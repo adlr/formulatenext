@@ -1,0 +1,41 @@
+body {
+  margin: 0;
+}
+
+#outer {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  border: 0px solid #f00;
+}
+
+#inner {
+  width: 3000px;
+  height: 3000px;
+  border: 0px solid #000;
+  overflow: hidden;
+  display: block;
+}
+
+#container {
+  display: block;
+  border: 0px solid #0f0;
+}
+
+#content {
+  position: relative;
+  user-select: none;
+  width: 200px;
+  height: 200px;
+  display: block;
+}
+
+canvas {
+  border: 0px solid #00f;
+  width: 200px;
+  height: 200px;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  display: block;
+}
