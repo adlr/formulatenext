@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   throttle('resize', 'optimizedResize');
-    var fixupContentSize = function() {
+  var fixupContentSize = function() {
     canvas.style.height = content.style.height = outer.clientHeight + 'px';
     canvas.style.width = content.style.width = outer.clientWidth + 'px';
     canvas.width = outer.clientWidth;
@@ -52,6 +52,14 @@ var draw = function() {
   var inner = document.getElementById('inner');
   var outer = document.getElementById('outer');
   var ctx = canvas.getContext('2d');
+
+  // high DPI support
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
   ctx.font = "20px Arial";
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillText("hi " + inner.clientHeight + ', ' + inner.clientWidth + '\n' +
