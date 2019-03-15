@@ -98,7 +98,7 @@ var draw = function() {
   ctx.translate(viewOffset.x, viewOffset.y);
   
   docview.draw(ctx, new Rect(new Point(outer.scrollLeft, outer.scrollTop),
-                             new Size(outer.clientWidth + ', ' + outer.clientHeight)));
+                             new Size(outer.clientWidth, outer.clientHeight)));
 };
 
 const zoomIn = function() {

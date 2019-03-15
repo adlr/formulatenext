@@ -1,22 +1,22 @@
 class Point {
   constructor(x, y) {
-    this.x = x;
-    this.y = y;
+    this.x = x + 0;
+    this.y = y + 0;
   }
 }
 
 class PagePoint {
   constructor(page, x, y) {
     this.page = page;
-    this.x = x;
-    this.y = y;
+    this.x = x + 0;
+    this.y = y + 0;
   }
 }
 
 class Size {
   constructor(width, height) {
-    this.width = width;
-    this.height = height;
+    this.width = width + 0;
+    this.height = height + 0;
   }
   scaled(factor) {
     return new Size(this.width * factor, this.height * factor);
@@ -27,6 +27,22 @@ class Rect {
   constructor(position, size) {
     this.position = position;
     this.size = size;
+  }
+  toString() {
+    return ['[', this.position.x, ', ',
+            this.position.y, ', ',
+            this.size.width, ', ',
+            this.size.height, ']'].join('');
+  }
+  intersects(that) {
+    const right = this.position.x + this.size.width;
+    const bot = this.position.y + this.size.height;
+    const that_right = that.position.x + that.size.width;
+    const that_bot = that.position.y + that.size.height;
+    return this.position.x < that_right &&
+      right > that.position.x &&
+      this.position.y < that_bot &&
+      bot > that.position.y;
   }
   inset(amount) {
     return new Rect(new Point(this.position.x + amount,
@@ -95,6 +111,9 @@ class DocView {
     for (let i = 0; i < this.pageRects.length; i++) {
       const pageRect = this.pageRects[i]
       const border = pageRect.inset(-0.5);
+      if (!border.intersects(dirtyrect)) {
+        continue;
+      }
       ctx.save();
       ctx.strokeRect(border.position.x,
 		     border.position.y,
