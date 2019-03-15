@@ -3,6 +3,9 @@ class Point {
     this.x = x + 0;
     this.y = y + 0;
   }
+  equals(that) {
+    return this.x == that.x && this.y == that.y;
+  }
 }
 
 class PagePoint {
@@ -17,6 +20,9 @@ class Size {
   constructor(width, height) {
     this.width = width + 0;
     this.height = height + 0;
+  }
+  equals(that) {
+    return this.width == that.width && this.height == that.height;
   }
   scaled(factor) {
     return new Size(this.width * factor, this.height * factor);
@@ -33,6 +39,10 @@ class Rect {
             this.position.y, ', ',
             this.size.width, ', ',
             this.size.height, ']'].join('');
+  }
+  equals(that) {
+    return this.position.equals(that.position) &&
+      this.size.equals(that.size);
   }
   intersects(that) {
     const right = this.position.x + this.size.width;
@@ -56,6 +66,86 @@ class Rect {
 	     this.size.width,
 	     this.size.height);
   }
+}
+
+class PageCacheEntry {
+  constructor() {
+    this.pagerect = null;
+    this.image = null;
+    this.next = null;
+    this.scaleFactor = 1;
+  }
+  hasImage() {
+    return this.image ? true : false;
+  }
+  hasExactMatch(rect, scale) {
+    return rect.equals(this.pagerect) && this.scaleFactor == scale;
+  }
+  acceptNext() {
+    this.pagerect = this.next.pagerect;
+    this.image = this.next.image;
+    this.scaleFactor = this.next.scaleFactor;
+  }
+  load(page, rect, scale, done) {
+    if (this.next) {
+      if (this.next.hasExactMatch(rect, scale)) {
+        console.log('already requesting');
+        // TODO: call 'done' here?
+        return;
+      }
+      console.log('cancelling previous load');
+      this.next.image.src = '';
+      this.next = null;
+    }
+
+    let next = new PageCacheEntry;
+    next.image = new Image;
+    let self = this;
+    next.image.onload = function() {
+      if ('naturalHeight' in this) {
+        if (this.naturalHeight + this.naturalWidth === 0) {
+          this.onerror();
+          return;
+        }
+      } else if (this.width + this.height == 0) {
+        this.onerror();
+        return;
+      }
+      // At this point, there's no error.
+      self.acceptNext();
+      done(true);
+    };
+    next.image.onerror = function() {
+      self.next = null;
+      done(false);
+    };
+    next.image.src = '/loadPageImage?page=' + page;
+    this.next = next;
+  }
+}
+
+class PageCache {
+  constructor() {
+    this.entries = {};
+  }
+  entryForPage(page) {
+    const key = page + '';
+    if (this.entries.hasOwnProperty(key)) {
+      return this.entries[key];
+    }
+    return null;
+  }
+  hasImageForPage(page) {
+    return this.entryForPage(page) ? true : false;
+  }
+  hasImageForRect(page, pagerect) {
+    if (!hasImageForPage(page)) {
+      console.log("ERROR! called hasImageForRect when no page entry exists");
+      return false;
+    }
+    return pagerect.equals(entryForPage(page).pagerect);
+  }
+  
 }
 
 class DocView {
