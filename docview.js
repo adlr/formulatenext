@@ -48,11 +48,11 @@ class DocView {
     this.margin = 20;  // pixels
     this.zoomLevel = 1;
     this.sizechanged = sizechanged;  // callback
-    this.pageRects = [];
     this.size = new Size(0, 0);
-    computePageRectsAndSize();
+    this.computePageRectsAndSize();
   }
   computePageRectsAndSize() {
+    this.pageRects = [];
     // first, compute max page width
     let width = 0;
     for (let i = 0; i < doc.pages.length; i++) {
@@ -69,7 +69,7 @@ class DocView {
       top += pageSize.height + this.margin;
     }
     // top is now the very bottom
-    this.size = new Size(width, top);
+    this.size = new Size(width + 2 * this.margin, top);
     this.sizechanged();
   }
   pixelToPagePoint(point) {
@@ -80,6 +80,13 @@ class DocView {
   }
   zoom(factor) {
     this.zoomLevel *= factor;
+    this.computePageRectsAndSize();
+  }
+  zoomabs(amount) {
+    if (this.zoomLevel == amount)
+      return;
+    this.zoomLevel = amount;
+    this.computePageRectsAndSize();
   }
   draw(ctx, dirtyrect) {
     // TODO: only draw in dirtyrect
@@ -95,10 +102,13 @@ class DocView {
 		     border.size.height);
       ctx.beginPath();
       pageRect.ctxRect(ctx);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.fillStyle = "#000000";
       ctx.clip();
-      ctx.scale(this.zoomLevel, this.zoomLevel);
       ctx.translate(pageRect.position.x,
 		    pageRect.position.y);
+      ctx.scale(this.zoomLevel, this.zoomLevel);
       this.doc.draw(ctx, i);
       ctx.restore();
     }

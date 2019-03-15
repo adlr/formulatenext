@@ -14,11 +14,32 @@ var throttle = function(type, name, obj) {
 
 var doc;
 var docview;
+var viewOffset = new Point(0, 0);
 
 document.addEventListener('DOMContentLoaded', function() {
   doc = new Doc(3);
   docview = new DocView(doc, function() {
-    console.log('size changed');
+    setTimeout(function() {
+      console.log('size changed');
+      const docSize = docview.size;
+      const viewportSize = new Size(outer.clientWidth,
+                                    outer.clientHeight);
+      viewOffset.x = Math.max(viewportSize.width -
+                              docSize.width, 0) / 2;
+      viewOffset.y = Math.max(viewportSize.height -
+                              docSize.height, 0) / 2;
+      if (viewOffset.x) {
+        inner.style.width = viewportSize.width + "px";
+      } else {
+        inner.style.width = docSize.width;
+      }
+      if (viewOffset.y) {
+        inner.style.height = viewportSize.height + "px";
+      } else {
+        inner.style.height = docSize.height;
+      }
+      draw();
+    }, 0);
   });
 
   var outer = document.getElementById('outer');
@@ -45,9 +66,9 @@ document.addEventListener('DOMContentLoaded', function() {
   fixupContentSize();
   window.addEventListener('optimizedResize', fixupContentSize);
   
-  document.getElementById('zoomin').onclick = zoom;
-  document.getElementById('zoomout').onclick = zoom;
-  document.getElementById('zoom100').onclick = zoom;
+  document.getElementById('zoomin').onclick = zoomIn;
+  document.getElementById('zoomout').onclick = zoomOut;
+  document.getElementById('zoom100').onclick = zoom100;
   document.getElementById('place').onclick = function() {
     console.log('place: ' + document.getElementById('string').value);
   };
@@ -66,17 +87,26 @@ var draw = function() {
   canvas.height = rect.height * dpr;
   ctx.scale(dpr, dpr);
 
-  ctx.font = "20px Arial";
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillText("hi " + inner.clientHeight + ', ' + inner.clientWidth + '\n' +
-               outer.scrollTop + ', ' + outer.scrollLeft + ', ' +
-               outer.clientWidth + ', ' + outer.clientHeight, 30, 30);
+  // ctx.font = "20px Arial";
+  ctx.fillStyle = "#909090";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // ctx.fillText("hi " + inner.clientHeight + ', ' + inner.clientWidth + '\n' +
+  //              outer.scrollTop + ', ' + outer.scrollLeft + ', ' +
+  //              outer.clientWidth + ', ' + outer.clientHeight, 30, 30);
 
-  docview.draw(ctx, null);
+  ctx.translate(-outer.scrollLeft, -outer.scrollTop);
+  ctx.translate(viewOffset.x, viewOffset.y);
+  
+  docview.draw(ctx, new Rect(new Point(outer.scrollLeft, outer.scrollTop),
+                             new Size(outer.clientWidth + ', ' + outer.clientHeight)));
 };
 
-
-var zoom = function() {
-  console.log('zoom');
+const zoomIn = function() {
+  docview.zoom(1.1);
 };
-
+const zoomOut = function() {
+  docview.zoom(1/1.1);
+};
+const zoom100 = function() {
+  docview.zoomabs(1);
+};
