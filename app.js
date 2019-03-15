@@ -12,7 +12,15 @@ var throttle = function(type, name, obj) {
   obj.addEventListener(type, func);
 };
 
+var doc;
+var docview;
+
 document.addEventListener('DOMContentLoaded', function() {
+  doc = new Doc(3);
+  docview = new DocView(doc, function() {
+    console.log('size changed');
+  });
+
   var outer = document.getElementById('outer');
   var container = document.getElementById('container');
   var content = document.getElementById('content');
@@ -46,8 +54,6 @@ document.addEventListener('DOMContentLoaded', function() {
 }, false);
 
 var draw = function() {
-
-
   var canvas = document.getElementById('canvas');
   var inner = document.getElementById('inner');
   var outer = document.getElementById('outer');
@@ -65,33 +71,12 @@ var draw = function() {
   ctx.fillText("hi " + inner.clientHeight + ', ' + inner.clientWidth + '\n' +
                outer.scrollTop + ', ' + outer.scrollLeft + ', ' +
                outer.clientWidth + ', ' + outer.clientHeight, 30, 30);
+
+  docview.draw(ctx, null);
 };
 
-var drawBox = function(ctx) {
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(10, 0);
-  ctx.lineTo(10, 10);
-  ctx.lineTo(0, 10);
-  ctx.lineTo(0, 0);
-  ctx.lineTo(10, 10);
-  ctx.stroke();
-};
-
-var zoomFactor = 1;
-var pagewidth = 612;  // points
-var pageheight = 792;  // points
-var pages = 3;
-var spacing = 20;  // pixels
 
 var zoom = function() {
   console.log('zoom');
 };
 
-var setupFakeDoc = function() {
-  var totalHeight = pages * Math.ceil(pageheight * zoomFactor + spacing) + spacing;
-  var totalWidth = Math.ceil(pagewidth * zoomFactor) + 2 * spacing;
-  var inner = document.getElementById('inner');
-  inner.style.width = totalWidth + "px";
-  inner.style.height = totalHeight + "px";
-};
