@@ -1,0 +1,73 @@
+diff --git a/config/BUILDCONFIG.gn b/config/BUILDCONFIG.gn
+index 9e843f3c3..0e9289815 100644
+--- a/config/BUILDCONFIG.gn
++++ b/config/BUILDCONFIG.gn
+@@ -257,6 +257,8 @@ if (target_os == "android") {
+   _default_toolchain = "//build/toolchain/win:uwp_$target_cpu"
+ } else if (target_os == "aix") {
+   _default_toolchain = "//build/toolchain/aix:$target_cpu"
++} else if (target_os == "wasm") {
++  _default_toolchain = "//build/toolchain/wasm:wasm"
+ } else {
+   assert(false, "Unsupported target_os: $target_os")
+ }
+diff --git a/config/compiler/BUILD.gn b/config/compiler/BUILD.gn
+index d777d7189..ad06c971c 100644
+--- a/config/compiler/BUILD.gn
++++ b/config/compiler/BUILD.gn
+@@ -1503,7 +1503,7 @@ config("default_warnings") {
+         cflags += [
+           # Ignore warnings about MSVC optimization pragmas.
+           # TODO(thakis): Only for no_chromium_code? http://crbug.com/912662
+-          "-Wno-ignored-pragma-optimize",
++          #"-Wno-ignored-pragma-optimize",
+         ]
+         if (is_fuchsia) {
+           cflags += [
+@@ -1698,7 +1698,7 @@ config("thin_archive") {
+   # have a "thin archive" mode (it does accept -T, but it means truncating
+   # archive names to 16 characters, which is not what we want).
+   if ((is_posix && !is_nacl && !is_mac && !is_ios) || is_fuchsia) {
+-    arflags = [ "-T" ]
++    arflags = [ "T" ]
+   } else if (is_win && use_lld) {
+     arflags = [ "/llvmlibthin" ]
+   }
+diff --git a/toolchain/gcc_toolchain.gni b/toolchain/gcc_toolchain.gni
+index 47f18c8a5..7b6c0b5f1 100644
+--- a/toolchain/gcc_toolchain.gni
++++ b/toolchain/gcc_toolchain.gni
+@@ -354,7 +354,7 @@ template("gcc_toolchain") {
+       } else {
+         rspfile = "{{output}}.rsp"
+         rspfile_content = "{{inputs}}"
+-        command = "\"$ar\" {{arflags}} -r -c -s -D {{output}} @\"$rspfile\""
++        command = "\"$ar\" {{arflags}}rcsD {{output}} @\"$rspfile\""
+       }
+ 
+       # Remove the output file first so that ar doesn't try to modify the
+diff --git a/toolchain/wasm/BUILD.gn b/toolchain/wasm/BUILD.gn
+new file mode 100644
+index 000000000..e6a9fc7fd
+--- /dev/null
++++ b/toolchain/wasm/BUILD.gn
+@@ -0,0 +1,19 @@
++# Copyright 2016 The Chromium Authors. All rights reserved.
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
++
++import("//build/toolchain/gcc_toolchain.gni")
++
++gcc_toolchain("wasm") {
++  executable_extension = ".js"
++  cc = "emcc"
++  cxx = "em++"
++  ar = "emar"
++  ld = "emcc"
++  toolchain_args = {
++    # Use all values set on the invoker's toolchain_args.
++    #forward_variables_from(invoker.toolchain_args, "*")
++    current_cpu = "wasm"
++    current_os = "wasm"
++  }
++}

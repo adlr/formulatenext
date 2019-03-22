@@ -1,43 +1,51 @@
-diff --git a/samples/BUILD.gn b/samples/BUILD.gn
-index f2c8014b0..89901d027 100644
---- a/samples/BUILD.gn
-+++ b/samples/BUILD.gn
-@@ -32,6 +32,38 @@ config("pdfium_samples_config") {
-   }
+diff --git a/testing/utils/path_service.cpp b/testing/utils/path_service.cpp
+index 5e1ce3960..91bd60e85 100644
+--- a/testing/utils/path_service.cpp
++++ b/testing/utils/path_service.cpp
+@@ -10,7 +10,8 @@
+ #include <mach-o/dyld.h>
+ #include <sys/stat.h>
+ #else  // Linux
+-#include <linux/limits.h>
++//#include <linux/limits.h>
++#define PATH_MAX 4096
+ #include <sys/stat.h>
+ #include <unistd.h>
+ #endif  // _WIN32
+diff --git a/third_party/BUILD.gn b/third_party/BUILD.gn
+index 51fd0cac4..4d503ef40 100644
+--- a/third_party/BUILD.gn
++++ b/third_party/BUILD.gn
+@@ -446,6 +446,7 @@ source_set("fx_libopenjpeg") {
+     "libopenjpeg20/tgt.c",
+     "libopenjpeg20/thread.c",
+   ]
++  defines = [ "_GNU_SOURCE" ]
  }
  
-+shared_library("pdfium_shared") {
-+  testonly = true
-+  sources = [
-+    "pdfium_test_lib.cc",
-+    "pdfium_test_dump_helper.cc",
-+    "pdfium_test_dump_helper.h",
-+    "pdfium_test_event_helper.cc",
-+    "pdfium_test_event_helper.h",
-+    "pdfium_test_write_helper.cc",
-+    "pdfium_test_write_helper.h",
-+  ]
-+  deps = [
-+    "../:pdfium",
-+    "../testing/:test_support",
-+    "../testing/image_diff",
-+    "//build/win:default_exe_manifest",
-+  ]
-+  configs += [ ":pdfium_samples_config" ]
-+
-+  if (pdf_enable_v8) {
-+    deps += [
-+      "//v8:v8_headers",
-+      "//v8:v8_libplatform",
-+    ]
-+    include_dirs = [ "//v8" ]
-+    configs += [ "//v8:external_startup_data" ]
-+  }
-+  if (pdf_use_skia || pdf_use_skia_paths) {
-+    deps += [ "//skia" ]
-+  }
-+}
-+
- executable("pdfium_test") {
-   testonly = true
-   sources = [
+ config("system_libpng_config") {
+diff --git a/third_party/base/allocator/partition_allocator/spin_lock.cc b/third_party/base/allocator/partition_allocator/spin_lock.cc
+index 42055836b..1aa96a72a 100644
+--- a/third_party/base/allocator/partition_allocator/spin_lock.cc
++++ b/third_party/base/allocator/partition_allocator/spin_lock.cc
+@@ -51,7 +51,7 @@
+ #endif  // ARCH
+ 
+ #ifndef YIELD_PROCESSOR
+-#warning "Processor yield not supported on this architecture."
++//#warning "Processor yield not supported on this architecture."
+ #define YIELD_PROCESSOR ((void)0)
+ #endif
+ 
+diff --git a/third_party/yasm/yasm_assemble.gni b/third_party/yasm/yasm_assemble.gni
+index 73d554856..67f40b24a 100644
+--- a/third_party/yasm/yasm_assemble.gni
++++ b/third_party/yasm/yasm_assemble.gni
+@@ -123,6 +123,7 @@ template("yasm_assemble") {
+                          root_build_dir) ]
+ 
+     # Deps.
++    print(invoker)
+     deps = [
+       yasm_label,
+     ]
