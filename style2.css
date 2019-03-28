@@ -1,0 +1,22 @@
+body {
+  margin: 0;
+}
+
+#toolbar {
+  height: 30px;
+}
+
+canvas {
+  border: 0px solid #00f;
+  width: 300;
+  height: 400;
+  /*position: absolute;
+  top: 30px;
+  left: 0px;
+  display: block;*/
+}
+
+.numin {
+  width: 40px;
+  margin-right: 20px;
+}

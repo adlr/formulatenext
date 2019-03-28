@@ -72,6 +72,9 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('place').onclick = function() {
     console.log('place: ' + document.getElementById('string').value);
   };
+
+  document.getElementById('file-input').addEventListener('change',
+                                                         loadFile, false);
 }, false);
 
 var draw = function() {
@@ -110,3 +113,20 @@ const zoomOut = function() {
 const zoom100 = function() {
   docview.zoomabs(1);
 };
+
+let loadFile = function(element) {
+  let file = element.target.files[0];
+  if (!file) {
+    return;
+  }
+  let reader = new FileReader();
+  reader.onload = function(el) {
+    let contents = el.target.result;
+    console.log('got a file');
+  }
+  reader.readAsArrayBuffer(file);
+}
+
+let loadPDF = function(arraybuffer) {
+
+}

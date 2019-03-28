@@ -1,3 +1,16 @@
+diff --git a/core/fxge/BUILD.gn b/core/fxge/BUILD.gn
+index 6c9ed9a11..fd480daa8 100644
+--- a/core/fxge/BUILD.gn
++++ b/core/fxge/BUILD.gn
+@@ -157,7 +157,7 @@ jumbo_source_set("fxge") {
+     ]
+   }
+ 
+-  if (is_linux) {
++  if (is_linux || current_os == "wasm") {
+     sources += [ "fx_ge_linux.cpp" ]
+   }
+ 
 diff --git a/testing/utils/path_service.cpp b/testing/utils/path_service.cpp
 index 5e1ce3960..91bd60e85 100644
 --- a/testing/utils/path_service.cpp
