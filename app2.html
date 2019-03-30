@@ -5,15 +5,17 @@
 </head>
 <body>
 <div id="toolbar">
+<!--
   <button id="zoomin" type="button">Zoom In</button>
   <button id="zoomout" type="button">Zoom Out</button>
   <button id="zoom100" type="button">Zoom 100%</button>
   <select id="font"><option value="Helvetica">Helvetica</option></select>
   <select id="size"><option value="12">12</option></select>
   <input type="text" id="string" />
-  <button id="place" type="button">Place</button>
+  <button id="place" type="button">Place</button>-->
   <input type="file" id="file-input" />
 </div>
+<b>First thing: click Choose File to open a PDF file!</b><br/>
 <canvas id="canvas"></canvas><br />
 a <input type="text" id="mat_a" class="numin" value="1" />
 b <input type="text" id="mat_b" class="numin" value="0" />
@@ -28,9 +30,22 @@ f <input type="text" id="mat_f" class="numin" value="0" />
 L <input type="text" id="sz_l" class="numin" value="0" />
 T <input type="text" id="sz_t" class="numin" value="0" />
 <br/>
-R <input type="text" id="sz_r" class="numin" value="300" />
-B <input type="text" id="sz_b" class="numin" value="400" />
+R <input type="text" id="sz_r" class="numin" value="612" />
+B <input type="text" id="sz_b" class="numin" value="792" />
 <br/>
-<button id="render" type="button">Render</button>
+<button id="render" type="button">Render Matrix</button><br/>
+<br/>
+startx <input type="text" id="startx" class="numin" value="0" />
+starty <input type="text" id="starty" class="numin" value="0" />
+<br/>
+sizex <input type="text" id="sizex" class="numin" value="612" />
+sizey <input type="text" id="sizey" class="numin" value="792" />
+<br/>
+rotate <input type="text" id="rotate" class="numin" value="0" /><br/>
+<button id="renderbitmap" type="button">Render Bitmap</button><br/>
+<br/>
+width <input type="text" id="cwidth" class="numin" value="300" />
+height <input type="text" id="cheight" class="numin" value="400" />
+<button id="resizecanvas" type="button">Resize Canvas<br/>
 
 </body></html>

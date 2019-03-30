@@ -96,7 +96,7 @@ public:
       return nullptr;
     // Make a new bitmap, filled with white
     FPDF_BITMAP bitmap = FPDFBitmap_Create(width, height, 0);
-    FPDFBitmap_FillRect(bitmap, 0, 0, width, height, 0xffffffff);
+    FPDFBitmap_FillRect(bitmap, 0, 0, width, height, 0xffe0e0e0);
     // Render
     FPDF_PAGE page = FPDF_LoadPage(doc_.get(), 0);
     FS_MATRIX matrix = { ma, mb, mc, md, me, mf };
@@ -123,6 +123,43 @@ public:
     FPDFBitmap_Destroy(bitmap);
     return ret;
   }			    
+
+  unsigned char* TestRenderBitmap(int width, int height,
+                                  int start_x,
+                                  int start_y,
+                                  int size_x,
+                                  int size_y,
+                                  int rotate) {
+    if (!doc_)
+      return nullptr;
+    // Make a new bitmap, filled with white
+    FPDF_BITMAP bitmap = FPDFBitmap_Create(width, height, 0);
+    FPDFBitmap_FillRect(bitmap, 0, 0, width, height, 0xffe0e0e0);
+    // Render
+    FPDF_PAGE page = FPDF_LoadPage(doc_.get(), 0);
+    FPDF_RenderPageBitmap(bitmap, page, start_x, start_y, size_x, size_y,
+                          rotate, 0);
+    FPDF_ClosePage(page);
+    // Copy to output buffer:
+    unsigned char* ret =
+      static_cast<unsigned char*>(malloc(width * height * 4));
+    // src in BGRx. dest in RGBx
+    int stride = FPDFBitmap_GetStride(bitmap);
+    const unsigned char* buf =
+      static_cast<unsigned char*>(FPDFBitmap_GetBuffer(bitmap));
+    for (int h = 0; h < height; h++) {
+      const unsigned char* src = &buf[h * stride];
+      unsigned char* dest = &ret[h * width * 4];
+      for (int w = 0; w < width; w++) {
+	dest[w * 4    ] = src[w * 4 + 2]; // R
+	dest[w * 4 + 1] = src[w * 4 + 1]; // G
+	dest[w * 4 + 2] = src[w * 4    ]; // B
+	dest[w * 4 + 3] = 0xff;  // alpha, just in case
+      }
+    }
+    FPDFBitmap_Destroy(bitmap);
+    return ret;
+  }
 
   // Returns true on success
   bool Render(void* out_buffer, int width, int height,
@@ -212,6 +249,20 @@ unsigned char* Render(int width, int height,
   }
   return mydoc_->TestRender(width, height,
 			    ma, mb, mc, md, me, mf, sl, st, sr, sb);
+}
+
+EMSCRIPTEN_KEEPALIVE
+unsigned char* RenderBitmap(int width, int height,
+                            int start_x,
+                            int start_y,
+                            int size_x,
+                            int size_y,
+                            int rotate) {
+  if (!mydoc_) {
+    return nullptr;
+  }
+  return mydoc_->TestRenderBitmap(width, height, start_x, start_y,
+                                  size_x, size_y, rotate);
 }
 
 EMSCRIPTEN_KEEPALIVE
