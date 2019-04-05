@@ -1,27 +1,40 @@
 # formulatenext
 
-Plan is for a simple utility w/ the following functions:
+Plan is for a simple client-side web page. It should operate natively
+on PDF files, rather than having a custom file format.
 
-* Define simple JSON format to store a PDF blob and overlay content
-* Web-based GUI to edit overlay content
-* command line tool to flatten overlay content to a PDF
+Core code will be written in C++, compiled w/ Emscripten, with glue
+code to the browser written in JavaScript.
 
 Software dependencies:
 
-* pdfium - rendering PDF for web-based GUI
-* (pikepdf/qpdf) - PDF manipulation
-* cherrypy - simple web server
+* pdfium - rendering PDF for web-based GUI, editing
+* (later) harfbuzz/skia - rendering Unicode text to PDF
 
-Future work:
-* Better text handling:
-  * Bold/Italics
-  * Choose from base PDF fonts
-  * Arbitrary (embedded) fonts
-  * High-ascii
-  * Unicode
-  * Emoji
-  * Kerning
-  * Ligatures
-  * Line wrapping
-* Drawing/freehand
-* Import PDF/raster images
+Planned features:
+
+* Ability to open and view a PDF
+* Arbitrary zoom in/out
+* Thumbnail view
+
+At this point I expect a few key C++ classes:
+
+* PDFDocument - The Model, and the bridge to PDFium
+* DocController - processes input on the main doc view
+* DocView - view for a document
+* ThumbnailController - processes input on the thumbnail view
+* ThumbnailView - view for the thumbnails
+
+Then the following features can be added:
+
+* Rotate pages
+* Save document
+* Select (multiple) pages in thumbnail view and drag to reorder
+* Drag a PDF document in, or drag pages between document windows to copy pages
+* Drop text onto a page
+* Re-open doc and edit dropped text
+* Draw/freehand (and edit when reopened)
+* Drop images into page (and edit when reopened)
+* Better text handling (with Harfbuzz)
+* Rich text
+* Drop PDF into page (as Form XObject)
