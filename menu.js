@@ -48,6 +48,107 @@ let menus = [
   ]}
 ];
 
+let enabledKeyShortcuts = {
+};
+
+class MenuItem {
+  constructor(str, shortcut) {
+    this.str = str;
+    this.shortcut = shortcut;
+    this.enabled = true;
+    this.child = null;
+    this.div = document.createElement('div');
+    this.leftDiv = document.createElement('div');
+    this.div.appendChild(this.leftDiv);
+    this.rightDiv = document.createElement('div');
+    this.div.appendChild(this.rightDiv);
+    this.updateDom();
+  }
+  setEnabled(en) {
+    this.enabled = en;
+  }
+  isSpacer() {
+    return this.str === '-';
+  }
+  updateDom() {
+    if (this.isSpacer()) {
+      this.div.classList
+    }
+    this.leftDiv.innerHTML = this.str;
+    if (this.shortcut)
+      this.rightDiv.innerHTML = shortcutKeyToStr(this.shortcut);
+    else if (this.child)
+      this.rightDiv.innerHTML = '&#9658;';
+    else
+      this.rightDiv.innerHTML = '';
+  }
+  setContainer(container) {
+    if (this.child)
+      this.child.div.remove();
+    this.child = container;
+    this.div.appendChild(this.child.div);
+  }
+}
+
+class MenuContainer {
+  constructor() {
+    this.items = [];
+    this.div = document.createElement('div');
+  }
+  addMenuItem(item) {
+    this.items.push(item);
+    this.div.appendChild(item.div);
+  }
+}
+
+class MenuBarLabel {
+  constructor(str) {
+    this.str = str;
+    this.div = document.createElement('div');
+    this.div.innerHTML = str;
+    this.container = null;
+  }
+  setContainer(container) {
+    if (this.container) {
+      this.container.div.remove();
+    }
+    this.container = container;
+    this.div.appendChild(this.container.div);
+  }
+}
+
+class MenuBar {
+  constructor(div) {
+    this.div = div;
+    this.labels = [];
+  }
+  addLabel(label) {
+    this.labels.push(label);
+    this.div.appendChild(label.div);
+  }
+}
+
+const populate2 = function(items, container) {
+  for (let i = 0; i < items.length; i++) {
+    const initem = items[i];
+    console.log('handling ' + initem.name);
+    let item = null;
+    if (container instanceof MenuBar) {
+      item = new MenuBarLabel(initem.name);
+      container.addLabel(item);
+    } else {
+      item = new MenuItem(initem.name,
+                          initem.hasOwnProperty('key') ? initem.key : null);
+      container.addMenuItem(item);
+    }
+    if (initem.children) {
+      let subcontainer = new MenuContainer();
+      item.setContainer(subcontainer);
+      populate2(initem.children, subcontainer);
+    }
+  }
+}
+
 let shortcutKeyToStr = function(key) {
   const code = key.charCodeAt(0);
   if (code > 64 && code < 91) {  // upper-case
@@ -55,32 +156,11 @@ let shortcutKeyToStr = function(key) {
   } else {  // assume lower-case
     return "Ctrl+" + key.toUpperCase();
   }
-}
+};
 
 let populateSubmenu = function(items, container) {
-  let submenuvisible = -1;
   let timerRunning = false;
   let timer = null;
-  const onenter = function(childtoshow) {
-    if (timerRunning) {
-      clearTimeout(timer);
-      timerRunning = false;
-    }
-    timer = setTimeout(function() {
-      childtoshow.style.display = 'block';
-    }, 500);
-    timerRunning = true;
-  };
-  const onexit = function(childtohide) {
-    if (timerRunning) {
-      clearTimeout(timer);
-      timerRunning = false;
-    }
-    timer = setTimeout(function() {
-      childtohide.style.display = 'none';
-    }, 500);
-    timerRunning = true;
-  }
 
   for (let i = 0; i < items.length; i++) {
     let item = items[i];
@@ -194,8 +274,30 @@ let populateDom = function(items, rootcontainer) {
   }
 }
 
+const handleKeyPress = function(ev) {
+  if (ev.metaKey || ev.altKey || !ev.ctrlKey)
+    return;
+  console.log(ev.type + " " + ev.bubbles + " " + ev.key);
+  const shortcut = ev.shiftKey ? ev.key.toUpperCase() : ev.key;
+  if (enabledKeyShortcuts.hasOwnProperty(shortcut)) {
+    ev.preventDefault();
+    enabledKeyShortcuts[shortcut]();
+  }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
   // create dom elements
-  populateDom(menus, document.getElementById('menubar'));
+  //populateDom(menus, document.getElementById('menubar'));
+  let menuBar = new MenuBar(document.getElementById('menubar'));
+  populate2(menus, menuBar);
+  console.log(menuBar);
+  let clicker = document.getElementById('mybutton');
+  let clicknum = 0;
+  clicker.addEventListener('click', function(ev) {
+    clicknum++;
+    document.getElementById('number').innerHTML = clicknum;
+  });
+
+  document.addEventListener('keydown', handleKeyPress);
 }, false);
 
