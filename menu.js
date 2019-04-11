@@ -26,7 +26,7 @@ let menus = [
   ]},
   {name: "Edit", children: [
     {name: "Undo", key: "z", action: menuUndo},
-    {name: "Redo", key: "Z", action: menuRedo},
+    {name: "Redo", key: "Z", action: menuRedo, enabled: false},
     {name: "-"},
     {name: "Cut", key: "x", action: menuCut},
     {name: "Copy", key: "c", action: menuCopy},
@@ -60,24 +60,32 @@ class MenuItem {
     this.enabled = true;
     this.child = null;
     this.div = document.createElement('div');
-    this.div.classList.add('menuitem');
-    this.leftDiv = document.createElement('div');
-    this.leftDiv.classList.add('menuitemname');
-    this.div.appendChild(this.leftDiv);
-    this.rightDiv = document.createElement('div');
-    this.rightDiv.classList.add('menuitemright');
-    this.div.appendChild(this.rightDiv);
+    if (!this.isSpacer()) {
+      this.div.classList.add('menuitem');
+      this.leftDiv = document.createElement('div');
+      this.leftDiv.classList.add('menuitemname');
+      this.div.appendChild(this.leftDiv);
+      this.rightDiv = document.createElement('div');
+      this.rightDiv.classList.add('menuitemright');
+      this.div.appendChild(this.rightDiv);
+    }
     this.updateDom();
   }
   setEnabled(en) {
     this.enabled = en;
+    if (this.enabled) {
+      this.div.classList.remove('menuiteminactive');
+    } else {
+      this.div.classList.add('menuiteminactive');
+    }
   }
   isSpacer() {
     return this.str === '-';
   }
   updateDom() {
     if (this.isSpacer()) {
-      this.div.classList
+      this.div.classList.add('menuspacer');
+      return;
     }
     this.leftDiv.innerHTML = this.str;
     if (this.shortcut)
@@ -224,6 +232,9 @@ const populate2 = function(items, container) {
     } else {
       item = new MenuItem(initem.name,
                           initem.hasOwnProperty('key') ? initem.key : null);
+      if (initem.hasOwnProperty('enabled') && !initem.enabled) {
+        item.setEnabled(false);
+      }
       container.addMenuItem(item);
     }
     if (initem.children) {
