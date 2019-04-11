@@ -1,3 +1,5 @@
+'use strict';
+
 let menuOpen = function() { console.log('menuOpen'); }
 let menuClose = function() { console.log('menuClose'); }
 let menuSave = function() { console.log('menuSave'); }
@@ -98,6 +100,7 @@ class MenuContainer {
     this.items = [];
     this.div = document.createElement('div');
     this.div.classList.add('submenucontainer');
+    this.div.addEventListener('click', ev => { ev.stopPropagation(); });
   }
   addMenuItem(item) {
     this.items.push(item);
@@ -112,6 +115,40 @@ class MenuBarLabel {
     this.div.classList.add('rootmenuitem');
     this.div.innerHTML = str;
     this.container = null;
+    this.handleClick = null;
+    this.domClickHandler = ev => {
+      console.log('label got a click');
+      this.handleClick(this);
+      ev.stopPropagation();
+    };
+    this.handleHover = null;
+    this.domEnterHoverHandler = ev => { this.onHover(ev, true); };
+    this.domLeaveHoverHandler = ev => { this.onHover(ev, false); };
+  }
+  setOnClick(handleClick) {
+    if (this.handleClick != handleClick) {
+      if (handleClick)
+        this.div.addEventListener('click', this.domClickHandler);
+      else
+        this.div.removeEventListener('click', this.domClickHandler);
+    }
+    this.handleClick = handleClick;
+  }
+  onHover(ev, on) {
+    if (this.handleHover)
+      this.handleHover(this, on);
+  }
+  setOnHover(handleHover) {
+    if (this.handleHover != handleHover) {
+      if (handleHover) {
+        this.div.addEventListener('mouseenter', this.domEnterHoverHandler);
+        this.div.addEventListener('mouseenter', this.domLeaveHoverHandler);
+      } else {
+        this.div.removeEventListener('mouseenter', this.domEnterHoverHandler);
+        this.div.removeEventListener('mouseenter', this.domLeaveHoverHandler);
+      }
+    }
+    this.handleHover = handleHover;
   }
   setContainer(container) {
     if (this.container) {
@@ -121,6 +158,11 @@ class MenuBarLabel {
     this.div.appendChild(this.container.div);
   }
   setChildVisible(vis) {
+    if (vis) {
+      this.div.classList.add('rootmenuitemactive');
+    } else {
+      this.div.classList.remove('rootmenuitemactive');
+    }
     this.container.div.style.display = vis ? 'block' : 'none';
   }
 }
@@ -130,19 +172,44 @@ class MenuBar {
     this.div = div;
     this.div.classList.add('menubar');
     this.labels = [];
+    this.menuShowing = null;
+    this.docClick = ev => {
+      console.log('doc click');
+      this.hideMenu(); };
+    document.addEventListener('click', this.docClick);
+    this.div.addEventListener('click', ev => { ev.stopPropagation(); });
   }
   addLabel(label) {
     this.labels.push(label);
     this.div.appendChild(label.div);
-    let self = this;
-    label.div.addEventListener('click', function(ev) {
-      self.labelClicked(label);
-    });
+    label.setOnClick(label => { this.labelClicked(label); });
+    label.setOnHover(this.labelHover.bind(this));
   }
-  labelClicked(label) {
+  showMenu(label) {
+    this.menuShowing = label;
     for (let i = 0; i < this.labels.length; i++) {
       this.labels[i].setChildVisible(this.labels[i] === label);
     }
+  }
+  hideMenu() {
+    if (!this.menuShowing)
+      return;
+    this.menuShowing.setChildVisible(false);
+    this.menuShowing = null;
+  }
+  labelClicked(label) {
+    if (this.menuShowing == label) {
+      this.menuShowing = null;
+      label.setChildVisible(false);
+    } else {
+      this.showMenu(label);
+    }
+  }
+  labelHover(label, on) {
+    if (!this.menuShowing || !on)
+      return;
+    // hovering on a menu, with a menu showing. Show what we're hoving on.
+    this.showMenu(label);
   }
 }
 
