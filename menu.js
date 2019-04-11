@@ -58,9 +58,12 @@ class MenuItem {
     this.enabled = true;
     this.child = null;
     this.div = document.createElement('div');
+    this.div.classList.add('menuitem');
     this.leftDiv = document.createElement('div');
+    this.leftDiv.classList.add('menuitemname');
     this.div.appendChild(this.leftDiv);
     this.rightDiv = document.createElement('div');
+    this.rightDiv.classList.add('menuitemright');
     this.div.appendChild(this.rightDiv);
     this.updateDom();
   }
@@ -94,6 +97,7 @@ class MenuContainer {
   constructor() {
     this.items = [];
     this.div = document.createElement('div');
+    this.div.classList.add('submenucontainer');
   }
   addMenuItem(item) {
     this.items.push(item);
@@ -105,6 +109,7 @@ class MenuBarLabel {
   constructor(str) {
     this.str = str;
     this.div = document.createElement('div');
+    this.div.classList.add('rootmenuitem');
     this.div.innerHTML = str;
     this.container = null;
   }
@@ -115,16 +120,29 @@ class MenuBarLabel {
     this.container = container;
     this.div.appendChild(this.container.div);
   }
+  setChildVisible(vis) {
+    this.container.div.style.display = vis ? 'block' : 'none';
+  }
 }
 
 class MenuBar {
   constructor(div) {
     this.div = div;
+    this.div.classList.add('menubar');
     this.labels = [];
   }
   addLabel(label) {
     this.labels.push(label);
     this.div.appendChild(label.div);
+    let self = this;
+    label.div.addEventListener('click', function(ev) {
+      self.labelClicked(label);
+    });
+  }
+  labelClicked(label) {
+    for (let i = 0; i < this.labels.length; i++) {
+      this.labels[i].setChildVisible(this.labels[i] === label);
+    }
   }
 }
 
