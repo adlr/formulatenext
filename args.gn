@@ -14,7 +14,7 @@ pdf_is_standalone = true  # Set for a non-embedded build.
 is_component_build = false # Disable component build (must be false)
 
 clang_use_chrome_plugins = false  # Currently must be false.
-use_libjpeg_turbo = false
+use_libjpeg_turbo = true
 use_glib = false
 target_os = "wasm"
 target_cpu = "wasm"
