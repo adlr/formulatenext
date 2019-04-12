@@ -1,9 +1,26 @@
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  src: local('Roboto'),
+       local('Roboto-Regular'),
+       url(Roboto/Roboto-Regular.woff2) format('woff2'),
+       url(Roboto/Roboto-Regular.woff) format('woff'),
+       url(Roboto/Roboto-Regular.ttf) format('truetype');
+}
+
 body {
+  font-family: 'Roboto', sans-serif;
   margin: 0;
 }
 
-#toolbar {
-  height: 30px;
+#filename {
+  font-size: 24px;
+  margin: 10px 0 0 10px;
+  display: none;
+}
+
+#menubar {
+  margin: 5px 0 0 5px;
 }
 
 #outer {

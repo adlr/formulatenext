@@ -66,15 +66,14 @@ document.addEventListener('DOMContentLoaded', function() {
   fixupContentSize();
   window.addEventListener('optimizedResize', fixupContentSize);
   
-  document.getElementById('zoomin').onclick = zoomIn;
-  document.getElementById('zoomout').onclick = zoomOut;
-  document.getElementById('zoom100').onclick = zoom100;
-  document.getElementById('place').onclick = function() {
-    console.log('place: ' + document.getElementById('string').value);
-  };
+  document.getElementById('zoom-in').onclick = zoomIn;
+  document.getElementById('zoom-out').onclick = zoomOut;
+  // document.getElementById('place').onclick = function() {
+  //   console.log('place: ' + document.getElementById('string').value);
+  // };
 
-  document.getElementById('file-input').addEventListener('change',
-                                                         loadFile, false);
+  // document.getElementById('file-input').addEventListener('change',
+  //                                                        loadFile, false);
 }, false);
 
 var draw = function() {
