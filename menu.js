@@ -50,13 +50,36 @@ let menus = [
   ]}
 ];
 
-let enabledKeyShortcuts = {
-};
+class ShortCutListener {
+  constructor() {
+    this.shortcuts = {};
+    document.addEventListener('keydown', this.handleKeyPress.bind(this));
+  }
+  handleKeyPress(ev) {
+    if (ev.metaKey || ev.altKey || !ev.ctrlKey || ev.key.length !== 1)
+      return;
+    console.log(ev.type + " " + ev.bubbles + " " + ev.key);
+    const shortcut = ev.shiftKey ? ev.key.toUpperCase() : ev.key;
+    if (this.shortcuts.hasOwnProperty(shortcut)) {
+      ev.preventDefault();
+      this.shortcuts[shortcut]();
+    }
+  }
+  add(key, callback) {
+    this.shortcuts[key] = callback;
+  }
+  remove(key) {
+    console.log('removing ' + key);
+    delete this.shortcuts[key];
+  }
+}
+let shortCutListener = null;
 
 class MenuItem {
-  constructor(str, shortcut) {
+  constructor(str, shortcut, callback) {
     this.str = str;
     this.shortcut = shortcut;
+    this.callback = callback;
     this.enabled = true;
     this.child = null;
     this.div = document.createElement('div');
@@ -70,12 +93,15 @@ class MenuItem {
       this.div.appendChild(this.rightDiv);
     }
     this.updateDom();
+    shortCutListener.add(shortcut, callback)
   }
   setEnabled(en) {
     this.enabled = en;
-    if (this.enabled) {
+    if (!this.enabled) {
+      shortCutListener.remove(this.shortcut);
       this.div.classList.remove('menuiteminactive');
     } else {
+      shortCutListener.add(this.shortcut, this.callback);
       this.div.classList.add('menuiteminactive');
     }
   }
@@ -231,7 +257,8 @@ const populate2 = function(items, container) {
       container.addLabel(item);
     } else {
       item = new MenuItem(initem.name,
-                          initem.hasOwnProperty('key') ? initem.key : null);
+                          initem.hasOwnProperty('key') ? initem.key : null,
+                          initem.action);
       if (initem.hasOwnProperty('enabled') && !initem.enabled) {
         item.setEnabled(false);
       }
@@ -370,20 +397,10 @@ let populateDom = function(items, rootcontainer) {
   }
 }
 
-const handleKeyPress = function(ev) {
-  if (ev.metaKey || ev.altKey || !ev.ctrlKey)
-    return;
-  console.log(ev.type + " " + ev.bubbles + " " + ev.key);
-  const shortcut = ev.shiftKey ? ev.key.toUpperCase() : ev.key;
-  if (enabledKeyShortcuts.hasOwnProperty(shortcut)) {
-    ev.preventDefault();
-    enabledKeyShortcuts[shortcut]();
-  }
-};
-
 document.addEventListener('DOMContentLoaded', function() {
   // create dom elements
   //populateDom(menus, document.getElementById('menubar'));
+  shortCutListener = new ShortCutListener();
   let menuBar = new MenuBar(document.getElementById('menubar'));
   populate2(menus, menuBar);
   console.log(menuBar);
@@ -393,7 +410,5 @@ document.addEventListener('DOMContentLoaded', function() {
     clicknum++;
     document.getElementById('number').innerHTML = clicknum;
   });
-
-  document.addEventListener('keydown', handleKeyPress);
 }, false);
 
