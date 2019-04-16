@@ -34,10 +34,12 @@ void DocView::Draw(SkCanvas* ctx) {
   paint.setColor(0xff000000);  // opaque black
   paint.setStrokeWidth(1);
   float pagetop = kBorderPixels;
+  const float pagewidth = kPageWidth * zoom_;
+  const float pageheight = kPageHeight * zoom_;
   for (int i = 0; i < pages_; i++) {
     SkRect page = SkRect::MakeXYWH(kBorderPixels,
 				   pagetop,
-				   kPageWidth, kPageHeight);
+				   pagewidth, pageheight);
     //ctx->save();
     paint.setStyle(SkPaint::kStroke_Style);
     paint.setColor(0xff000000);  // opaque black
@@ -49,7 +51,7 @@ void DocView::Draw(SkCanvas* ctx) {
     paint.setStrokeWidth(0);
     ctx->drawRect(page, paint);
     //ctx->restore();
-    pagetop += kPageHeight + kBorderPixels;
+    pagetop += pageheight + kBorderPixels;
   }
 }
 

@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
   TestDraw = Module.cwrap('TestDraw', 'number',
                           ['number',  // width
                            'number']);  // height
+  SetZoom = Module.cwrap('SetZoom', null, ['number']);
 
   doc = new Doc(3);
   docview = new DocView(doc, function() {
@@ -62,8 +63,8 @@ document.addEventListener('DOMContentLoaded', function() {
   outer.addEventListener('optimizedScroll', function() {
     var dx = outer.scrollLeft;
     var dy = outer.scrollTop;
-    container.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
     draw();
+    container.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
   });
 
   throttle('resize', 'optimizedResize');
@@ -74,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
     canvas.height = outer.clientHeight;
     draw();
   };
-  //fixupContentSize();
+  fixupContentSize();
   window.addEventListener('optimizedResize', fixupContentSize);
   
   document.getElementById('zoom-in').onclick = zoomIn;
@@ -102,7 +103,8 @@ var draw = function() {
 
   // do test string
   if (runtime_ready) {
-    let bufptr = TestDraw(canvas.width, canvas.height, dpr);
+    let bufptr = TestDraw(outer.scrollLeft, outer.scrollTop,
+                          canvas.width, canvas.height, dpr);
     let arr = new Uint8ClampedArray(Module.HEAPU8.buffer,
                                     bufptr, canvas.width *
                                     canvas.height * 4);
@@ -125,11 +127,17 @@ var draw = function() {
                              new Size(outer.clientWidth, outer.clientHeight)));
 };
 
+let g_zoom = 1.0;
+
 const zoomIn = function() {
-  docview.zoom(1.1);
+  g_zoom *= 1.1;
+  SetZoom(g_zoom);
+  draw();
 };
 const zoomOut = function() {
-  docview.zoom(1/1.1);
+  g_zoom /= 1.1;
+  SetZoom(g_zoom);
+  draw();
 };
 const zoom100 = function() {
   docview.zoomabs(1);

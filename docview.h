@@ -11,6 +11,7 @@ class DocView {
   int Width() const;
   int Height() const;
   void Draw(SkCanvas* ctx);
+  void SetZoom(float zoom) { zoom_ = zoom; }
   void SetScale(float scale) { scale_ = scale; }
  private:
   int pages_;

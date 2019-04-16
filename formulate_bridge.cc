@@ -13,7 +13,8 @@ formulate::DocView* view_;
 extern "C" {
 
 EMSCRIPTEN_KEEPALIVE
-void* TestDraw(int width, int height, float scale) {
+void* TestDraw(int xstart, int ystart,
+               int width, int height, float scale) {
   if (bitmap_) {
     if (bitmap_->width() != width ||
 	bitmap_->height() != height) {
@@ -42,9 +43,18 @@ void* TestDraw(int width, int height, float scale) {
   // font.setSize(40);
   // font.setSubpixel(true);
   // offscreen.drawString("Hello world", 80, 80, font, paint);
+  offscreen.translate(-xstart, -ystart);
   view_->SetScale(scale);
   view_->Draw(&offscreen);
   return bitmap_->getPixels();
+}
+
+EMSCRIPTEN_KEEPALIVE
+void SetZoom(float zoom) {
+  if (view_) {
+    fprintf(stderr, "got zoom: %f\n", zoom);
+    view_->SetZoom(zoom);
+  }
 }
 
 }  // extern "C"
