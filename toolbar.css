@@ -1,0 +1,18 @@
+.toolbar {
+    margin-top: 5px;
+    padding: 5px 0 5px 30px;
+    cursor: default;
+    border-top: 1px solid rgb(218, 220, 224);
+    border-bottom: 1px solid rgb(218, 220, 224);
+}
+
+.toolbar-button {
+    padding: 3px;
+    margin-right: 2px;
+    display: inline-block;
+}
+
+.toolbar-button:hover {
+    background-color: rgb(0, 0, 0, 0.06);
+    display: inline-block;
+}

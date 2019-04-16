@@ -16,7 +16,18 @@ var doc;
 var docview;
 var viewOffset = new Point(0, 0);
 
+let runtime_ready = false;
+
 document.addEventListener('DOMContentLoaded', function() {
+  Module['onRuntimeInitialized'] = function() {
+    runtime_ready = true;
+    console.log("runtime is ready");
+    draw();
+  };
+  TestDraw = Module.cwrap('TestDraw', 'number',
+                          ['number',  // width
+                           'number']);  // height
+
   doc = new Doc(3);
   docview = new DocView(doc, function() {
     setTimeout(function() {
@@ -63,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
     canvas.height = outer.clientHeight;
     draw();
   };
-  fixupContentSize();
+  //fixupContentSize();
   window.addEventListener('optimizedResize', fixupContentSize);
   
   document.getElementById('zoom-in').onclick = zoomIn;
@@ -88,6 +99,17 @@ var draw = function() {
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
   ctx.scale(dpr, dpr);
+
+  // do test string
+  if (runtime_ready) {
+    let bufptr = TestDraw(canvas.width, canvas.height, dpr);
+    let arr = new Uint8ClampedArray(Module.HEAPU8.buffer,
+                                    bufptr, canvas.width *
+                                    canvas.height * 4);
+    let img = new ImageData(arr, canvas.width, canvas.height);
+    ctx.putImageData(img, 0, 0);
+  }
+  return;
 
   // ctx.font = "20px Arial";
   ctx.fillStyle = "#909090";
