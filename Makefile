@@ -16,7 +16,7 @@ formulate.html: $(OBJS)
 	emcc -o $@ $(OBJS) -s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" -s ALLOW_MEMORY_GROWTH=1
 
 TESTOBJS=\
-	TestDoc.o \
+	testdoc.o \
 	docview.o \
 	skia/out/canvaskit_wasm/libskia.a
 
