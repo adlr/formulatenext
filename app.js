@@ -55,8 +55,8 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   var outer = document.getElementById('outer');
-  var container = document.getElementById('container');
-  var content = document.getElementById('content');
+  // var container = document.getElementById('container');
+  // var content = document.getElementById('content');
   var canvas = document.getElementById('canvas');
   console.log('start');
   throttle('scroll', 'optimizedScroll', outer);
@@ -64,13 +64,13 @@ document.addEventListener('DOMContentLoaded', function() {
     var dx = outer.scrollLeft;
     var dy = outer.scrollTop;
     draw();
-    container.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+    //container.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
   });
 
   throttle('resize', 'optimizedResize');
   var fixupContentSize = function() {
-    canvas.style.height = content.style.height = outer.clientHeight + 'px';
-    canvas.style.width = content.style.width = outer.clientWidth + 'px';
+    // canvas.style.height = content.style.height = outer.clientHeight + 'px';
+    // canvas.style.width = content.style.width = outer.clientWidth + 'px';
     canvas.width = outer.clientWidth;
     canvas.height = outer.clientHeight;
     draw();
@@ -86,6 +86,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // document.getElementById('file-input').addEventListener('change',
   //                                                        loadFile, false);
+  let mouse_down = false;
+  document.getElementById('inner').addEventListener('mousedown', ev => {
+    console.log('mouse down ' + ev.offsetX + ', ' + ev.offsetY);
+    mouse_down = true;
+  });
+  document.getElementById('inner').addEventListener('mousemove', ev => {
+    if (mouse_down)
+      console.log('mouse move ' + ev.offsetX + ', ' + ev.offsetY);
+  });
+  document.getElementById('inner').addEventListener('mouseup', ev => {
+    console.log('mouse up   ' + ev.offsetX + ', ' + ev.offsetY);
+    mouse_down = false;
+  });
+
 }, false);
 
 var draw = function() {

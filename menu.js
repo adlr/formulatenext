@@ -208,7 +208,7 @@ class MenuBar {
     this.labels = [];
     this.menuShowing = null;
     this.docClick = ev => {
-      console.log('doc click');
+      //console.log('doc click');
       this.hideMenu(); };
     document.addEventListener('click', this.docClick);
     this.div.addEventListener('click', ev => { ev.stopPropagation(); });
@@ -250,7 +250,7 @@ class MenuBar {
 const populate2 = function(items, container) {
   for (let i = 0; i < items.length; i++) {
     const initem = items[i];
-    console.log('handling ' + initem.name);
+    //console.log('handling ' + initem.name);
     let item = null;
     if (container instanceof MenuBar) {
       item = new MenuBarLabel(initem.name);
@@ -403,12 +403,12 @@ document.addEventListener('DOMContentLoaded', function() {
   shortCutListener = new ShortCutListener();
   let menuBar = new MenuBar(document.getElementById('menubar'));
   populate2(menus, menuBar);
-  console.log(menuBar);
-  let clicker = document.getElementById('mybutton');
-  let clicknum = 0;
-  clicker.addEventListener('click', function(ev) {
-    clicknum++;
-    document.getElementById('number').innerHTML = clicknum;
-  });
+  // console.log(menuBar);
+  // let clicker = document.getElementById('mybutton');
+  // let clicknum = 0;
+  // clicker.addEventListener('click', function(ev) {
+  //   clicknum++;
+  //   document.getElementById('number').innerHTML = clicknum;
+  // });
 }, false);
 
