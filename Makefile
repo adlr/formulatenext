@@ -23,14 +23,12 @@ TESTOBJS=\
 MATERIAL_FONTS_FILES=\
 	MaterialIcons-Regular.woff2 \
 	MaterialIcons-Regular.woff \
-	MaterialIcons-Regular.ttf
+	MaterialIcons-Regular.ttf \
+	material-icons.css
 
-MATERIAL_GIT_BASE := https://github.com/google/material-design-icons/raw/master/iconfont/
+MATERIAL_GIT_BASE := https://raw.githubusercontent.com/google/material-design-icons/master/iconfont/
 
-MaterialIcons-Regular.% :
-	curl -O $(MATERIAL_GIT_BASE)$@
-
-material-icons.css: $(MATERIAL_FONTS_FILES)
+$(MATERIAL_FONTS_FILES) :
 	curl -O $(MATERIAL_GIT_BASE)$@
 
 testdoc.html: $(TESTOBJS) material-icons.css
