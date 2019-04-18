@@ -65,3 +65,7 @@ canvas {
   display: block;
   z-index: 2;
 }
+
+#file-input {
+  display: none;
+}

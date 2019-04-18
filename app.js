@@ -29,63 +29,21 @@ document.addEventListener('DOMContentLoaded', function() {
                            'number']);  // height
   SetZoom = Module.cwrap('SetZoom', null, ['number']);
 
-  doc = new Doc(3);
-  docview = new DocView(doc, function() {
-    setTimeout(function() {
-      console.log('size changed');
-      const docSize = docview.size;
-      const viewportSize = new Size(outer.clientWidth,
-                                    outer.clientHeight);
-      viewOffset.x = Math.max(viewportSize.width -
-                              docSize.width, 0) / 2;
-      viewOffset.y = Math.max(viewportSize.height -
-                              docSize.height, 0) / 2;
-      if (viewOffset.x) {
-        inner.style.width = viewportSize.width + "px";
-      } else {
-        inner.style.width = docSize.width;
-      }
-      if (viewOffset.y) {
-        inner.style.height = viewportSize.height + "px";
-      } else {
-        inner.style.height = docSize.height;
-      }
-      draw();
-    }, 0);
-  });
-
   var outer = document.getElementById('outer');
-  // var container = document.getElementById('container');
-  // var content = document.getElementById('content');
   var canvas = document.getElementById('canvas');
-  console.log('start');
   throttle('scroll', 'optimizedScroll', outer);
   outer.addEventListener('optimizedScroll', function() {
-    var dx = outer.scrollLeft;
-    var dy = outer.scrollTop;
     draw();
-    //container.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
   });
 
   throttle('resize', 'optimizedResize');
   var fixupContentSize = function() {
-    // canvas.style.height = content.style.height = outer.clientHeight + 'px';
-    // canvas.style.width = content.style.width = outer.clientWidth + 'px';
-    canvas.width = outer.clientWidth;
-    canvas.height = outer.clientHeight;
     draw();
   };
-  fixupContentSize();
   window.addEventListener('optimizedResize', fixupContentSize);
   
   document.getElementById('zoom-in').onclick = zoomIn;
   document.getElementById('zoom-out').onclick = zoomOut;
-  // document.getElementById('place').onclick = function() {
-  //   console.log('place: ' + document.getElementById('string').value);
-  // };
-
-  // document.getElementById('file-input').addEventListener('change',
-  //                                                        loadFile, false);
   let mouse_down = false;
   document.getElementById('inner').addEventListener('mousedown', ev => {
     console.log('mouse down ' + ev.offsetX + ', ' + ev.offsetY);
@@ -100,12 +58,12 @@ document.addEventListener('DOMContentLoaded', function() {
     mouse_down = false;
   });
 
+  document.getElementById('file-input').addEventListener('change',
+                                                         loadFile, false);
 }, false);
 
 var draw = function() {
   var canvas = document.getElementById('canvas');
-  var inner = document.getElementById('inner');
-  var outer = document.getElementById('outer');
   var ctx = canvas.getContext('2d');
 
   // high DPI support
@@ -125,30 +83,16 @@ var draw = function() {
     let img = new ImageData(arr, canvas.width, canvas.height);
     ctx.putImageData(img, 0, 0);
   }
-  return;
-
-  // ctx.font = "20px Arial";
-  ctx.fillStyle = "#909090";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  // ctx.fillText("hi " + inner.clientHeight + ', ' + inner.clientWidth + '\n' +
-  //              outer.scrollTop + ', ' + outer.scrollLeft + ', ' +
-  //              outer.clientWidth + ', ' + outer.clientHeight, 30, 30);
-
-  ctx.translate(-outer.scrollLeft, -outer.scrollTop);
-  ctx.translate(viewOffset.x, viewOffset.y);
-  
-  docview.draw(ctx, new Rect(new Point(outer.scrollLeft, outer.scrollTop),
-                             new Size(outer.clientWidth, outer.clientHeight)));
 };
 
 let g_zoom = 1.0;
 
-const zoomIn = function() {
+const zoomIn = function(ev) {
   g_zoom *= 1.1;
   SetZoom(g_zoom);
   draw();
 };
-const zoomOut = function() {
+const zoomOut = function(ev) {
   g_zoom /= 1.1;
   SetZoom(g_zoom);
   draw();

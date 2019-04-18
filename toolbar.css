@@ -4,6 +4,7 @@
     cursor: default;
     border-top: 1px solid rgb(218, 220, 224);
     border-bottom: 1px solid rgb(218, 220, 224);
+    user-select: none;
 }
 
 .toolbar-button {

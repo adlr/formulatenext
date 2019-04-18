@@ -20,7 +20,20 @@ TESTOBJS=\
 	docview.o \
 	skia/out/canvaskit_wasm/libskia.a
 
-testdoc.html: $(TESTOBJS)
+MATERIAL_FONTS_FILES=\
+	MaterialIcons-Regular.woff2 \
+	MaterialIcons-Regular.woff \
+	MaterialIcons-Regular.ttf
+
+MATERIAL_GIT_BASE := https://github.com/google/material-design-icons/raw/master/iconfont/
+
+MaterialIcons-Regular.% :
+	curl -O $(MATERIAL_GIT_BASE)$@
+
+material-icons.css: $(MATERIAL_FONTS_FILES)
+	curl -O $(MATERIAL_GIT_BASE)$@
+
+testdoc.html: $(TESTOBJS) material-icons.css
 	emcc -o $@ $(TESTOBJS) \
 		-std=c++14 \
 		-Iskia/include/core \

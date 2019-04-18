@@ -1,18 +1,22 @@
 'use strict';
 
-let menuOpen = function() { console.log('menuOpen'); }
-let menuClose = function() { console.log('menuClose'); }
-let menuSave = function() { console.log('menuSave'); }
-let menuSaveAs = function() { console.log('menuSaveAs'); }
-let menuPrint = function() { console.log('menuPrint'); }
-let menuUndo = function() { console.log('menuUndo'); }
-let menuRedo = function() { console.log('menuRedo'); }
-let menuCut = function() { console.log('menuCut'); }
-let menuCopy = function() { console.log('menuCopy'); }
-let menuPaste = function() { console.log('menuPaste'); }
-let menuZoomOut = function() { console.log('menuZoomOut'); }
-let menuZoomIn = function() { console.log('menuZoomIn'); }
-let menuView100 = function() { console.log('menuView100'); }
+let menuOpen = function(ev) {
+  let ev2 = document.createEvent('MouseEvents');
+  ev2.initEvent('click', true, true);
+  document.getElementById('file-input').dispatchEvent(ev2);
+};
+let menuClose = function() { console.log('menuClose'); };
+let menuSave = function() { console.log('menuSave'); };
+let menuSaveAs = function() { console.log('menuSaveAs'); };
+let menuPrint = function() { console.log('menuPrint'); };
+let menuUndo = function() { console.log('menuUndo'); };
+let menuRedo = function() { console.log('menuRedo'); };
+let menuCut = function() { console.log('menuCut'); };
+let menuCopy = function() { console.log('menuCopy'); };
+let menuPaste = function() { console.log('menuPaste'); };
+let menuZoomOut = function() { zoomOut(); };
+let menuZoomIn = function() { zoomIn(); };
+let menuView100 = function() { console.log('menuView100'); };
 
 let menus = [
   {name: "File", children: [
@@ -62,7 +66,7 @@ class ShortCutListener {
     const shortcut = ev.shiftKey ? ev.key.toUpperCase() : ev.key;
     if (this.shortcuts.hasOwnProperty(shortcut)) {
       ev.preventDefault();
-      this.shortcuts[shortcut]();
+      this.shortcuts[shortcut](ev);
     }
   }
   add(key, callback) {
@@ -281,134 +285,10 @@ let shortcutKeyToStr = function(key) {
   }
 };
 
-let populateSubmenu = function(items, container) {
-  let timerRunning = false;
-  let timer = null;
-
-  for (let i = 0; i < items.length; i++) {
-    let item = items[i];
-    let div = document.createElement("div");
-    if (item.name == "-") {
-      div.classList.add('menuspacer');
-    } else {
-      let left = document.createElement('div');
-      left.classList.add('menuitemname');
-      left.innerHTML = item.name;
-      div.appendChild(left);
-      if (item.children || item.key) {
-        let right = document.createElement('div');
-        right.classList.add('menuitemright');
-        if (item.children) {
-          right.innerHTML = '&#9658;';
-        } else {
-          right.innerHTML = shortcutKeyToStr(item.key);
-        }
-        div.appendChild(right);
-      }
-      div.classList.add('menuitem');
-      div.addEventListener('click', function() {
-	console.log('clicked');
-      });
-    }
-    container.appendChild(div);
-    if (item.hasOwnProperty('children')) {
-      let container = document.createElement('div');
-      container.classList.add('subsubmenucontainer');
-      div.appendChild(container);
-      var temp = function(){
-        let timerRunning = false;
-        let timer = -1;
-        div.addEventListener('mouseenter', function() {
-          if (timerRunning) {
-            clearTimeout(timer);
-            timerRunning = false;
-          }
-          timer = setTimeout(function() {
-            container.style.display = 'block';
-          }, 500);
-          timerRunning = true;
-        });
-        div.addEventListener('mouseleave', function() {
-          if (timerRunning) {
-            clearTimeout(timer);
-            timerRunning = false;
-          }
-          timer = setTimeout(function() {
-            container.style.display = 'none';
-          }, 500);
-          timerRunning = true;
-        });
-      };
-      temp();
-      populateSubmenu(item.children, container);
-    }
-  }
-}
-
-let populateDom = function(items, rootcontainer) {
-  let submenuvisible = -1;
-  let labels = [];
-  let submenus = [];
-  const entermenuname = function(index) {
-    if (submenuvisible == -1 || submenuvisible == index)
-      return;
-    submenus[submenuvisible].style.display = 'none';
-    labels[submenuvisible].classList.remove('rootmenuitemactive');
-    submenuvisible = index;
-    submenus[submenuvisible].style.display = 'block';
-    labels[submenuvisible].classList.add('rootmenuitemactive');
-  }
-  const submenuclick = function(index) {
-    if (submenuvisible == -1 || submenuvisible != index) {
-      if (submenuvisible != -1) {
-        submenus[submenuvisible].style.display = 'none';
-        labels[submenuvisible].classList.remove('rootmenuitemactive');
-      }
-      submenuvisible = index;
-      submenus[submenuvisible].style.display = 'block';
-      labels[submenuvisible].classList.add('rootmenuitemactive');
-    } else {
-      submenus[submenuvisible].style.display = 'none';
-      labels[submenuvisible].classList.remove('rootmenuitemactive');
-      submenuvisible = -1;
-    }
-  }
-  for (let i = 0; i < items.length; i++) {
-    let item = items[i];
-    let div = document.createElement("div");
-    div.innerHTML = item.name;
-    div.classList.add('rootmenuitem');
-    rootcontainer.appendChild(div);
-    div.addEventListener('mouseenter', function() {
-      entermenuname(i);
-    });
-    let container = document.createElement('div');
-    container.classList.add('submenucontainer');
-    div.appendChild(container);
-    labels.push(div);
-    submenus.push(container);
-    populateSubmenu(item.children, container);
-    div.addEventListener('click', function(ev) {
-      submenuclick(i);
-    });
-    div.addEventListener('mousedown', function(ev) {
-      ev.preventDefault();
-    });
-  }
-}
-
 document.addEventListener('DOMContentLoaded', function() {
   // create dom elements
-  //populateDom(menus, document.getElementById('menubar'));
   shortCutListener = new ShortCutListener();
   let menuBar = new MenuBar(document.getElementById('menubar'));
   populate2(menus, menuBar);
-  // console.log(menuBar);
-  // let clicker = document.getElementById('mybutton');
-  // let clicknum = 0;
-  // clicker.addEventListener('click', function(ev) {
-  //   clicknum++;
-  //   document.getElementById('number').innerHTML = clicknum;
-  // });
 }, false);
 
