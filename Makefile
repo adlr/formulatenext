@@ -31,6 +31,9 @@ MATERIAL_GIT_BASE := https://raw.githubusercontent.com/google/material-design-ic
 $(MATERIAL_FONTS_FILES) :
 	curl -O $(MATERIAL_GIT_BASE)$@
 
+Roboto/Roboto.css :
+	./download_font.sh 'https://fonts.googleapis.com/css?family=Roboto'
+
 testdoc.html: $(TESTOBJS) material-icons.css
 	emcc -o $@ $(TESTOBJS) \
 		-std=c++14 \
