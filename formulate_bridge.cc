@@ -54,6 +54,10 @@ void SetZoom(float zoom) {
   if (view_) {
     fprintf(stderr, "got zoom: %f\n", zoom);
     view_->SetZoom(zoom);
+    // bridge_setSize
+    EM_ASM_({
+        bridge_setSize($0, $1, $2, $3);
+      }, view_->Width(), view_->Height(), 0, 1);
   }
 }
 

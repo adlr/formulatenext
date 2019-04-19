@@ -101,6 +101,11 @@ const zoom100 = function() {
   docview.zoomabs(1);
 };
 
+let bridge_setSize = function(width, height, xpos, ypos) {
+  console.log('setsize ' +
+              width + ', ' + height + ', ' + xpos + ', ' + ypos);
+};
+
 let loadFile = function(element) {
   let file = element.target.files[0];
   if (!file) {

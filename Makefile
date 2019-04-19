@@ -18,6 +18,7 @@ formulate.html: $(OBJS)
 TESTOBJS=\
 	formulate_bridge.o \
 	docview.o \
+	NotoMono-Regular.ttf.o \
 	skia/out/canvaskit_wasm/libskia.a
 
 MATERIAL_FONTS_FILES=\
@@ -34,12 +35,15 @@ $(MATERIAL_FONTS_FILES) :
 Roboto/Roboto.css :
 	./download_font.sh 'https://fonts.googleapis.com/css?family=Roboto'
 
-testdoc.html: $(TESTOBJS) material-icons.css
-	emcc -o $@ $(TESTOBJS) \
+NotoMono-Regular.ttf.o : skia/modules/canvaskit/fonts/NotoMono-Regular.ttf.cpp
+	emcc -c -o $@ \
 		-std=c++14 \
 		-Iskia/include/core \
 		-Iskia/include/config \
-		skia/modules/canvaskit/fonts/NotoMono-Regular.ttf.cpp \
+		$<
+
+testdoc.html: $(TESTOBJS) material-icons.css Roboto/Roboto.css
+	emcc -o $@ $(TESTOBJS) \
 		-s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" \
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s USE_LIBPNG=1 \
