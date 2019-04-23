@@ -90,20 +90,28 @@ let g_zoom = 1.0;
 const zoomIn = function(ev) {
   g_zoom *= 1.1;
   SetZoom(g_zoom);
-  draw();
+  //draw();
 };
 const zoomOut = function(ev) {
   g_zoom /= 1.1;
   SetZoom(g_zoom);
-  draw();
+  //draw();
 };
 const zoom100 = function() {
   docview.zoomabs(1);
 };
 
+// set the size/position of the scrollbar view
 let bridge_setSize = function(width, height, xpos, ypos) {
-  console.log('setsize ' +
-              width + ', ' + height + ', ' + xpos + ', ' + ypos);
+  let inner = document.getElementById('inner');
+  inner.setAttribute('width', 'width: ' + width + 'px');
+  inner.setAttribute('height', 'height: ' + height + 'px');
+  let outer = document.getElementById('outer');
+  outer.scrollLeft = xpos;
+  outer.scrollTop = ypos;
+  draw();
+  // console.log('setsize ' +
+  //             width + ', ' + height + ', ' + xpos + ', ' + ypos);
 };
 
 let loadFile = function(element) {
