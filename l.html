@@ -12,11 +12,15 @@
       </style>
     </head><body>
 
+<textarea id="x"></textarea>
 <script language="JavaScript">
   let r = 8;
+  let full = '';
   let w = function(s) {
   document.write(s);
-  console.log(s);
+  //console.log(s);
+  full = full + s;
+  document.getElementById('x').innerText = full;
   };
   w('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">');
     w('<path fill="#00b000" d="');

@@ -48,3 +48,14 @@ testdoc.html: $(TESTOBJS) material-icons.css Roboto/Roboto.css
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s USE_LIBPNG=1 \
 		-s USE_FREETYPE=1
+
+icons: icons-16.png icons-192.png icons-512.png
+
+icons-16.png: favicon.svg
+	rsvg-convert -w 16 -h 16 --format=png --output=$@ $<
+
+icons-192.png: favicon.svg
+	rsvg-convert -w 192 -h 192 --format=png --output=$@ $<
+
+icons-512.png: favicon.svg
+	rsvg-convert -w 512 -h 512 --format=png --output=$@ $<
