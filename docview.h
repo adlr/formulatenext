@@ -2,15 +2,17 @@
 
 #include "SkCanvas.h"
 
+#include "view.h"
+
 namespace formulate {
 
-class DocView {
+class DocView : public View {
  public:
   DocView(int pages)
     : pages_(pages) {}
   int Width() const;
   int Height() const;
-  void Draw(SkCanvas* ctx);
+  void Draw(SkCanvas* canvas);
   void SetZoom(float zoom) { zoom_ = zoom; }
   void SetScale(float scale) { scale_ = scale; }
  private:
@@ -20,3 +22,4 @@ class DocView {
 };
 
 }  // namespace formulate
+

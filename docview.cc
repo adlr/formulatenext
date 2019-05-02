@@ -13,23 +13,22 @@ namespace {
 }
 
 int DocView::Width() const {
-  return (kPageWidth * zoom_ + kBorderPixels * 2) * scale_;
+  return kPageWidth * zoom_ + kBorderPixels * 2;
 }
 
 int DocView::Height() const {
-  return ((kPageHeight + kBorderPixels) * pages_ +
-	  kBorderPixels) * scale_;
+  return (kPageHeight + kBorderPixels) * pages_ + kBorderPixels;
 }
 
-void DocView::Draw(SkCanvas* ctx) {
-  ctx->scale(scale_, scale_);
+void DocView::Draw(SkCanvas* canvas) {
+  canvas->scale(scale_, scale_);
   SkRect rect = SkRect::MakeXYWH(0, 0, Width(), Height());
   SkPaint paint;
   paint.setAntiAlias(true);
   paint.setStyle(SkPaint::kFill_Style);
   paint.setColor(0xff808080);  // opaque grey
   paint.setStrokeWidth(0);
-  ctx->drawRect(rect, paint);
+  canvas->drawRect(rect, paint);
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setColor(0xff000000);  // opaque black
   paint.setStrokeWidth(1);
@@ -40,17 +39,17 @@ void DocView::Draw(SkCanvas* ctx) {
     SkRect page = SkRect::MakeXYWH(kBorderPixels,
 				   pagetop,
 				   pagewidth, pageheight);
-    //ctx->save();
+    //canvas->save();
     paint.setStyle(SkPaint::kStroke_Style);
     paint.setColor(0xff000000);  // opaque black
     paint.setStrokeWidth(1);
-    ctx->drawRect(page.makeInset(-0.5, -0.5), paint);
+    canvas->drawRect(page.makeInset(-0.5, -0.5), paint);
 
     paint.setStyle(SkPaint::kFill_Style);
     paint.setColor(0xffffffff);  // opaque white
     paint.setStrokeWidth(0);
-    ctx->drawRect(page, paint);
-    //ctx->restore();
+    canvas->drawRect(page, paint);
+    //canvas->restore();
     pagetop += pageheight + kBorderPixels;
   }
 }

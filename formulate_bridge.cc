@@ -7,8 +7,10 @@
 
 #include "docview.h"
 
-SkBitmap* bitmap_;
-formulate::DocView* view_;
+using namespace formulate;
+
+ScrollView* scroll_view_;
+DocView* doc_view_;
 
 extern "C" {
 
@@ -51,14 +53,32 @@ void* TestDraw(int xstart, int ystart,
 
 EMSCRIPTEN_KEEPALIVE
 void SetZoom(float zoom) {
-  if (view_) {
-    fprintf(stderr, "got zoom: %f\n", zoom);
-    view_->SetZoom(zoom);
-    // bridge_setSize
-    EM_ASM_({
-        bridge_setSize($0, $1, $2, $3);
-      }, view_->Width(), view_->Height(), 0, 1);
-  }
+  doc_view_->SetZoom(zoom);
+  // bridge_setSize
+  // EM_ASM_({
+  //     bridge_setSize($0, $1, $2, $3);
+  //   }, view_->Width(), view_->Height(), 0, 1);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void SetScale(float scale) {
+  scroll_view_->SetScale(scale);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void SetSize(float width, float height) {
+  scroll_view_->SetSize(SkSize::Make(width, height));
+}
+
+EMSCRIPTEN_KEEPALIVE
+void SetScrollOrigin(float xpos, float ypos) {
+  scroll_view_->SetOrigin(SkPoint::Make(xpos, ypos));
+}
+
+EMSCRIPTEN_KEEPALIVE
+bool Init() {
+  doc_view_ = new DocView(3);
+  scroll_view_ = new ScrollView(doc_view_);
 }
 
 }  // extern "C"
