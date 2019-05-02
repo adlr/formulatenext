@@ -12,12 +12,13 @@ namespace {
   float kBorderPixels = 20.0;
 }
 
-int DocView::Width() const {
+float DocView::Width() const {
   return kPageWidth * zoom_ + kBorderPixels * 2;
 }
 
-int DocView::Height() const {
-  return (kPageHeight + kBorderPixels) * pages_ + kBorderPixels;
+float DocView::Height() const {
+  return (kPageHeight * zoom_ + kBorderPixels) * pages_ +
+    kBorderPixels;
 }
 
 void DocView::Draw(SkCanvas* canvas) {

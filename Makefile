@@ -19,6 +19,7 @@ formulate.html: $(OBJS)
 TESTOBJS=\
 	formulate_bridge.o \
 	docview.o \
+	scrollview.o \
 	NotoMono-Regular.ttf.o \
 	skia/skia/out/canvaskit_wasm/libskia.a
 

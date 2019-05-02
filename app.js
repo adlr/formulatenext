@@ -1,3 +1,5 @@
+'use strict';
+
 var throttle = function(type, name, obj) {
   obj = obj || window;
   var running = false;
@@ -18,27 +20,45 @@ var viewOffset = new Point(0, 0);
 
 let runtime_ready = false;
 
+let SetZoom = null;
+let SetScale = null;
+let SetSize = null;
+let SetScrollOrigin = null;
+let Init = null;
+
 document.addEventListener('DOMContentLoaded', function() {
   Module['onRuntimeInitialized'] = function() {
     runtime_ready = true;
     console.log("runtime is ready");
-    draw();
+    Init();
   };
-  TestDraw = Module.cwrap('TestDraw', 'number',
-                          ['number',  // width
-                           'number']);  // height
+  // TestDraw = Module.cwrap('TestDraw', 'number',
+  //                         ['number',  // width
+  //                          'number']);  // height
   SetZoom = Module.cwrap('SetZoom', null, ['number']);
+  SetScale = Module.cwrap('SetScale', null, ['number']);
+  SetSize = Module.cwrap('SetSize', null, ['number', 'number']);
+  SetScrollOrigin = Module.cwrap('SetScrollOrigin', null,
+                                 ['number', 'number']);
+  Init = Module.cwrap('Init', null, []);
 
   var outer = document.getElementById('outer');
   var canvas = document.getElementById('canvas');
   throttle('scroll', 'optimizedScroll', outer);
   outer.addEventListener('optimizedScroll', function() {
-    draw();
+    if (!runtime_ready) return;
+    SetScrollOrigin(outer.scrollLeft, outer.scrollTop);
   });
 
   throttle('resize', 'optimizedResize');
   var fixupContentSize = function() {
-    draw();
+    if (!runtime_ready) return;
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    SetScale(dpr);
+    SetSize(rect.width, rect.height);
   };
   window.addEventListener('optimizedResize', fixupContentSize);
   
@@ -62,54 +82,44 @@ document.addEventListener('DOMContentLoaded', function() {
                                                          loadFile, false);
 }, false);
 
-var draw = function() {
+var PushCanvas = (bufptr, width, height) => {
   var canvas = document.getElementById('canvas');
-  var ctx = canvas.getContext('2d');
-
-  // high DPI support
-  var dpr = window.devicePixelRatio || 1;
-  var rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
-
-  // do test string
-  if (runtime_ready) {
-    let bufptr = TestDraw(outer.scrollLeft, outer.scrollTop,
-                          canvas.width, canvas.height, dpr);
-    let arr = new Uint8ClampedArray(Module.HEAPU8.buffer,
-                                    bufptr, canvas.width *
-                                    canvas.height * 4);
-    let img = new ImageData(arr, canvas.width, canvas.height);
-    ctx.putImageData(img, 0, 0);
+  if (canvas.width != width || canvas.height != height) {
+    console.log(`Size mismatch! Canvas is (${canvas.width}, ${canvas.height}). Given (${width}, ${height})`);
   }
+  var ctx = canvas.getContext('2d');
+  let arr = new Uint8ClampedArray(Module.HEAPU8.buffer,
+                                  bufptr, canvas.width *
+                                  canvas.height * 4);
+  let img = new ImageData(arr, canvas.width, canvas.height);
+  ctx.putImageData(img, 0, 0);
 };
 
 let g_zoom = 1.0;
 
 const zoomIn = function(ev) {
+  if (!runtime_ready) return;
   g_zoom *= 1.1;
   SetZoom(g_zoom);
-  //draw();
 };
 const zoomOut = function(ev) {
+  if (!runtime_ready) return;
   g_zoom /= 1.1;
   SetZoom(g_zoom);
-  //draw();
 };
 const zoom100 = function() {
+  if (!runtime_ready) return;
   docview.zoomabs(1);
 };
 
 // set the size/position of the scrollbar view
 let bridge_setSize = function(width, height, xpos, ypos) {
   let inner = document.getElementById('inner');
-  inner.setAttribute('width', 'width: ' + width + 'px');
-  inner.setAttribute('height', 'height: ' + height + 'px');
+  inner.style.width = width + 'px';
+  inner.style.height = height + 'px';
   let outer = document.getElementById('outer');
   outer.scrollLeft = xpos;
   outer.scrollTop = ypos;
-  draw();
   // console.log('setsize ' +
   //             width + ', ' + height + ', ' + xpos + ', ' + ypos);
 };
