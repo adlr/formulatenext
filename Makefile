@@ -5,9 +5,10 @@ OBJS=\
 	pdfium/out/Debug/obj/libpdfium.a
 
 INC=\
-	-Ipdfium \
-	-Iskia/include/core \
-	-Iskia/include/config
+	-Ipdfium/pdfium \
+	-Iskia/skia \
+	-Iskia/skia/include/core \
+	-Iskia/skia/include/config
 
 %.o : %.cc
 	emcc -std=c++14 $(INC) -o $@ $<
@@ -19,7 +20,7 @@ TESTOBJS=\
 	formulate_bridge.o \
 	docview.o \
 	NotoMono-Regular.ttf.o \
-	skia/out/canvaskit_wasm/libskia.a
+	skia/skia/out/canvaskit_wasm/libskia.a
 
 MATERIAL_FONTS_FILES=\
 	MaterialIcons-Regular.woff2 \
@@ -35,14 +36,15 @@ $(MATERIAL_FONTS_FILES) :
 Roboto/Roboto.css :
 	./download_font.sh 'https://fonts.googleapis.com/css?family=Roboto'
 
-NotoMono-Regular.ttf.o : skia/modules/canvaskit/fonts/NotoMono-Regular.ttf.cpp
+NotoMono-Regular.ttf.o : skia/skia/modules/canvaskit/fonts/NotoMono-Regular.ttf.cpp
 	emcc -c -o $@ \
 		-std=c++14 \
-		-Iskia/include/core \
-		-Iskia/include/config \
+		-Iskia/skia \
+		-Iskia/skia/include/core \
+		-Iskia/skia/include/config \
 		$<
 
-testdoc.html: $(TESTOBJS) material-icons.css Roboto/Roboto.css
+testdoc.html: $(TESTOBJS) $(MATERIAL_FONTS_FILES) Roboto/Roboto.css
 	emcc -o $@ $(TESTOBJS) \
 		-s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" \
 		-s ALLOW_MEMORY_GROWTH=1 \
