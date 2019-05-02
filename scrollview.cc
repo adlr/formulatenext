@@ -10,10 +10,12 @@
 
 namespace formulate {
 
-void ScrollView::Draw(SkCanvas* canvas) {
+void ScrollView::Draw(SkCanvas* canvas, SkRect rect) {
   canvas->scale(scale_, scale_);
+  rect = ScaleRect(rect, scale_);
   canvas->translate(-origin_.x(), -origin_.y());
-  child_->Draw(canvas);
+  rect.offset(origin_);
+  child_->Draw(canvas, rect);
 }
 
 void ScrollView::RepositionChild() {
@@ -50,7 +52,7 @@ void ScrollView::DoDraw() {
     return;
   }
   SkCanvas offscreen(bitmap);
-  Draw(&offscreen);
+  Draw(&offscreen, SkRect::MakeWH(bitmap.width(), bitmap.height()));
   // Push to HTML canvas now
   EM_ASM_({
       PushCanvas($0, $1, $2);

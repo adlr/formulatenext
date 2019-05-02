@@ -20,6 +20,7 @@ TESTOBJS=\
 	formulate_bridge.o \
 	docview.o \
 	scrollview.o \
+	view.o \
 	NotoMono-Regular.ttf.o \
 	skia/skia/out/canvaskit_wasm/libskia.a
 

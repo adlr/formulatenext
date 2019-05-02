@@ -13,7 +13,7 @@ class View {
   virtual ~View() {}
   virtual float Width() const = 0;
   virtual float Height() const = 0;
-  virtual void Draw(SkCanvas* canvas) = 0;
+  virtual void Draw(SkCanvas* canvas, SkRect rect) = 0;
 };
 
 template<typename T>
@@ -22,6 +22,8 @@ T Clamp(T cur, T min, T max) {
   if (cur > max) return max;
   return cur;
 }
+
+SkRect ScaleRect(SkRect rect, float scale);
 
 }  // namespace formulate
 

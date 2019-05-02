@@ -15,7 +15,7 @@ class DocView : public View {
     : pages_(pages) {}
   float Width() const;
   float Height() const;
-  void Draw(SkCanvas* canvas);
+  void Draw(SkCanvas* canvas, SkRect rect);
   void SetZoom(float zoom) { zoom_ = zoom; }
   void SetScale(float scale) { scale_ = scale; }
  private:

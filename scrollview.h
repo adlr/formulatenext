@@ -19,7 +19,7 @@ class ScrollView {
     size_ = size;
     RepositionChild();
   }
-  void Draw(SkCanvas* canvas);
+  void Draw(SkCanvas* canvas, SkRect rect);
   void SetScale(float scale) {
     scale_ = scale;
   }
