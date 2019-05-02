@@ -1,0 +1,23 @@
+diff --git a/modules/canvaskit/compile.sh b/modules/canvaskit/compile.sh
+index 9c4e5b886d..739cdb4790 100755
+--- a/modules/canvaskit/compile.sh
++++ b/modules/canvaskit/compile.sh
+@@ -19,8 +19,9 @@ pushd $BASE_DIR/../..
+ source $EMSDK/emsdk_env.sh
+ EMCC=`which emcc`
+ EMCXX=`which em++`
++EMAR=`which emar`
+ 
+-RELEASE_CONF="-Oz --closure 1 --llvm-lto 3 -DSK_RELEASE --pre-js $BASE_DIR/release.js \
++RELEASE_CONF="-Oz --llvm-lto 3 -DSK_RELEASE --pre-js $BASE_DIR/release.js \
+               -DGR_GL_CHECK_ALLOC_WITH_GET_ERROR=0"
+ EXTRA_CFLAGS="\"-DSK_RELEASE\", \"-DGR_GL_CHECK_ALLOC_WITH_GET_ERROR=0\","
+ if [[ $@ == *debug* ]]; then
+@@ -142,6 +143,7 @@ echo "Compiling bitcode"
+ ./bin/gn gen ${BUILD_DIR} \
+   --args="cc=\"${EMCC}\" \
+   cxx=\"${EMCXX}\" \
++  ar=\"${EMAR}\" \
+   extra_cflags_cc=[\"-frtti\"] \
+   extra_cflags=[\"-s\",\"USE_FREETYPE=1\",\"-s\",\"USE_LIBPNG=1\", \"-s\", \"WARN_UNALIGNED=1\",
+     \"-DSKNX_NO_SIMD\", \"-DSK_DISABLE_AAA\", \"-DSK_DISABLE_READBUFFER\",

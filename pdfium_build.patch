@@ -1,8 +1,21 @@
+From b8c153d3c900433938722de4425fcd05ffac79c6 Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Wed, 1 May 2019 21:04:34 -0700
+Subject: [PATCH] EXPERIMENTAL: wasm build
+
+---
+ config/BUILDCONFIG.gn       |  2 ++
+ config/compiler/BUILD.gn    |  6 +++---
+ toolchain/gcc_toolchain.gni |  2 +-
+ toolchain/wasm/BUILD.gn     | 19 +++++++++++++++++++
+ 4 files changed, 25 insertions(+), 4 deletions(-)
+ create mode 100644 toolchain/wasm/BUILD.gn
+
 diff --git a/config/BUILDCONFIG.gn b/config/BUILDCONFIG.gn
-index 9e843f3c3..0e9289815 100644
+index 9fea836a4..eb7764f3e 100644
 --- a/config/BUILDCONFIG.gn
 +++ b/config/BUILDCONFIG.gn
-@@ -257,6 +257,8 @@ if (target_os == "android") {
+@@ -254,6 +254,8 @@ if (target_os == "android") {
    _default_toolchain = "//build/toolchain/win:uwp_$target_cpu"
  } else if (target_os == "aix") {
    _default_toolchain = "//build/toolchain/aix:$target_cpu"
@@ -12,10 +25,19 @@ index 9e843f3c3..0e9289815 100644
    assert(false, "Unsupported target_os: $target_os")
  }
 diff --git a/config/compiler/BUILD.gn b/config/compiler/BUILD.gn
-index d777d7189..ad06c971c 100644
+index c7a015070..0e498bd92 100644
 --- a/config/compiler/BUILD.gn
 +++ b/config/compiler/BUILD.gn
-@@ -1503,7 +1503,7 @@ config("default_warnings") {
+@@ -471,7 +471,7 @@ config("compiler") {
+     }
+   }
+ 
+-  if (is_clang && !is_nacl && !use_xcode_clang) {
++  if (is_clang && !is_nacl && !(target_os == "wasm") && !use_xcode_clang) {
+     cflags += [ "-fcrash-diagnostics-dir=" +
+                 rebase_path("//tools/clang/crashreports", root_build_dir) ]
+ 
+@@ -1495,7 +1495,7 @@ config("default_warnings") {
          cflags += [
            # Ignore warnings about MSVC optimization pragmas.
            # TODO(thakis): Only for no_chromium_code? http://crbug.com/912662
@@ -24,7 +46,7 @@ index d777d7189..ad06c971c 100644
          ]
          if (is_fuchsia) {
            cflags += [
-@@ -1698,7 +1698,7 @@ config("thin_archive") {
+@@ -1699,7 +1699,7 @@ config("thin_archive") {
    # have a "thin archive" mode (it does accept -T, but it means truncating
    # archive names to 16 characters, which is not what we want).
    if ((is_posix && !is_nacl && !is_mac && !is_ios) || is_fuchsia) {
@@ -34,10 +56,10 @@ index d777d7189..ad06c971c 100644
      arflags = [ "/llvmlibthin" ]
    }
 diff --git a/toolchain/gcc_toolchain.gni b/toolchain/gcc_toolchain.gni
-index 47f18c8a5..7b6c0b5f1 100644
+index 80e2a362a..68b0d0c15 100644
 --- a/toolchain/gcc_toolchain.gni
 +++ b/toolchain/gcc_toolchain.gni
-@@ -354,7 +354,7 @@ template("gcc_toolchain") {
+@@ -358,7 +358,7 @@ template("gcc_toolchain") {
        } else {
          rspfile = "{{output}}.rsp"
          rspfile_content = "{{inputs}}"
@@ -71,3 +93,6 @@ index 000000000..e6a9fc7fd
 +    current_os = "wasm"
 +  }
 +}
+-- 
+2.11.0
+

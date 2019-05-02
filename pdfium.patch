@@ -1,5 +1,5 @@
 diff --git a/core/fxge/BUILD.gn b/core/fxge/BUILD.gn
-index 6c9ed9a11..fd480daa8 100644
+index 83374cc0e..11fa8ec50 100644
 --- a/core/fxge/BUILD.gn
 +++ b/core/fxge/BUILD.gn
 @@ -157,7 +157,7 @@ jumbo_source_set("fxge") {
@@ -26,7 +26,7 @@ index 5e1ce3960..91bd60e85 100644
  #include <unistd.h>
  #endif  // _WIN32
 diff --git a/third_party/BUILD.gn b/third_party/BUILD.gn
-index 51fd0cac4..4d503ef40 100644
+index 3863ad2f8..9d24e1cf9 100644
 --- a/third_party/BUILD.gn
 +++ b/third_party/BUILD.gn
 @@ -446,6 +446,7 @@ source_set("fx_libopenjpeg") {
@@ -51,7 +51,7 @@ index 42055836b..1aa96a72a 100644
  #endif
  
 diff --git a/third_party/yasm/yasm_assemble.gni b/third_party/yasm/yasm_assemble.gni
-index 73d554856..67f40b24a 100644
+index f94fa6bd6..cc6aaff3d 100644
 --- a/third_party/yasm/yasm_assemble.gni
 +++ b/third_party/yasm/yasm_assemble.gni
 @@ -123,6 +123,7 @@ template("yasm_assemble") {
