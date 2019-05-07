@@ -41,6 +41,9 @@ document.addEventListener('DOMContentLoaded', function() {
   SetScrollOrigin = Module.cwrap('SetScrollOrigin', null,
                                  ['number', 'number']);
   Init = Module.cwrap('Init', null, []);
+  SetFileSize = Module.cwrap('SetFileSize', null, ['number']);
+  AppendFileBytes = Module.cwrap('AppendFileBytes', null, ['number', 'number']);
+  FinishFileLoad = Module.cwrap('FinishFileLoad', null, []);
 
   var outer = document.getElementById('outer');
   var canvas = document.getElementById('canvas');
@@ -143,14 +146,18 @@ let loadFile = function(element) {
   if (!file) {
     return;
   }
+  SetFileSize(file.size);
+
   let reader = new FileReader();
   reader.onload = function(el) {
-    let contents = el.target.result;
     console.log('got a file');
+    let data = new Uint8Array(reader.result);
+    let buf = Module._malloc(data.length);
+    Module.HEAPU8.set(data, buf);
+    AppendBytes(buf, data.length);
+    Module._free(buf);
+    FinishFileLoad();
   }
   reader.readAsArrayBuffer(file);
 }
 
-let loadPDF = function(arraybuffer) {
-
-}

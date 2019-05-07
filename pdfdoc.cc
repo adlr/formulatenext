@@ -1,10 +1,49 @@
 // Copyright...
 
+#include "pdfdoc.h"
+
+#include <emscripten.h>
+#include <stdio.h>
+
+#include "public/fpdf_save.h"
+
 namespace formulate {
 
-void PDFDoc::FinshLoad() {
-  loader_ = {&bytes_[0], bytes_.size()};
-  file_access_ = {bytes_.size(), TestLoader::GetBlock, &loader_};
+void PrintLastError() {
+  unsigned long err = FPDF_GetLastError();
+  fprintf(stderr, "Load pdf docs unsuccessful: ");
+  switch (err) {
+  case FPDF_ERR_SUCCESS:
+    fprintf(stderr, "Success");
+    break;
+  case FPDF_ERR_UNKNOWN:
+    fprintf(stderr, "Unknown error");
+    break;
+  case FPDF_ERR_FILE:
+    fprintf(stderr, "File not found or could not be opened");
+    break;
+  case FPDF_ERR_FORMAT:
+    fprintf(stderr, "File not in PDF format or corrupted");
+    break;
+  case FPDF_ERR_PASSWORD:
+    fprintf(stderr, "Password required or incorrect password");
+    break;
+  case FPDF_ERR_SECURITY:
+    fprintf(stderr, "Unsupported security scheme");
+    break;
+  case FPDF_ERR_PAGE:
+    fprintf(stderr, "Page not found or content error");
+    break;
+  default:
+    fprintf(stderr, "Unknown error %ld", err);
+  }
+  fprintf(stderr, ".\n");
+  return;
+}
+
+void PDFDoc::FinishLoad() {
+  loader_.reset(new TestLoader({&bytes_[0], bytes_.size()}));
+  file_access_ = {bytes_.size(), TestLoader::GetBlock, loader_.get()};
   // TODO: support for Linearized PDFs
   doc_.reset(FPDF_LoadCustomDocument(&file_access_, nullptr));
   if (!doc_) {
@@ -19,19 +58,20 @@ void PDFDoc::FinshLoad() {
 }
 
 int PDFDoc::Pages() const {
-  if (!valid) return 0;
+  if (!valid_) return 0;
   return FPDF_GetPageCount(doc_.get());
 }
 
 SkSize PDFDoc::PageSize(int page) const {
   SkSize ret({0, 0});
-  if (!valid) return ret;
+  if (!valid_) return ret;
   double width = 0.0;
   double height = 0.0;
   if (FPDF_GetPageSizeByIndex(doc_.get(), page, &width, &height)) {
     fprintf(stderr, "FPDF_GetPageSizeByIndex error\n");
   }
-  ret = {width, height};
+  ret = {static_cast<float>(width),
+         static_cast<float>(height)};
   return ret;
 }
 
@@ -57,20 +97,20 @@ void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const {
     fprintf(stderr, "Can't access raw pixels\n");
     return;
   }
-  FS_MATRIX pdfmatrix = {matrix.getScaleX(),
-			 matrix.getSkewX(),
-			 matrix.getSkewY(),
-			 matrix.getScaleY(),
-			 matrix.getTranslateX(),
-			 matrix.getTranslateY()};
+  FS_MATRIX pdfmatrix = {mat.getScaleX(),
+			 mat.getSkewX(),
+			 mat.getSkewY(),
+			 mat.getScaleY(),
+			 mat.getTranslateX(),
+			 mat.getTranslateY()};
   SkRect clip;  // Luckily, FS_RECTF and SkRect are the same
   if (!inverse.mapRect(&clip, rect)) {
     fprintf(stderr, "Weird matrix transform: rect doesn't map to rect\n");
     return;
   }
   ScopedFPDFBitmap
-    bitmap(FPDFBitmap_CreateEx(image_info.width,
-			       image_info.height,
+    bitmap(FPDFBitmap_CreateEx(image_info.width(),
+			       image_info.height(),
 			       FPDFBitmap_BGRx,
 			       pixels, static_cast<int>(row_bytes)));
   if (!bitmap) {
@@ -84,10 +124,9 @@ void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const {
     return;
   }
   FPDF_RenderPageBitmapWithMatrix(bitmap.get(), page.get(), &pdfmatrix,
-				  static_cast<FS_RECTF*>(&clip),
+				  reinterpret_cast<FS_RECTF*>(&clip),
 				  FPDF_REVERSE_BYTE_ORDER);
   // Render doesn't return anything? I guess it always 'works' heh
-  return true;
 }
 
 void PDFDoc::ModifyPage(int page, SkPoint point) {
@@ -96,16 +135,20 @@ void PDFDoc::ModifyPage(int page, SkPoint point) {
 
 class FileSaver : public FPDF_FILEWRITE {
  public:
-  FileSaver() : version(1), WriteBlock(StaticWriteBlock) {}
+  FileSaver() {
+    version = 1;
+    WriteBlock = StaticWriteBlock;
+  }
   static int StaticWriteBlock(FPDF_FILEWRITE* pthis,
                               const void* data,
                               unsigned long size) {
     FileSaver* fs = static_cast<FileSaver*>(pthis);
-    const char* cdata = static_cast<char*>(data);
+    const char* cdata = static_cast<const char*>(data);
     fs->data_.insert(fs->data_.end(), cdata, cdata + size);
+    return 1;  // success
   }
   std::vector<char> data_;
-}
+};
 
 void PDFDoc::DownloadDoc() const {
   FileSaver fs;

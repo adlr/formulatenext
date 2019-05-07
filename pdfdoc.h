@@ -1,9 +1,15 @@
 // Copyright...
 
+#ifndef FORMULATE_PDFDOC_H__
+#define FORMULATE_PDFDOC_H__
+
+#include <vector>
+
 #include "public/cpp/fpdf_scopers.h"
 #include "public/fpdf_dataavail.h"
 #include "public/fpdf_edit.h"
 #include "public/fpdfview.h"
+#include "SkCanvas.h"
 #include "SkSize.h"
 #include "third_party/base/span.h"
 
@@ -36,37 +42,7 @@ class TestLoader {
 
 namespace formulate {
 
-void PrintLastError() {
-  unsigned long err = FPDF_GetLastError();
-  fprintf(stderr, "Load pdf docs unsuccessful: ");
-  switch (err) {
-  case FPDF_ERR_SUCCESS:
-    fprintf(stderr, "Success");
-    break;
-  case FPDF_ERR_UNKNOWN:
-    fprintf(stderr, "Unknown error");
-    break;
-  case FPDF_ERR_FILE:
-    fprintf(stderr, "File not found or could not be opened");
-    break;
-  case FPDF_ERR_FORMAT:
-    fprintf(stderr, "File not in PDF format or corrupted");
-    break;
-  case FPDF_ERR_PASSWORD:
-    fprintf(stderr, "Password required or incorrect password");
-    break;
-  case FPDF_ERR_SECURITY:
-    fprintf(stderr, "Unsupported security scheme");
-    break;
-  case FPDF_ERR_PAGE:
-    fprintf(stderr, "Page not found or content error");
-    break;
-  default:
-    fprintf(stderr, "Unknown error %ld", err);
-  }
-  fprintf(stderr, ".\n");
-  return;
-}
+void PrintLastError();
 
 class PDFDoc {
  public:
@@ -78,11 +54,11 @@ class PDFDoc {
   void AppendBytes(char* bytes, size_t len) {
     bytes_.insert(bytes_.end(), bytes, bytes + len);
   }
-  void FinshLoad();
+  void FinishLoad();
 
   int Pages() const;
   SkSize PageSize(int page) const;
-  void DrawPage(SkCanvas* canvas, SkRect rect) const;
+  void DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const;
 
   // Test to make a change to a doc
   void ModifyPage(int page, SkPoint point);
@@ -92,9 +68,11 @@ class PDFDoc {
  private:
   bool valid_{false};
   std::vector<char> bytes_;
-  TestLoader loader_;
+  std::unique_ptr<TestLoader> loader_;
   FPDF_FILEACCESS file_access_;
   ScopedFPDFDocument doc_;
-}
+};
 
 }  // namespace formulate
+
+#endif  // FORMULATE_PDFDOC_H__

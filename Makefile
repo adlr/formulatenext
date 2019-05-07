@@ -20,9 +20,11 @@ TESTOBJS=\
 	formulate_bridge.o \
 	docview.o \
 	scrollview.o \
+	pdfdoc.o \
 	view.o \
 	NotoMono-Regular.ttf.o \
-	skia/skia/out/canvaskit_wasm/libskia.a
+	skia/skia/out/canvaskit_wasm/libskia.a \
+	pdfium/pdfium/out/Debug/obj/libpdfium.a
 
 MATERIAL_FONTS_FILES=\
 	MaterialIcons-Regular.woff2 \
@@ -58,3 +60,4 @@ favicon.png: favicon.svg
 	pngquant -f --speed 1 --output favicon-temp.png $@
 	optipng -clobber -o7 -strip all -out $@ favicon-temp.png
 	rm favicon-temp.png
+

@@ -41,9 +41,24 @@ void SetScrollOrigin(float xpos, float ypos) {
 
 EMSCRIPTEN_KEEPALIVE
 bool Init() {
-  doc_view_ = new DocView(3);
+  doc_view_ = new DocView();
   scroll_view_ = new ScrollView(doc_view_);
   return true;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void SetFileSize(size_t length) {
+  doc_view_->doc_.SetLength(length);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void AppendFileBytes(char* bytes, size_t length) {
+  doc_view_->doc_.AppendBytes(bytes, length);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void FinishFileLoad() {
+  doc_view_->doc_.FinishLoad();
 }
 
 }  // extern "C"
