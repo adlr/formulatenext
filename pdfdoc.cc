@@ -94,15 +94,28 @@ void PDFDoc::ModifyPage(int page, SkPoint point) {
 
 }
 
+class FileSaver : public FPDF_FILEWRITE {
+ public:
+  FileSaver() : version(1), WriteBlock(StaticWriteBlock) {}
+  static int StaticWriteBlock(FPDF_FILEWRITE* pthis,
+                              const void* data,
+                              unsigned long size) {
+    FileSaver* fs = static_cast<FileSaver*>(pthis);
+    const char* cdata = static_cast<char*>(data);
+    fs->data_.insert(fs->data_.end(), cdata, cdata + size);
+  }
+  std::vector<char> data_;
+}
+
 void PDFDoc::DownloadDoc() const {
-  vector<char> out_bytes;
-  FPDF_FILEWRITE file_write;
-  file_write.version = 1;
-  file_write.
-  if (!FPDF_SaveAsCopy(doc_.get(), file_write, FPDF_REMOVE_SECURITY)) {
+  FileSaver fs;
+  if (!FPDF_SaveAsCopy(doc_.get(), &fs, FPDF_REMOVE_SECURITY)) {
     fprintf(stderr, "FPDF_SaveAsCopy failed\n");
     return;
   }
+  EM_ASM_({
+      bridge_downloadBytes($0, $1);
+    }, &fs.data_[0], fs.data_.size());
 }
 
 }  // namespace formulate

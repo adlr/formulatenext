@@ -124,6 +124,20 @@ let bridge_setSize = function(width, height, xpos, ypos) {
   //             width + ', ' + height + ', ' + xpos + ', ' + ypos);
 };
 
+let bridge_downloadBytes = (addr, len) => {
+  const arr = new Uint8ClampedArray(Module.HEAPU8.buffer, addr, len);
+  const blob = new Blob([arr], {type: 'application/pdf'});
+  const data = window.URL.createObjectURL(blob);
+  var link = document.createElement('a');
+  link.href = data;
+  link.download="file.pdf";
+  link.click();
+  setTimeout(() => {
+    console.log('freeing memory for firefox');
+    window.URL.revokeObjectURL(data);
+  }, 100);
+};
+
 let loadFile = function(element) {
   let file = element.target.files[0];
   if (!file) {
