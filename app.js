@@ -115,7 +115,6 @@ const zoom100 = function() {
 
 // set the size/position of the scrollbar view
 let bridge_setSize = function(width, height, xpos, ypos) {
-  console.log("setting size:" + width);
   let inner = document.getElementById('inner');
   inner.style.width = width + 'px';
   inner.style.height = height + 'px';

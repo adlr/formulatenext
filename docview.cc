@@ -38,7 +38,8 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
   float pagetop = kBorderPixels;
   for (int i = 0; i < page_sizes_.size(); i++) {
     const SkSize& pgsize = page_sizes_[i];
-    const float pageleft = floorf((max_page_width_ - pgsize.width()) / 2);
+    const float pageleft = kBorderPixels +
+      floorf((max_page_width_ - pgsize.width()) / 2);
     SkRect page = SkRect::MakeXYWH(pageleft, pagetop,
 				   pgsize.width() * zoom_,
                                    pgsize.height() * zoom_);
@@ -66,8 +67,8 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
       canvas->scale(zoom_, zoom_);
       
       SkRect pageDrawClip =
-        SkRect::MakeXYWH(pagePaint.fLeft - pageleft,
-                         pagePaint.fTop - pagetop,
+        SkRect::MakeXYWH((pagePaint.fLeft - pageleft) / zoom_,
+                         (pagePaint.fTop - pagetop) / zoom_,
                          pagePaint.width() / zoom_,
                          pagePaint.height() / zoom_);
       doc_.DrawPage(canvas, pageDrawClip, static_cast<int>(i));

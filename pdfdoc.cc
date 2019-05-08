@@ -143,14 +143,6 @@ void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const {
     fprintf(stderr, "failed to load PDFPage\n");
     return;
   }
-  fprintf(stderr, "Rendering page %d\n", pageno);
-  fprintf(stderr, "Matrix: %f %f %f %f %f %f\n",
-          pdfmatrix.a,
-          pdfmatrix.b,
-          pdfmatrix.c,
-          pdfmatrix.d,
-          pdfmatrix.e,
-          pdfmatrix.f);
   FPDF_RenderPageBitmapWithMatrix(bitmap.get(), page.get(), &pdfmatrix,
 				  reinterpret_cast<FS_RECTF*>(&clip),
 				  FPDF_REVERSE_BYTE_ORDER);
