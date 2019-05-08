@@ -25,6 +25,17 @@ class DocView : public View {
   float PageHeight(size_t page) const { return page_sizes_[page].height(); }
   float MaxPageWidth() const { return max_page_width_; }
 
+  // Convert point in view coords (within Width() and Height()) to a
+  // page and point within that page. The point within that page is in PDF
+  // coordinates, so it doesn't take zoom into acct.
+  void ViewPointToPageAndPoint(const SkPoint& viewpt,
+                               int* out_page,
+                               SkPoint* out_pagept) const;
+
+  // Converts a point in PDF coordinates of a given page to view coords.
+  // The inverse of ViewPointToPageAndPoint().
+  SkPoint PagePointToViewPoint(int page, const SkPoint& pagept) const;
+
   PDFDoc doc_;
  private:
   std::vector<SkSize> page_sizes_;  // in PDF points

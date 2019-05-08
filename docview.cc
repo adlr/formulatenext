@@ -88,4 +88,39 @@ void DocView::RecomputePageSizes() {
   }
 }
 
+void DocView::ViewPointToPageAndPoint(const SkPoint& viewpt,
+                                      int* out_page,
+                                      SkPoint* out_pagept) const {
+  // find best page
+  float bottom = kBorderPixels / 2;
+  int i;
+  for (i = 0; i < page_sizes_.size(); i++) {
+    bottom += page_sizes_[i].height();
+    if (viewpt.y() < bottom)
+      break;
+  }
+  // use this page
+  float top = bottom - page_sizes_[i].height() - kBorderPixels / 2;
+  float left =
+    kBorderPixels + (max_page_width_ - page_sizes_[i].width()) / 2;
+  *out_page = i;
+  *out_pagept = SkPoint::Make((viewpt.x() - left) / zoom_,
+                              (viewpt.y() - top) / zoom_);
+}
+
+SkPoint DocView::PagePointToViewPoint(int page, const SkPoint& pagept) const {
+  if (page >= page_sizes_.size()) {
+    fprintf(stderr, "PagePointToViewPoint: invalid page!\n");
+    return SkPoint();
+  }
+  float top = kBorderPixels;
+  for (int i = 0; i < page; i++) {
+    top += page_sizes_[i].height() + kBorderPixels;
+  }
+  float left =
+    kBorderPixels + (max_page_width_ - page_sizes_[page].width()) / 2;
+  return SkPoint::Make(pagept.x() * zoom_ + left,
+                       pagept.y() * zoom_ + top);
+}
+
 }  // namespace formulate
