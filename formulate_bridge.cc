@@ -59,6 +59,7 @@ void AppendFileBytes(char* bytes, size_t length) {
 EMSCRIPTEN_KEEPALIVE
 void FinishFileLoad() {
   doc_view_->doc_.FinishLoad();
+  doc_view_->RecomputePageSizes();
 }
 
 }  // extern "C"

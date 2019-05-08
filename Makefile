@@ -11,7 +11,7 @@ INC=\
 	-Iskia/skia/include/config
 
 %.o : %.cc
-	emcc -std=c++14 $(INC) -o $@ $<
+	emcc -g -O0 -std=c++14 $(INC) -o $@ $<
 
 formulate.html: $(OBJS)
 	emcc -o $@ $(OBJS) -s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" -s ALLOW_MEMORY_GROWTH=1
@@ -49,11 +49,12 @@ NotoMono-Regular.ttf.o : skia/skia/modules/canvaskit/fonts/NotoMono-Regular.ttf.
 		$<
 
 testdoc.html: $(TESTOBJS) $(MATERIAL_FONTS_FILES) Roboto/Roboto.css
-	emcc -o $@ $(TESTOBJS) \
+	emcc -O0 -g -o $@ $(TESTOBJS) \
 		-s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" \
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s USE_LIBPNG=1 \
-		-s USE_FREETYPE=1
+		-s USE_FREETYPE=1 \
+		-s DEMANGLE_SUPPORT=1
 
 favicon.png: favicon.svg
 	rsvg-convert -w 192 -h 192 --format=png --output=$@ $<

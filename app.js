@@ -14,10 +14,6 @@ var throttle = function(type, name, obj) {
   obj.addEventListener(type, func);
 };
 
-var doc;
-var docview;
-var viewOffset = new Point(0, 0);
-
 let runtime_ready = false;
 
 let SetZoom = null;
@@ -25,6 +21,9 @@ let SetScale = null;
 let SetSize = null;
 let SetScrollOrigin = null;
 let Init = null;
+let SetFileSize = null;
+let AppendFileBytes = null;
+let FinishFileLoad = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   Module['onRuntimeInitialized'] = function() {
@@ -112,11 +111,11 @@ const zoomOut = function(ev) {
 };
 const zoom100 = function() {
   if (!runtime_ready) return;
-  docview.zoomabs(1);
 };
 
 // set the size/position of the scrollbar view
 let bridge_setSize = function(width, height, xpos, ypos) {
+  console.log("setting size:" + width);
   let inner = document.getElementById('inner');
   inner.style.width = width + 'px';
   inner.style.height = height + 'px';
@@ -154,7 +153,7 @@ let loadFile = function(element) {
     let data = new Uint8Array(reader.result);
     let buf = Module._malloc(data.length);
     Module.HEAPU8.set(data, buf);
-    AppendBytes(buf, data.length);
+    AppendFileBytes(buf, data.length);
     Module._free(buf);
     FinishFileLoad();
   }

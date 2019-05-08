@@ -40,7 +40,8 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
     const SkSize& pgsize = page_sizes_[i];
     const float pageleft = floorf((max_page_width_ - pgsize.width()) / 2);
     SkRect page = SkRect::MakeXYWH(pageleft, pagetop,
-				   pgsize.width(), pgsize.height());
+				   pgsize.width() * zoom_,
+                                   pgsize.height() * zoom_);
     SkRect pageBorder = page.makeInset(-0.5, -0.5);
     SkRect pageBorderBorder = pageBorder.makeInset(-0.5, -0.5);
     if (SkRect::Intersects(rect, pageBorderBorder)) {
@@ -63,11 +64,26 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
 
       canvas->translate(pageleft, pagetop);
       canvas->scale(zoom_, zoom_);
-      doc_.DrawPage(canvas, pagePaint, static_cast<int>(i));
+      
+      SkRect pageDrawClip =
+        SkRect::MakeXYWH(pagePaint.fLeft - pageleft,
+                         pagePaint.fTop - pagetop,
+                         pagePaint.width() / zoom_,
+                         pagePaint.height() / zoom_);
+      doc_.DrawPage(canvas, pageDrawClip, static_cast<int>(i));
 
       canvas->restore();
     }
     pagetop += pgsize.height() + kBorderPixels;
+  }
+}
+
+void DocView::RecomputePageSizes() {
+  page_sizes_.resize(doc_.Pages());
+  max_page_width_ = 0.0;
+  for (int i = 0; i < page_sizes_.size(); i++) {
+    page_sizes_[i] = doc_.PageSize(i);
+    max_page_width_ = std::max(max_page_width_, page_sizes_[i].width());
   }
 }
 

@@ -42,6 +42,15 @@ void PrintLastError() {
 }
 
 void PDFDoc::FinishLoad() {
+  {
+    FPDF_LIBRARY_CONFIG config;
+    config.version = 2;
+    config.m_pUserFontPaths = nullptr;
+    config.m_pIsolate = nullptr;
+    config.m_v8EmbedderSlot = 0;
+    FPDF_InitLibraryWithConfig(&config);
+  }
+
   loader_.reset(new TestLoader({&bytes_[0], bytes_.size()}));
   file_access_ = {bytes_.size(), TestLoader::GetBlock, loader_.get()};
   // TODO: support for Linearized PDFs
@@ -67,12 +76,23 @@ SkSize PDFDoc::PageSize(int page) const {
   if (!valid_) return ret;
   double width = 0.0;
   double height = 0.0;
-  if (FPDF_GetPageSizeByIndex(doc_.get(), page, &width, &height)) {
+  if (!FPDF_GetPageSizeByIndex(doc_.get(), page, &width, &height)) {
     fprintf(stderr, "FPDF_GetPageSizeByIndex error\n");
   }
-  ret = {static_cast<float>(width),
-         static_cast<float>(height)};
-  return ret;
+  return SkSize::Make(width, height);
+}
+
+void DbgMatrix(const char* str, const SkMatrix& mat) {
+  fprintf(stderr, "%s: %f %f %f %f %f %f %f %f %f\n", str,
+          mat[0], mat[1], mat[2],
+          mat[3], mat[4], mat[5],
+          mat[6], mat[7], mat[8]);
+}
+
+void DbgRect(const char* str, const SkRect& rect) {
+  fprintf(stderr, "%s: L: %f T: %f R: %f B: %f (W: %f H: %f)\n", str,
+          rect.fLeft, rect.fTop, rect.fRight, rect.fBottom,
+          rect.width(), rect.height());
 }
 
 void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const {
@@ -104,7 +124,7 @@ void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const {
 			 mat.getTranslateX(),
 			 mat.getTranslateY()};
   SkRect clip;  // Luckily, FS_RECTF and SkRect are the same
-  if (!inverse.mapRect(&clip, rect)) {
+  if (!mat.mapRect(&clip, rect)) {
     fprintf(stderr, "Weird matrix transform: rect doesn't map to rect\n");
     return;
   }
@@ -123,6 +143,14 @@ void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const {
     fprintf(stderr, "failed to load PDFPage\n");
     return;
   }
+  fprintf(stderr, "Rendering page %d\n", pageno);
+  fprintf(stderr, "Matrix: %f %f %f %f %f %f\n",
+          pdfmatrix.a,
+          pdfmatrix.b,
+          pdfmatrix.c,
+          pdfmatrix.d,
+          pdfmatrix.e,
+          pdfmatrix.f);
   FPDF_RenderPageBitmapWithMatrix(bitmap.get(), page.get(), &pdfmatrix,
 				  reinterpret_cast<FS_RECTF*>(&clip),
 				  FPDF_REVERSE_BYTE_ORDER);
