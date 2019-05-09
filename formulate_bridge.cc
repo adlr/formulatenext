@@ -17,8 +17,17 @@ extern "C" {
 
 EMSCRIPTEN_KEEPALIVE
 void SetZoom(float zoom) {
+  SkPoint pt = scroll_view_->ChildVisibleCenter();
+  int page = 1;
+  SkPoint pagept;
+  doc_view_->ViewPointToPageAndPoint(pt, &page, &pagept);
+  // fprintf(stderr, "\nsc center: %f %f page: %d, pt: %f %f\n",
+  //         pt.x(), pt.y(), page, pagept.x(), pagept.y());
+  // fprintf(stderr, "set zoom to %f\n", zoom);
   doc_view_->SetZoom(zoom);
-  scroll_view_->RepositionChild();
+  pt = doc_view_->PagePointToViewPoint(page, pagept);
+  // fprintf(stderr, "new sc center: %f %f\n", pt.x(), pt.y());
+  scroll_view_->CenterOnChildPoint(pt);
   scroll_view_->DoDraw();
 }
 

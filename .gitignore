@@ -8,6 +8,7 @@ MaterialIcons-Regular.*
 Roboto/*
 testdoc.html
 testdoc.js
+testdoc.wast
 pdfium/*
 skia/*
 depot_tools/*

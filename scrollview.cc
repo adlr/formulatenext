@@ -38,6 +38,24 @@ void ScrollView::RepositionChild() {
     }, child_->Width(), child_->Height(), origin_.fX, origin_.fY);
 }
 
+SkPoint ScrollView::ChildVisibleCenter() const {
+  // Find center of this view
+  SkPoint center = SkPoint::Make(size_.width() / 2,
+                                 size_.height() / 2);
+  // shift by origin of child
+  center.offset(origin_.x(), origin_.y());
+  return center;
+}
+
+void ScrollView::CenterOnChildPoint(SkPoint point) {
+  // Find center of this view
+  SkPoint center = SkPoint::Make(size_.width() / 2,
+                                 size_.height() / 2);
+  origin_ = SkPoint::Make(point.x() - center.x(),
+                          point.y() - center.y());
+  RepositionChild();
+}
+
 void ScrollView::DoDraw() {
   // Allocate a buffer
   SkISize bufsize({static_cast<int32_t>(Width()),
