@@ -106,6 +106,8 @@ void DocView::ViewPointToPageAndPoint(const SkPoint& viewpt,
   *out_page = i;
   *out_pagept = SkPoint::Make((viewpt.x() - left) / zoom_,
                               (viewpt.y() - top) / zoom_);
+  // flip y on page
+  out_pagept->fY = page_sizes_[i].height() - out_pagept->fY;
 }
 
 SkPoint DocView::PagePointToViewPoint(int page, const SkPoint& pagept) const {
@@ -119,8 +121,22 @@ SkPoint DocView::PagePointToViewPoint(int page, const SkPoint& pagept) const {
   }
   float left =
     kBorderPixels + (max_page_width_ - page_sizes_[page].width()) / 2 * zoom_;
+  // flip y back on page, but not x
   return SkPoint::Make(pagept.x() * zoom_ + left,
-                       pagept.y() * zoom_ + top);
+                       (page_sizes_[page].height() - pagept.y()) * zoom_ + top);
+}
+
+void DocView::MouseDown(SkPoint pt) {
+}
+void DocView::MouseDrag(SkPoint pt) {
+}
+void DocView::MouseUp(SkPoint pt) {
+  int page = 0;
+  SkPoint pagept;
+  ViewPointToPageAndPoint(pt, &page, &pagept);
+  fprintf(stderr, "doc point %f %f to pg %d  %f %f\n",
+          pt.x(), pt.y(), page, pagept.x(), pagept.y());
+  doc_.ModifyPage(page, pagept);
 }
 
 }  // namespace formulate

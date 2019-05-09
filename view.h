@@ -14,6 +14,9 @@ class View {
   virtual float Width() const = 0;
   virtual float Height() const = 0;
   virtual void Draw(SkCanvas* canvas, SkRect rect) = 0;
+  virtual void MouseDown(SkPoint pt) {}
+  virtual void MouseDrag(SkPoint pt) {}
+  virtual void MouseUp(SkPoint pt) {}
 };
 
 template<typename T>

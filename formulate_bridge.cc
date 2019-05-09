@@ -69,6 +69,28 @@ EMSCRIPTEN_KEEPALIVE
 void FinishFileLoad() {
   doc_view_->doc_.FinishLoad();
   doc_view_->RecomputePageSizes();
+  scroll_view_->DoDraw();
+}
+
+EMSCRIPTEN_KEEPALIVE
+void MouseDown(float xpos, float ypos) {
+  scroll_view_->MouseDown(SkPoint::Make(xpos, ypos));
+}
+
+EMSCRIPTEN_KEEPALIVE
+void MouseDrag(float xpos, float ypos) {
+  scroll_view_->MouseDrag(SkPoint::Make(xpos, ypos));
+}
+
+EMSCRIPTEN_KEEPALIVE
+void MouseUp(float xpos, float ypos) {
+  scroll_view_->MouseUp(SkPoint::Make(xpos, ypos));
+  scroll_view_->DoDraw();
+}
+
+EMSCRIPTEN_KEEPALIVE
+void DownloadFile() {
+  doc_view_->doc_.DownloadDoc();
 }
 
 }  // extern "C"

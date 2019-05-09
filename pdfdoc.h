@@ -61,7 +61,7 @@ class PDFDoc {
   void DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const;
 
   // Test to make a change to a doc
-  void ModifyPage(int page, SkPoint point);
+  void ModifyPage(int pageno, SkPoint point);
 
   // Calls into JS to do the save
   void DownloadDoc() const;

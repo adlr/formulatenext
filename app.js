@@ -24,12 +24,18 @@ let Init = null;
 let SetFileSize = null;
 let AppendFileBytes = null;
 let FinishFileLoad = null;
+let MouseDown = null
+let MouseDrag = null;
+let MouseUp = null
+let DownloadFile = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+  let fixupContentSize = null;
   Module['onRuntimeInitialized'] = function() {
     runtime_ready = true;
     console.log("runtime is ready");
     Init();
+    fixupContentSize();
   };
   // TestDraw = Module.cwrap('TestDraw', 'number',
   //                         ['number',  // width
@@ -43,6 +49,10 @@ document.addEventListener('DOMContentLoaded', function() {
   SetFileSize = Module.cwrap('SetFileSize', null, ['number']);
   AppendFileBytes = Module.cwrap('AppendFileBytes', null, ['number', 'number']);
   FinishFileLoad = Module.cwrap('FinishFileLoad', null, []);
+  MouseDown = Module.cwrap('MouseDown', null, ['number', 'number']);
+  MouseDrag = Module.cwrap('MouseDrag', null, ['number', 'number']);
+  MouseUp = Module.cwrap('MouseUp', null, ['number', 'number']);
+  DownloadFile = Module.cwrap('DownloadFile', null, []);
 
   var outer = document.getElementById('outer');
   var canvas = document.getElementById('canvas');
@@ -53,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   throttle('resize', 'optimizedResize');
-  var fixupContentSize = function() {
+  fixupContentSize = function() {
     if (!runtime_ready) return;
     var dpr = window.devicePixelRatio || 1;
     var rect = canvas.getBoundingClientRect();
@@ -67,16 +77,24 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('zoom-in').onclick = zoomIn;
   document.getElementById('zoom-out').onclick = zoomOut;
   let mouse_down = false;
-  document.getElementById('inner').addEventListener('mousedown', ev => {
-    console.log('mouse down ' + ev.offsetX + ', ' + ev.offsetY);
+  outer.addEventListener('mousedown', ev => {
+    if (MouseDown) {
+      MouseDown(ev.offsetX - outer.scrollLeft,
+                ev.offsetY - outer.scrollTop);
+    }
     mouse_down = true;
   });
-  document.getElementById('inner').addEventListener('mousemove', ev => {
-    if (mouse_down)
-      console.log('mouse move ' + ev.offsetX + ', ' + ev.offsetY);
+  outer.addEventListener('mousemove', ev => {
+    if (mouse_down && MouseDrag) {
+      MouseDrag(ev.offsetX - outer.scrollLeft,
+                ev.offsetY - outer.scrollTop);
+    }
   });
-  document.getElementById('inner').addEventListener('mouseup', ev => {
-    console.log('mouse up   ' + ev.offsetX + ', ' + ev.offsetY);
+  outer.addEventListener('mouseup', ev => {
+    if (MouseUp) {
+      MouseUp(ev.offsetX - outer.scrollLeft,
+                ev.offsetY - outer.scrollTop);
+    }
     mouse_down = false;
   });
 

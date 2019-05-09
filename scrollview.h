@@ -31,11 +31,17 @@ class ScrollView {
   SkPoint ChildVisibleCenter() const;
   void CenterOnChildPoint(SkPoint point);
   void DoDraw();
+
+  void MouseDown(SkPoint pt);
+  void MouseDrag(SkPoint pt);
+  void MouseUp(SkPoint pt);
  private:
   View* child_;
   SkSize size_;
   SkPoint origin_;  // scroll origin; upper left point
   float scale_{1};  // for high-DPI
+
+  bool sent_child_mousedown_{false};
 };
 
 }  // namespace formulate

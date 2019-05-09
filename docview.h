@@ -36,6 +36,10 @@ class DocView : public View {
   // The inverse of ViewPointToPageAndPoint().
   SkPoint PagePointToViewPoint(int page, const SkPoint& pagept) const;
 
+  void MouseDown(SkPoint pt);
+  void MouseDrag(SkPoint pt);
+  void MouseUp(SkPoint pt);
+
   PDFDoc doc_;
  private:
   std::vector<SkSize> page_sizes_;  // in PDF points

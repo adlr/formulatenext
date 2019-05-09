@@ -6,7 +6,10 @@ let menuOpen = function(ev) {
   document.getElementById('file-input').dispatchEvent(ev2);
 };
 let menuClose = function() { console.log('menuClose'); };
-let menuSave = function() { console.log('menuSave'); };
+let menuSave = function() {
+  if (DownloadFile)
+    DownloadFile();
+};
 let menuSaveAs = function() { console.log('menuSaveAs'); };
 let menuPrint = function() { console.log('menuPrint'); };
 let menuUndo = function() { console.log('menuUndo'); };

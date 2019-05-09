@@ -4,6 +4,7 @@
 
 #include <emscripten.h>
 #include <stdio.h>
+#include <wchar.h>
 
 #include "public/fpdf_save.h"
 
@@ -149,8 +150,44 @@ void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const {
   // Render doesn't return anything? I guess it always 'works' heh
 }
 
-void PDFDoc::ModifyPage(int page, SkPoint point) {
+std::string StrConv(const std::wstring& wstr) {
+  std::string ret;
+  for (wchar_t w : wstr) {
+    ret.push_back(w & 0xff);
+    ret.push_back((w >> 8) & 0xff);
+  }
+  ret.push_back(0);
+  ret.push_back(0);
+  return ret;
+}
 
+void PDFDoc::ModifyPage(int pageno, SkPoint point) {
+  fprintf(stderr, "modifying page %d (%f %f)\n", pageno,
+          point.x(), point.y());
+  ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return;
+  }
+
+  FPDF_PAGEOBJECT textobj =
+    FPDFPageObj_NewTextObj(doc_.get(), "Helvetica", 12.0f);
+  if (!textobj) {
+    fprintf(stderr, "Unable to allocate text obj\n");
+    return;
+  }
+  std::string message = StrConv(L"Hello, world!");
+  FPDF_WIDESTRING pdf_str = reinterpret_cast<FPDF_WIDESTRING>(message.c_str());
+  if (!FPDFText_SetText(textobj, pdf_str)) {
+    fprintf(stderr, "failed to set text\n");
+    return;
+  }
+
+  FPDFPageObj_Transform(textobj, 1, 0, 0, 1, point.x(), point.y());
+  FPDFPage_InsertObject(page.get(), textobj);
+  if (!FPDFPage_GenerateContent(page.get())) {
+    fprintf(stderr, "PDFPage_GenerateContent failed\n");
+  }
 }
 
 class FileSaver : public FPDF_FILEWRITE {

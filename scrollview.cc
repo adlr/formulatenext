@@ -77,4 +77,26 @@ void ScrollView::DoDraw() {
     }, bitmap.getPixels(), bitmap.width(), bitmap.height());
 }
 
+void ScrollView::MouseDown(SkPoint pt) {
+  pt.offset(origin_.x(), origin_.y());
+  SkRect child_bounds =
+    SkRect::MakeXYWH(0, 0, child_->Width(), child_->Height());
+  if (child_bounds.contains(pt.x(), pt.y())) {
+    sent_child_mousedown_ = true;
+    child_->MouseDown(pt);
+  }
+}
+void ScrollView::MouseDrag(SkPoint pt) {
+  pt.offset(origin_.x(), origin_.y());
+  if (sent_child_mousedown_)
+    child_->MouseDrag(pt);
+}
+void ScrollView::MouseUp(SkPoint pt) {
+  pt.offset(origin_.x(), origin_.y());
+  if (sent_child_mousedown_) {
+    child_->MouseUp(pt);
+    sent_child_mousedown_ = false;
+  }
+}
+
 }  // namespace formulate
