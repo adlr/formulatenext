@@ -59,3 +59,18 @@ canvas {
 #file-input {
   display: none;
 }
+
+.texteditor {
+  font-family: Arial;
+  font-size: 12px;
+  white-space: pre;
+  position: absolute;
+  z-index: 15;
+  margin: 0;
+  padding: 5px;
+  overflow: hidden;
+  outline: none;
+  border: none;
+  resize: none;
+  background-color: rgba(255, 255, 255, 0.1);
+}

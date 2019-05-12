@@ -102,14 +102,26 @@ class MenuItem {
     this.updateDom();
     shortCutListener.add(shortcut, callback)
   }
+  name() {
+    return this.str;
+  }
   setEnabled(en) {
     this.enabled = en;
     if (!this.enabled) {
       shortCutListener.remove(this.shortcut);
-      this.div.classList.remove('menuiteminactive');
+      this.div.classList.add('menuiteminactive');
     } else {
       shortCutListener.add(this.shortcut, this.callback);
-      this.div.classList.add('menuiteminactive');
+      this.div.classList.remove('menuiteminactive');
+    }
+  }
+  setCallback(callback) {
+    if (this.callback === callback)
+      return;
+    this.callback = callback;
+    if (this.enabled) {
+      shortCutListener.remove(this.shortcut);
+      shortCutListener.add(this.shortcut, this.callback);
     }
   }
   isSpacer() {
@@ -134,6 +146,14 @@ class MenuItem {
     this.child = container;
     this.div.appendChild(this.child.div);
   }
+  findMenu(path) {
+    if (path.length === 0)
+      return this;
+    if (!this.child)
+      return null;
+    path.shift();
+    return this.child.findMenu(path);
+  }
 }
 
 class MenuContainer {
@@ -146,6 +166,15 @@ class MenuContainer {
   addMenuItem(item) {
     this.items.push(item);
     this.div.appendChild(item.div);
+  }
+  findMenu(path) {
+    for (let i = 0; i < this.items.length; i++) {
+      if (this.items[i].name() === path[0]) {
+        path.shift();
+        return this.items[i].findMenu(path);
+      }
+    }
+    return null;
   }
 }
 
@@ -165,6 +194,9 @@ class MenuBarLabel {
     this.handleHover = null;
     this.domEnterHoverHandler = ev => { this.onHover(ev, true); };
     this.domLeaveHoverHandler = ev => { this.onHover(ev, false); };
+  }
+  name() {
+    return this.str;
   }
   setOnClick(handleClick) {
     if (this.handleClick != handleClick) {
@@ -205,6 +237,13 @@ class MenuBarLabel {
       this.div.classList.remove('rootmenuitemactive');
     }
     this.container.div.style.display = vis ? 'block' : 'none';
+  }
+  findMenu(path) {
+    if (path.length === 0)
+      return this;
+    if (!this.container)
+      return null;
+    return this.container.findMenu(path);
   }
 }
 
@@ -252,6 +291,15 @@ class MenuBar {
     // hovering on a menu, with a menu showing. Show what we're hoving on.
     this.showMenu(label);
   }
+  findMenu(path) {
+    for (let i = 0; i < this.labels.length; i++) {
+      if (this.labels[i].name() === path[0]) {
+        path.shift();
+        return this.labels[i].findMenu(path);
+      }
+    }
+    return null;
+  }
 }
 
 const populate2 = function(items, container) {
@@ -288,10 +336,15 @@ let shortcutKeyToStr = function(key) {
   }
 };
 
-document.addEventListener('DOMContentLoaded', function() {
+let globalMenuBar = null;
+
+let initGlobalMenuBar = () => {
+  if (globalMenuBar)
+    return;
   // create dom elements
   shortCutListener = new ShortCutListener();
-  let menuBar = new MenuBar(document.getElementById('menubar'));
-  populate2(menus, menuBar);
-}, false);
+  globalMenuBar = new MenuBar(document.getElementById('menubar'));
+  populate2(menus, globalMenuBar);
+};
 
+document.addEventListener('DOMContentLoaded', initGlobalMenuBar, false);

@@ -28,14 +28,57 @@ let MouseDown = null
 let MouseDrag = null;
 let MouseUp = null
 let DownloadFile = null;
+let UndoRedoClicked = null;
+
+class ButtonMenuHelper {
+  constructor(path, buttonid, clicked) {
+    this.button = document.getElementById(buttonid);
+    this.button.onclick = (ev) => { this.clicked(ev); };
+    this.menuItem = globalMenuBar.findMenu(path);
+    this.menuItem.setCallback(this.button.onclick);
+    this.enabled = false;
+    this.callback = clicked;
+  }
+  clicked(ev) {
+    if (!this.enabled)
+      return;
+    this.callback();
+  }
+  setEnabled(enabled) {
+    if (this.enabled == enabled)
+      return;
+    this.enabled = enabled;
+    this.menuItem.setEnabled(enabled);
+    if (enabled)
+      this.button.classList.add('toolbar-button-enabled');
+    else
+      this.button.classList.remove('toolbar-button-enabled');
+  }
+}
+
+let bridge_undoRedoEnable = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+  initGlobalMenuBar();
+
   let fixupContentSize = null;
   Module['onRuntimeInitialized'] = function() {
     runtime_ready = true;
     console.log("runtime is ready");
     Init();
     fixupContentSize();
+
+    let undoButtonMenuHelper =
+        new ButtonMenuHelper(['Edit', 'Undo'], 'undo',
+                             () => { UndoRedoClicked(true); });
+    let redoButtonMenuHelper =
+        new ButtonMenuHelper(['Edit', 'Redo'], 'redo',
+                             () => { UndoRedoClicked(false); });
+    bridge_undoRedoEnable = (undoEnabled, redoEnabled) => {
+      undoButtonMenuHelper.setEnabled(undoEnabled);
+      redoButtonMenuHelper.setEnabled(redoEnabled);
+    };
+    undoButtonMenuHelper.setEnabled(true);
   };
   // TestDraw = Module.cwrap('TestDraw', 'number',
   //                         ['number',  // width
@@ -53,6 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
   MouseDrag = Module.cwrap('MouseDrag', null, ['number', 'number']);
   MouseUp = Module.cwrap('MouseUp', null, ['number', 'number']);
   DownloadFile = Module.cwrap('DownloadFile', null, []);
+  UndoRedoClicked = Module.cwrap('UndoRedoClicked', null, ['number']);
 
   var outer = document.getElementById('outer');
   var canvas = document.getElementById('canvas');
@@ -74,10 +118,70 @@ document.addEventListener('DOMContentLoaded', function() {
   };
   window.addEventListener('optimizedResize', fixupContentSize);
   
+  let calcFontMetrics = () => {
+    let div = document.createElement('div');
+    div.style.position = 'absolute';
+    div.style.top = '-10000px';
+    div.style.left = '-10000px';
+    div.style.fontFamily = 'Arial';
+    div.style.fontSize = '12px';
+    let span = document.createElement('span');
+    span.style.fontSize = '0%';
+    span.innerText = 'x';
+    let spanbig = document.createElement('span');
+    spanbig.innerText = 'x';
+    div.appendChild(span);
+    div.appendChild(spanbig);
+    document.body.appendChild(div);
+    let ret = span.offsetTop;
+    console.log([span.offsetTop, span.offsetHeight,
+                 spanbig.offsetTop, spanbig.offsetHeight].join(', '));
+    document.body.removeChild(div);
+    return ret;
+  };
+
+  let launchEditor = (xpos, ypos) => {
+    let vertOffset = calcFontMetrics();
+    let padding = 5;
+    xpos -= padding;
+    ypos -= padding + vertOffset;
+    let textarea = document.createElement('textarea');
+    textarea.rows = '1';
+    textarea.cols = '1';
+    textarea.classList.add('texteditor');
+
+    textarea.style.left = (outer.offsetLeft + xpos) + 'px';
+    textarea.style.top = (outer.offsetTop + ypos) + 'px';
+    let update = () => {
+      textarea.style.height = '';
+      textarea.style.height = Math.max(10, textarea.scrollHeight) + 'px';
+      textarea.style.width = '';
+      textarea.style.width = Math.max(10, textarea.scrollWidth + padding) + 'px';
+    };
+    textarea.addEventListener('keyup', update);
+    textarea.addEventListener('input', update);
+    textarea.addEventListener('blur', (ev) => {
+      textarea.parentNode.removeChild(textarea);
+    });
+    textarea.value = "Hello there";
+    update();
+    document.body.appendChild(textarea);
+    setTimeout(() => {
+      textarea.focus();
+      update();
+    }, 100);
+  };
+
   document.getElementById('zoom-in').onclick = zoomIn;
   document.getElementById('zoom-out').onclick = zoomOut;
   let mouse_down = false;
   outer.addEventListener('mousedown', ev => {
+    if (ev.ctrlKey) {
+      launchEditor(ev.offsetX - outer.scrollLeft,
+                   ev.offsetY - outer.scrollTop);
+      return;
+    }
+
     if (MouseDown) {
       MouseDown(ev.offsetX - outer.scrollLeft,
                 ev.offsetY - outer.scrollTop);
@@ -91,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   outer.addEventListener('mouseup', ev => {
-    if (MouseUp) {
+    if (mouse_down && MouseUp) {
       MouseUp(ev.offsetX - outer.scrollLeft,
                 ev.offsetY - outer.scrollTop);
     }
@@ -156,6 +260,10 @@ let bridge_downloadBytes = (addr, len) => {
     window.URL.revokeObjectURL(data);
   }, 100);
 };
+
+let bridge_enableUndoRedo = (undoEnabled, redoEnabled) => {
+  
+}
 
 let loadFile = function(element) {
   let file = element.target.files[0];

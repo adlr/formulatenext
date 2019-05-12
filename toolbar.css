@@ -8,12 +8,16 @@
 }
 
 .toolbar-button {
+    color: rgba(0, 0, 0, 0.5);
     padding: 3px;
     margin-right: 2px;
     display: inline-block;
 }
 
-.toolbar-button:hover {
-    background-color: rgb(0, 0, 0, 0.06);
-    display: inline-block;
+.toolbar-button-enabled {
+    color: rgba(0, 0, 0, 1);
+}
+
+.toolbar-button-enabled:hover {
+    background-color: rgba(0, 0, 0, 0.06);
 }

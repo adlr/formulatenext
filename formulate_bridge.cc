@@ -69,6 +69,7 @@ EMSCRIPTEN_KEEPALIVE
 void FinishFileLoad() {
   doc_view_->doc_.FinishLoad();
   doc_view_->RecomputePageSizes();
+  scroll_view_->RepositionChild();
   scroll_view_->DoDraw();
 }
 
@@ -91,6 +92,18 @@ void MouseUp(float xpos, float ypos) {
 EMSCRIPTEN_KEEPALIVE
 void DownloadFile() {
   doc_view_->doc_.DownloadDoc();
+}
+
+EMSCRIPTEN_KEEPALIVE
+void UndoRedoClicked(bool undo) {
+  if (undo) {
+    fprintf(stderr, "Undo clicked\n");
+  } else {
+    fprintf(stderr, "Redo clicked\n");
+  }
+  EM_ASM_({
+      bridge_undoRedoEnable($0, $1);
+    }, !undo, undo);
 }
 
 }  // extern "C"
