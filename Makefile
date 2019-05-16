@@ -11,7 +11,7 @@ INC=\
 	-Iskia/skia/include/config
 
 %.o : %.cc
-	emcc -g -O0 -std=c++14 $(INC) -o $@ $<
+	emcc -g -O0 -MMD -std=c++14 $(INC) -o $@ $<
 
 formulate.html: $(OBJS)
 	emcc -o $@ $(OBJS) -s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" -s ALLOW_MEMORY_GROWTH=1
@@ -22,6 +22,7 @@ TESTOBJS=\
 	scrollview.o \
 	pdfdoc.o \
 	view.o \
+	undo_manager.o \
 	NotoMono-Regular.ttf.o \
 	skia/skia/out/canvaskit_wasm/libskia.a \
 	pdfium/pdfium/out/Debug/obj/libpdfium.a
@@ -62,3 +63,4 @@ favicon.png: favicon.svg
 	optipng -clobber -o7 -strip all -out $@ favicon-temp.png
 	rm favicon-temp.png
 
+-include *.d

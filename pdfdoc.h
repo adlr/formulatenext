@@ -13,6 +13,8 @@
 #include "SkSize.h"
 #include "third_party/base/span.h"
 
+#include "undo_manager.h"
+
 namespace {
 
 class TestLoader {
@@ -62,9 +64,14 @@ class PDFDoc {
 
   // Test to make a change to a doc
   void ModifyPage(int pageno, SkPoint point);
+  void DeleteObjUnderPoint(int pageno, SkPoint point);
+
+  void DeleteObject(int pageno, int index);
+  void InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj);
 
   // Calls into JS to do the save
   void DownloadDoc() const;
+  UndoManager undo_manager_;
  private:
   bool valid_{false};
   std::vector<char> bytes_;

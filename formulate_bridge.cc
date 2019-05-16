@@ -71,6 +71,7 @@ void FinishFileLoad() {
   doc_view_->RecomputePageSizes();
   scroll_view_->RepositionChild();
   scroll_view_->DoDraw();
+  doc_view_->toolbox_.UpdateUI();
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -96,14 +97,36 @@ void DownloadFile() {
 
 EMSCRIPTEN_KEEPALIVE
 void UndoRedoClicked(bool undo) {
+  if (!doc_view_)
+    return;
   if (undo) {
-    fprintf(stderr, "Undo clicked\n");
+    doc_view_->doc_.undo_manager_.PerformUndo();
   } else {
-    fprintf(stderr, "Redo clicked\n");
+    doc_view_->doc_.undo_manager_.PerformRedo();
   }
-  EM_ASM_({
-      bridge_undoRedoEnable($0, $1);
-    }, !undo, undo);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void ToolbarClicked(int tool) {
+  if (!doc_view_)
+    return;
+  doc_view_->toolbox_.set_current_tool(static_cast<Toolbox::Tool>(tool));
 }
 
 }  // extern "C"
+
+namespace formulate {
+
+void bridge_UpdateUndoRedoUI(bool undo_enabled, bool redo_unabled) {
+  EM_ASM_({
+      bridge_undoRedoEnable($0, $1);
+    }, undo_enabled, redo_unabled);
+}
+
+void bridge_setToolboxState(bool enabled, int tool) {
+  EM_ASM_({
+      bridge_setToolboxState($0, $1);
+    }, enabled, tool);
+}
+
+}  // namespace formulate

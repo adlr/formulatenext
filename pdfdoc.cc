@@ -148,6 +148,39 @@ void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const {
 				  reinterpret_cast<FS_RECTF*>(&clip),
 				  FPDF_REVERSE_BYTE_ORDER);
   // Render doesn't return anything? I guess it always 'works' heh
+
+  double page_width, page_height;
+  if (!FPDF_GetPageSizeByIndex(doc_.get(), pageno, &page_width, &page_height)) {
+    fprintf(stderr, "can't get page size\n");
+    return;
+  }
+
+  SkPaint paint;
+  paint.setStyle(SkPaint::kStroke_Style);
+  paint.setColor(0xff808080);  // opaque grey
+  paint.setStrokeWidth(1);
+
+  int objcnt = FPDFPage_CountObjects(page.get());
+  for (int i = 0; i < objcnt; i++) {
+    FPDF_PAGEOBJECT pageobj = FPDFPage_GetObject(page.get(), i);
+    if (!pageobj) {
+      fprintf(stderr, "Unable to get pageobj!\n");
+      return;
+    }
+    SkRect bounds;
+    if (!FPDFPageObj_GetBounds(pageobj,
+                               &bounds.fLeft,
+                               &bounds.fBottom,
+                               &bounds.fRight,
+                               &bounds.fTop)) {
+      fprintf(stderr, "Unable to get bounds\n");
+      return;
+    }
+    bounds.fTop = page_height - bounds.fTop;
+    bounds.fBottom = page_height - bounds.fBottom;
+    canvas->drawRect(bounds, paint);
+  }
+  fprintf(stderr, "Drawing found %d objects\n", objcnt);
 }
 
 std::string StrConv(const std::wstring& wstr) {
@@ -161,6 +194,47 @@ std::string StrConv(const std::wstring& wstr) {
   return ret;
 }
 
+void PDFDoc::DeleteObjUnderPoint(int pageno, SkPoint point) {
+  int i = -1;
+  {
+    ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+    if (!page) {
+      fprintf(stderr, "failed to load PDFPage\n");
+      return;
+    }
+    int objcount = FPDFPage_CountObjects(page.get());
+    for (i = objcount - 1; i >= 0; i--) {
+      FPDF_PAGEOBJECT pageobj = FPDFPage_GetObject(page.get(), i);
+      if (!pageobj) {
+        fprintf(stderr, "Unable to get pageobj!\n");
+        return;
+      }
+      SkRect bounds;
+      if (!FPDFPageObj_GetBounds(pageobj,
+                                 &bounds.fLeft,
+                                 &bounds.fTop,
+                                 &bounds.fRight,
+                                 &bounds.fBottom)) {
+        fprintf(stderr, "Unable to get bounds\n");
+        return;
+      }
+      fprintf(stderr, "Bounds: %f %f %f %f, pt %f %f type %d\n",
+              bounds.fLeft, bounds.fTop, bounds.fRight, bounds.fBottom,
+              point.x(), point.y(),
+              FPDFPageObj_GetType(pageobj));
+      if (bounds.contains(point.x(), point.y())) {
+        // Delete this object!
+        break;
+      }
+    }
+    if (i < 0) {
+      fprintf(stderr, "Couldn't find an object under given point\n");
+      return;
+    }
+  }
+  DeleteObject(pageno, i);
+}
+
 void PDFDoc::ModifyPage(int pageno, SkPoint point) {
   fprintf(stderr, "modifying page %d (%f %f)\n", pageno,
           point.x(), point.y());
@@ -171,12 +245,12 @@ void PDFDoc::ModifyPage(int pageno, SkPoint point) {
   }
 
   FPDF_PAGEOBJECT textobj =
-    FPDFPageObj_NewTextObj(doc_.get(), "Helvetica", 12.0f);
+    FPDFPageObj_NewTextObj(doc_.get(), "Times-Roman", 12.0f);
   if (!textobj) {
     fprintf(stderr, "Unable to allocate text obj\n");
     return;
   }
-  std::string message = StrConv(L"Hello, world!");
+  std::string message = StrConv(L"Hello, world! 5%pz&*$gdkt\nline2");
   FPDF_WIDESTRING pdf_str = reinterpret_cast<FPDF_WIDESTRING>(message.c_str());
   if (!FPDFText_SetText(textobj, pdf_str)) {
     fprintf(stderr, "failed to set text\n");
@@ -188,6 +262,69 @@ void PDFDoc::ModifyPage(int pageno, SkPoint point) {
   if (!FPDFPage_GenerateContent(page.get())) {
     fprintf(stderr, "PDFPage_GenerateContent failed\n");
   }
+}
+
+void PDFDoc::DeleteObject(int pageno, int index) {
+  {
+    fprintf(stderr, "DeleteObject(%d, %d) called\n", pageno, index);
+    ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+    if (!page) {
+      fprintf(stderr, "failed to load PDFPage\n");
+      return;
+    }
+    FPDF_PAGEOBJECT pageobj = FPDFPage_GetObject(page.get(), index);
+    if (!pageobj) {
+      fprintf(stderr, "Unable to get page obj\n");
+      return;
+    }
+    fprintf(stderr, "Deleting of type %d\n",
+            FPDFPageObj_GetType(pageobj));
+    int beforeocnt = FPDFPage_CountObjects(page.get());
+    if (!FPDFPage_RemoveObject(page.get(), pageobj)) {
+      fprintf(stderr, "Unable to remove object\n");
+      return;
+    }
+    int afterocnt = FPDFPage_CountObjects(page.get());
+    if (!FPDFPage_GenerateContent(page.get())) {
+      fprintf(stderr, "PDFPage_GenerateContent failed\n");
+    }
+    int afterocnt2 = FPDFPage_CountObjects(page.get());
+    fprintf(stderr, "Before: %d AFter: %d aftergen: %d\n", beforeocnt, afterocnt,
+            afterocnt2);
+    // Generate undo op.
+    // TODO(adlr): This is leaking pageojb if the UndoManager removes
+    // this undo op without performing it
+    undo_manager_.PushUndoOp(
+        [this, pageno, index, pageobj] () {
+          InsertObject(pageno, index, pageobj);
+        });
+  }
+  ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return;
+  }
+  int ocnt = FPDFPage_CountObjects(page.get());
+  fprintf(stderr, "after close/open: %d objects\n", ocnt);
+}
+
+void PDFDoc::InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj) {
+  fprintf(stderr, "InsertObject(%d, %d) called\n", pageno, index);
+  ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return;
+  }
+  // TODO(adlr): use index. Currently the API is not there for it
+  FPDFPage_InsertObject(page.get(), pageobj);
+  index = FPDFPage_CountObjects(page.get()) - 1;
+  if (!FPDFPage_GenerateContent(page.get())) {
+    fprintf(stderr, "PDFPage_GenerateContent failed\n");
+  }
+  undo_manager_.PushUndoOp(
+      [this, pageno, index] () {
+        DeleteObject(pageno, index);
+      });
 }
 
 class FileSaver : public FPDF_FILEWRITE {

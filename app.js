@@ -29,13 +29,20 @@ let MouseDrag = null;
 let MouseUp = null
 let DownloadFile = null;
 let UndoRedoClicked = null;
+let ToolbarClicked = null;
 
 class ButtonMenuHelper {
   constructor(path, buttonid, clicked) {
-    this.button = document.getElementById(buttonid);
-    this.button.onclick = (ev) => { this.clicked(ev); };
-    this.menuItem = globalMenuBar.findMenu(path);
-    this.menuItem.setCallback(this.button.onclick);
+    this.button = null;
+    if (buttonid) {
+      this.button = document.getElementById(buttonid);
+      this.button.onclick = (ev) => { this.clicked(ev); };
+    }
+    this.menuItem = null;
+    if (path) {
+      this.menuItem = globalMenuBar.findMenu(path);
+      this.menuItem.setCallback(this.button.onclick);
+    }
     this.enabled = false;
     this.callback = clicked;
   }
@@ -48,15 +55,60 @@ class ButtonMenuHelper {
     if (this.enabled == enabled)
       return;
     this.enabled = enabled;
-    this.menuItem.setEnabled(enabled);
-    if (enabled)
-      this.button.classList.add('toolbar-button-enabled');
-    else
-      this.button.classList.remove('toolbar-button-enabled');
+    if (this.menuItem)
+      this.menuItem.setEnabled(enabled);
+    if (this.button) {
+      if (enabled)
+        this.button.classList.add('toolbar-button-enabled');
+      else
+        this.button.classList.remove('toolbar-button-enabled');
+    }
+  }
+}
+
+class SelectButtonGroup {
+  constructor(buttons, callback) {
+    this.buttons = buttons;
+    this.enabled = false;
+    this.selected = 0;
+    this.callback = callback;
+    for (let i = 0; i < this.buttons.length; i++) {
+      this.buttons[i].addEventListener('click',
+                                       (ev) => { this.setSelected(i); });
+    }
+    this.fixupCSS();
+  }
+  setSelected(index) {
+    if (this.selected == index)
+      return;
+    this.selected = index;
+    if (!this.enabled)
+      return;
+    this.fixupCSS();
+    this.callback(index);
+  }
+  setEnabled(en) {
+    if (this.enabled == en)
+      return;
+    this.enabled = en;
+    this.fixupCSS();
+  }
+  fixupCSS() {
+    for (let i = 0; i < this.buttons.length; i++) {
+      if (this.selected != i && this.enabled)
+        this.buttons[i].classList.add('toolbar-button-enabled');
+      else
+        this.buttons[i].classList.remove('toolbar-button-enabled');
+      if (this.selected == i && this.enabled)
+        this.buttons[i].classList.add('toolbar-selected');
+      else
+        this.buttons[i].classList.remove('toolbar-selected');
+    }
   }
 }
 
 let bridge_undoRedoEnable = null;
+let bridge_setToolboxState = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   initGlobalMenuBar();
@@ -68,6 +120,22 @@ document.addEventListener('DOMContentLoaded', function() {
     Init();
     fixupContentSize();
 
+    let zoom_level = 1.0;
+    let zoomInButtonMenuHelper =
+        new ButtonMenuHelper(null, 'zoom-in',
+                             () => {
+                               zoom_level *= 1.1;
+                               SetZoom(zoom_level);
+                             });
+    let zoomOutButtonMenuHelper =
+        new ButtonMenuHelper(null, 'zoom-out',
+                             () => {
+                               zoom_level /= 1.1;
+                               SetZoom(zoom_level);
+                             });
+    zoomInButtonMenuHelper.setEnabled(true);
+    zoomOutButtonMenuHelper.setEnabled(true);
+
     let undoButtonMenuHelper =
         new ButtonMenuHelper(['Edit', 'Undo'], 'undo',
                              () => { UndoRedoClicked(true); });
@@ -78,7 +146,19 @@ document.addEventListener('DOMContentLoaded', function() {
       undoButtonMenuHelper.setEnabled(undoEnabled);
       redoButtonMenuHelper.setEnabled(redoEnabled);
     };
-    undoButtonMenuHelper.setEnabled(true);
+
+    let toolbox = new SelectButtonGroup([
+      document.getElementById('tb-tool-arrow'),
+      document.getElementById('tb-tool-text'),
+      document.getElementById('tb-tool-freehand')
+    ], (index) => {
+      if (ToolbarClicked)
+        ToolbarClicked(index);
+    });
+    bridge_setToolboxState = (enabled, tool) => {
+      toolbox.setSelected(tool);
+      toolbox.setEnabled(enabled);
+    }
   };
   // TestDraw = Module.cwrap('TestDraw', 'number',
   //                         ['number',  // width
@@ -97,6 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
   MouseUp = Module.cwrap('MouseUp', null, ['number', 'number']);
   DownloadFile = Module.cwrap('DownloadFile', null, []);
   UndoRedoClicked = Module.cwrap('UndoRedoClicked', null, ['number']);
+  ToolbarClicked = Module.cwrap('ToolbarClicked', null, ['number']);
 
   var outer = document.getElementById('outer');
   var canvas = document.getElementById('canvas');
@@ -172,8 +253,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
   };
 
-  document.getElementById('zoom-in').onclick = zoomIn;
-  document.getElementById('zoom-out').onclick = zoomOut;
+  // document.getElementById('zoom-in').onclick = zoomIn;
+  // document.getElementById('zoom-out').onclick = zoomOut;
   let mouse_down = false;
   outer.addEventListener('mousedown', ev => {
     if (ev.ctrlKey) {
@@ -219,21 +300,21 @@ var PushCanvas = (bufptr, width, height) => {
   ctx.putImageData(img, 0, 0);
 };
 
-let g_zoom = 1.0;
+// let g_zoom = 1.0;
 
-const zoomIn = function(ev) {
-  if (!runtime_ready) return;
-  g_zoom *= 1.1;
-  SetZoom(g_zoom);
-};
-const zoomOut = function(ev) {
-  if (!runtime_ready) return;
-  g_zoom /= 1.1;
-  SetZoom(g_zoom);
-};
-const zoom100 = function() {
-  if (!runtime_ready) return;
-};
+// const zoomIn = function(ev) {
+//   if (!runtime_ready) return;
+//   g_zoom *= 1.1;
+//   SetZoom(g_zoom);
+// };
+// const zoomOut = function(ev) {
+//   if (!runtime_ready) return;
+//   g_zoom /= 1.1;
+//   SetZoom(g_zoom);
+// };
+// const zoom100 = function() {
+//   if (!runtime_ready) return;
+// };
 
 // set the size/position of the scrollbar view
 let bridge_setSize = function(width, height, xpos, ypos) {
@@ -260,10 +341,6 @@ let bridge_downloadBytes = (addr, len) => {
     window.URL.revokeObjectURL(data);
   }, 100);
 };
-
-let bridge_enableUndoRedo = (undoEnabled, redoEnabled) => {
-  
-}
 
 let loadFile = function(element) {
   let file = element.target.files[0];

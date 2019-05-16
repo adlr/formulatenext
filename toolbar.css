@@ -9,6 +9,7 @@
 
 .toolbar-button {
     color: rgba(0, 0, 0, 0.5);
+    fill: rgba(0, 0, 0, 0.5);
     padding: 3px;
     margin-right: 2px;
     display: inline-block;
@@ -16,8 +17,28 @@
 
 .toolbar-button-enabled {
     color: rgba(0, 0, 0, 1);
+    fill: rgba(0, 0, 0, 1);
 }
 
 .toolbar-button-enabled:hover {
     background-color: rgba(0, 0, 0, 0.06);
+}
+
+.toolbar-divider {
+    background-color: rgba(0, 0, 0, 0.2);
+    width: 1px;
+    height: 20px;
+    margin: 0px;
+    display: inline-block;
+}
+
+#tb-tool-arrow {
+    width: 24px;
+    height: 24px;
+}
+
+.toolbar-selected {
+    color: rgba(0, 0, 0, 1);
+    fill: rgba(0, 0, 0, 1);
+    background-color: rgb(232, 240, 254);
 }

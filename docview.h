@@ -8,6 +8,7 @@
 #include "SkCanvas.h"
 
 #include "pdfdoc.h"
+#include "toolbox.h"
 #include "view.h"
 
 namespace formulate {
@@ -41,6 +42,7 @@ class DocView : public View {
   void MouseUp(SkPoint pt);
 
   PDFDoc doc_;
+  Toolbox toolbox_;
  private:
   std::vector<SkSize> page_sizes_;  // in PDF points
   float max_page_width_{0};  // in PDF points

@@ -1,0 +1,51 @@
+<html><head>
+    <style>
+      svg {
+      width: 16px;
+      height: 16px;
+      margin: 10px;
+      }
+
+      body {
+      background: #d0d0d0;
+      }
+      </style>
+    </head><body>
+
+<textarea id="x"></textarea>
+<script language="JavaScript">
+  let r = 8;
+  let full = '';
+
+  let points = [
+  [5, 10],
+  [5, 39],
+  [12, 32],
+  [16, 42],
+  [19, 41],
+  [15, 31],
+  [25, 31]
+  ];
+
+let scale = 0.5;
+let translate = [5, -1];
+
+  let w = function(s) {
+  document.write(s);
+  //console.log(s);
+  full = full + s;
+  document.getElementById('x').innerText = full;
+  };
+w('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">');
+//w('<rect x="0" y="0" width="24" height="24" style="fill:rgb(255,255,255);" />');
+w('<polyline points="');
+for (let i = 0; i < points.length; i++) {
+    let point = points[i];
+    for (let j = 0; j < point.length; j++) {
+	w((scale * point[j] + translate[j]) + ' ');
+    }
+}
+w('" fill="#000000" stroke="none" />');
+			w('</svg>');
+			</script>
+</body></html>
