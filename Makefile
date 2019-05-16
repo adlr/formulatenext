@@ -1,8 +1,7 @@
 all: formulate.html
 
-OBJS=\
-	formulate.o \
-	pdfium/out/Debug/obj/libpdfium.a
+CFLAGS=\
+	-g -O0
 
 INC=\
 	-Ipdfium/pdfium \
@@ -11,12 +10,9 @@ INC=\
 	-Iskia/skia/include/config
 
 %.o : %.cc
-	emcc -g -O0 -MMD -std=c++14 $(INC) -o $@ $<
+	emcc $(CFLAGS) -MMD -std=c++14 $(INC) -o $@ $<
 
-formulate.html: $(OBJS)
-	emcc -o $@ $(OBJS) -s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" -s ALLOW_MEMORY_GROWTH=1
-
-TESTOBJS=\
+OBJS=\
 	formulate_bridge.o \
 	docview.o \
 	scrollview.o \
@@ -49,8 +45,8 @@ NotoMono-Regular.ttf.o : skia/skia/modules/canvaskit/fonts/NotoMono-Regular.ttf.
 		-Iskia/skia/include/config \
 		$<
 
-testdoc.html: $(TESTOBJS) $(MATERIAL_FONTS_FILES) Roboto/Roboto.css
-	emcc -O0 -g -o $@ $(TESTOBJS) \
+formulate.html: $(OBJS) $(MATERIAL_FONTS_FILES) Roboto/Roboto.css
+	emcc $(CFLAGS) -o $@ $(OBJS) \
 		-s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" \
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s USE_LIBPNG=1 \

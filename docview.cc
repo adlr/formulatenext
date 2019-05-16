@@ -134,9 +134,23 @@ void DocView::MouseUp(SkPoint pt) {
   int page = 0;
   SkPoint pagept;
   ViewPointToPageAndPoint(pt, &page, &pagept);
-  fprintf(stderr, "doc point %f %f to pg %d  %f %f\n",
-          pt.x(), pt.y(), page, pagept.x(), pagept.y());
-  doc_.ModifyPage(page, pagept);
+  if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
+    fprintf(stderr, "doc point %f %f to pg %d  %f %f\n",
+            pt.x(), pt.y(), page, pagept.x(), pagept.y());
+    doc_.ModifyPage(page, pagept);
+  }
+  if (editing_text_page_ >= 0) {
+    if (!editing_text_str_.empty()) {
+      fprintf(stderr, "Commit: %s\n", editing_text_str_.c_str());
+      // commit text
+    }
+    editing_text_str_.clear();
+    editing_text_page_ = -1;
+  } else if (toolbox_.current_tool() == Toolbox::kText_Tool) {
+    editing_text_page_ = page;
+    editing_text_point_ = pagept;
+    bridge_startComposingText(0, 0, zoom_);
+  }
 }
 
 }  // namespace formulate

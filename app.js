@@ -30,6 +30,7 @@ let MouseUp = null
 let DownloadFile = null;
 let UndoRedoClicked = null;
 let ToolbarClicked = null;
+let UpdateEditText = null;
 
 class ButtonMenuHelper {
   constructor(path, buttonid, clicked) {
@@ -109,6 +110,8 @@ class SelectButtonGroup {
 
 let bridge_undoRedoEnable = null;
 let bridge_setToolboxState = null;
+let bridge_startComposingText = null;
+let bridge_stopComposingText = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   initGlobalMenuBar();
@@ -178,6 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
   DownloadFile = Module.cwrap('DownloadFile', null, []);
   UndoRedoClicked = Module.cwrap('UndoRedoClicked', null, ['number']);
   ToolbarClicked = Module.cwrap('ToolbarClicked', null, ['number']);
+  UpdateEditText = Module.cwrap('UpdateEditText', null, ['string']);
 
   var outer = document.getElementById('outer');
   var canvas = document.getElementById('canvas');
@@ -221,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
     return ret;
   };
 
-  let launchEditor = (xpos, ypos) => {
+  let launchEditor = (xpos, ypos, zoom) => {
     let vertOffset = calcFontMetrics();
     let padding = 5;
     xpos -= padding;
@@ -233,16 +237,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     textarea.style.left = (outer.offsetLeft + xpos) + 'px';
     textarea.style.top = (outer.offsetTop + ypos) + 'px';
+    textarea.style.transform = 'scale(' + zoom + ')';
     let update = () => {
       textarea.style.height = '';
       textarea.style.height = Math.max(10, textarea.scrollHeight) + 'px';
       textarea.style.width = '';
       textarea.style.width = Math.max(10, textarea.scrollWidth + padding) + 'px';
+      UpdateEditText(textarea.value);
     };
     textarea.addEventListener('keyup', update);
     textarea.addEventListener('input', update);
     textarea.addEventListener('blur', (ev) => {
-      textarea.parentNode.removeChild(textarea);
+      //textarea.parentNode.removeChild(textarea);
     });
     textarea.value = "Hello there";
     update();
@@ -251,17 +257,21 @@ document.addEventListener('DOMContentLoaded', function() {
       textarea.focus();
       update();
     }, 100);
+    bridge_stopComposingText = () => {
+      textarea.parentNode.removeChild(textarea);
+    }
   };
+  bridge_startComposingText = launchEditor;
 
   // document.getElementById('zoom-in').onclick = zoomIn;
   // document.getElementById('zoom-out').onclick = zoomOut;
   let mouse_down = false;
   outer.addEventListener('mousedown', ev => {
-    if (ev.ctrlKey) {
-      launchEditor(ev.offsetX - outer.scrollLeft,
-                   ev.offsetY - outer.scrollTop);
-      return;
-    }
+    // if (ev.ctrlKey) {
+    //   launchEditor(ev.offsetX - outer.scrollLeft,
+    //                ev.offsetY - outer.scrollTop);
+    //   return;
+    // }
 
     if (MouseDown) {
       MouseDown(ev.offsetX - outer.scrollLeft,

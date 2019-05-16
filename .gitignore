@@ -4,12 +4,10 @@
 *~
 formulate.html
 formulate.js
+formulate.wast
 material-icons.css
 MaterialIcons-Regular.*
 Roboto/*
-testdoc.html
-testdoc.js
-testdoc.wast
 pdfium/*
 skia/*
 depot_tools/*

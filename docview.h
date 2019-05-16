@@ -43,10 +43,17 @@ class DocView : public View {
 
   PDFDoc doc_;
   Toolbox toolbox_;
+
+  void SetEditingString(const char* str) {
+    editing_text_str_ = str;
+  }
  private:
   std::vector<SkSize> page_sizes_;  // in PDF points
   float max_page_width_{0};  // in PDF points
   float zoom_{1};  // user zoom in/out
+  int editing_text_page_{-1};
+  SkPoint editing_text_point_;  // in PDF points
+  std::string editing_text_str_;
 };
 
 }  // namespace formulate

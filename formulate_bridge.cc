@@ -84,8 +84,13 @@ void MouseDrag(float xpos, float ypos) {
   scroll_view_->MouseDrag(SkPoint::Make(xpos, ypos));
 }
 
+float hack_xpos;
+float hack_ypos;
+
 EMSCRIPTEN_KEEPALIVE
 void MouseUp(float xpos, float ypos) {
+  hack_xpos = xpos;
+  hack_ypos = ypos;
   scroll_view_->MouseUp(SkPoint::Make(xpos, ypos));
   scroll_view_->DoDraw();
 }
@@ -113,6 +118,11 @@ void ToolbarClicked(int tool) {
   doc_view_->toolbox_.set_current_tool(static_cast<Toolbox::Tool>(tool));
 }
 
+EMSCRIPTEN_KEEPALIVE
+void UpdateEditText(const char* str) {
+  doc_view_->SetEditingString(str);
+}
+
 }  // extern "C"
 
 namespace formulate {
@@ -127,6 +137,18 @@ void bridge_setToolboxState(bool enabled, int tool) {
   EM_ASM_({
       bridge_setToolboxState($0, $1);
     }, enabled, tool);
+}
+
+void bridge_startComposingText(float xpos, float ypos, float zoom) {
+  EM_ASM_({
+      bridge_startComposingText($0, $1);
+    }, hack_xpos, hack_ypos);
+}
+
+void bridge_stopComposingText() {
+  EM_ASM({
+      bridge_stopComposingText();
+    });
 }
 
 }  // namespace formulate
