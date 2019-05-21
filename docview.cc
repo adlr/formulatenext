@@ -140,9 +140,12 @@ void DocView::MouseUp(SkPoint pt) {
     doc_.ModifyPage(page, pagept);
   }
   if (editing_text_page_ >= 0) {
+    
     if (!editing_text_str_.empty()) {
       fprintf(stderr, "Commit: %s\n", editing_text_str_.c_str());
-      // commit text
+      bridge_stopComposingText();
+      doc_.PlaceText(editing_text_page_, editing_text_point_,
+                     editing_text_str_);
     }
     editing_text_str_.clear();
     editing_text_page_ = -1;

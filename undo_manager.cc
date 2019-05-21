@@ -10,7 +10,8 @@ void UndoManager::PushUndoOp(const std::function<void ()>& op) {
   if (undo_in_progress_) {
     redo_ops_.push_back(op);
   } else {
-    redo_ops_.clear();
+    if (!redo_in_progress_)
+      redo_ops_.clear();
     undo_ops_.push_back(op);
     while (undo_ops_.size() > 10) {
       undo_ops_.pop_front();

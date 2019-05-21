@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
     textarea.addEventListener('blur', (ev) => {
       //textarea.parentNode.removeChild(textarea);
     });
-    textarea.value = "Hello there";
+    textarea.value = '';
     update();
     document.body.appendChild(textarea);
     setTimeout(() => {

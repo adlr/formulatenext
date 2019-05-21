@@ -194,6 +194,20 @@ std::string StrConv(const std::wstring& wstr) {
   return ret;
 }
 
+std::string StrConv(const std::string& ascii) {
+  // Convert low-order ascii string to UTF-16LE
+  std::string ret;
+  for (char c : ascii) {
+    if (c < 0)
+      return "";
+    ret.push_back(c);
+    ret.push_back(0);
+  }
+  ret.push_back(0);
+  ret.push_back(0);
+  return ret;
+}
+
 void PDFDoc::DeleteObjUnderPoint(int pageno, SkPoint point) {
   int i = -1;
   {
@@ -280,10 +294,12 @@ void PDFDoc::DeleteObject(int pageno, int index) {
     fprintf(stderr, "Deleting of type %d\n",
             FPDFPageObj_GetType(pageobj));
     int beforeocnt = FPDFPage_CountObjects(page.get());
+    fprintf(stderr, "about to call FPDFPage_RemoveObject\n");
     if (!FPDFPage_RemoveObject(page.get(), pageobj)) {
       fprintf(stderr, "Unable to remove object\n");
       return;
     }
+    fprintf(stderr, "called FPDFPage_RemoveObject\n");
     int afterocnt = FPDFPage_CountObjects(page.get());
     if (!FPDFPage_GenerateContent(page.get())) {
       fprintf(stderr, "PDFPage_GenerateContent failed\n");
@@ -316,11 +332,59 @@ void PDFDoc::InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj) {
     return;
   }
   // TODO(adlr): use index. Currently the API is not there for it
+  fprintf(stderr, "calling FPDFPage_InsertObject\n");
+  fprintf(stderr, "before we have %d objs\n", FPDFPage_CountObjects(page.get()));
   FPDFPage_InsertObject(page.get(), pageobj);
+  fprintf(stderr, "after we have %d objs\n", FPDFPage_CountObjects(page.get()));
+
+  double a, b, c, d, e, f;
+  int rc = FPDFText_GetMatrix(pageobj, &a, &b, &c, &d, &e, &f);
+  fprintf(stderr, "get matrix(%d) = [%f %f %f %f %f %f]\n", rc,
+          a, b, c, d, e, f);
+
+  fprintf(stderr, "Going to count objects\n");
   index = FPDFPage_CountObjects(page.get()) - 1;
+  fprintf(stderr, "going to generate content\n");
   if (!FPDFPage_GenerateContent(page.get())) {
     fprintf(stderr, "PDFPage_GenerateContent failed\n");
   }
+  fprintf(stderr, "making undo op\n");
+  undo_manager_.PushUndoOp(
+      [this, pageno, index] () {
+        DeleteObject(pageno, index);
+      });
+}
+
+void PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
+  ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return;
+  }
+  FPDF_PAGEOBJECT textobj =
+      FPDFPageObj_NewTextObj(doc_.get(), "Helvetica", 12.0f);
+  if (!textobj) {
+    fprintf(stderr, "Unable to allocate text obj\n");
+    return;
+  }
+  std::string message = StrConv(ascii);
+  FPDF_WIDESTRING pdf_str = reinterpret_cast<FPDF_WIDESTRING>(message.c_str());
+  if (!FPDFText_SetText(textobj, pdf_str)) {
+    fprintf(stderr, "failed to set text\n");
+    return;
+  }
+
+  FPDFPageObj_Transform(textobj, 1, 0, 0, 1, pagept.x(), pagept.y());
+  FPDFPage_InsertObject(page.get(), textobj);
+  double a, b, c, d, e, f;
+  int rc = FPDFText_GetMatrix(textobj, &a, &b, &c, &d, &e, &f);
+  fprintf(stderr, "get matrix(%d) = [%f %f %f %f %f %f]\n", rc,
+          a, b, c, d, e, f);
+  if (!FPDFPage_GenerateContent(page.get())) {
+    fprintf(stderr, "PDFPage_GenerateContent failed\n");
+  }
+  // Handle Undo
+  int index = FPDFPage_CountObjects(page.get()) - 1;
   undo_manager_.PushUndoOp(
       [this, pageno, index] () {
         DeleteObject(pageno, index);

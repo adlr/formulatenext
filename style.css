@@ -68,6 +68,7 @@ canvas {
   z-index: 15;
   margin: 0;
   padding: 5px;
+  font-kerning: none;
   transform-origin: 5px 5px;
   overflow: hidden;
   outline: none;
