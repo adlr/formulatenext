@@ -9,38 +9,25 @@
 
 namespace formulate {
 
-class ScrollView {
+class ScrollView : public View {
  public:
-  ScrollView(View* child)
-    : child_(child) {}
-  float Width() const { return size_.width() * scale_; }
-  float Height() const { return size_.height() * scale_; }
   void SetSize(const SkSize& size) {
-    size_ = size;
+    View::SetSize(size);
     RepositionChild();
-  }
-  void Draw(SkCanvas* canvas, SkRect rect);
-  void SetScale(float scale) {
-    scale_ = scale;
   }
   void SetOrigin(SkPoint origin) {
     origin_ = origin;
     RepositionChild();
   }
   void RepositionChild();
+
   SkPoint ChildVisibleCenter() const;
   void CenterOnChildPoint(SkPoint point);
-  void DoDraw();
 
-  void MouseDown(SkPoint pt);
-  void MouseDrag(SkPoint pt);
-  void MouseUp(SkPoint pt);
+  // void MouseDown(SkPoint pt);
+  // void MouseDrag(SkPoint pt);
+  // void MouseUp(SkPoint pt);
  private:
-  View* child_;
-  SkSize size_;
-  SkPoint origin_;  // scroll origin; upper left point
-  float scale_{1};  // for high-DPI
-
   bool sent_child_mousedown_{false};
 };
 

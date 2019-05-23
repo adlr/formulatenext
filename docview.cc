@@ -10,17 +10,6 @@ namespace {
   float kBorderPixels = 20.0;
 }
 
-float DocView::Width() const {
-  return MaxPageWidth() * zoom_ + kBorderPixels * 2;
-}
-
-float DocView::Height() const {
-  float ret = kBorderPixels;
-  for (auto it = page_sizes_.begin(); it != page_sizes_.end(); ++it)
-    ret += it->height() * zoom_ + kBorderPixels;
-  return ret;
-}
-
 void DocView::Draw(SkCanvas* canvas, SkRect rect) {
   SkPaint paint;
 
@@ -82,10 +71,14 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
 void DocView::RecomputePageSizes() {
   page_sizes_.resize(doc_.Pages());
   max_page_width_ = 0.0;
+  float height = kBorderPixels;
   for (int i = 0; i < page_sizes_.size(); i++) {
     page_sizes_[i] = doc_.PageSize(i);
     max_page_width_ = std::max(max_page_width_, page_sizes_[i].width());
+    height += page_sizes_[i].height() * zoom_ + kBorderPixels;
   }
+  SetSize(SkSize::Make(max_page_width_ * zoom_ + kBorderPixels * 2,
+                       height));
 }
 
 void DocView::ViewPointToPageAndPoint(const SkPoint& viewpt,
@@ -126,34 +119,34 @@ SkPoint DocView::PagePointToViewPoint(int page, const SkPoint& pagept) const {
                        (page_sizes_[page].height() - pagept.y()) * zoom_ + top);
 }
 
-void DocView::MouseDown(SkPoint pt) {
-}
-void DocView::MouseDrag(SkPoint pt) {
-}
-void DocView::MouseUp(SkPoint pt) {
-  int page = 0;
-  SkPoint pagept;
-  ViewPointToPageAndPoint(pt, &page, &pagept);
-  if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
-    fprintf(stderr, "doc point %f %f to pg %d  %f %f\n",
-            pt.x(), pt.y(), page, pagept.x(), pagept.y());
-    doc_.ModifyPage(page, pagept);
-  }
-  if (editing_text_page_ >= 0) {
+// void DocView::MouseDown(SkPoint pt) {
+// }
+// void DocView::MouseDrag(SkPoint pt) {
+// }
+// void DocView::MouseUp(SkPoint pt) {
+//   int page = 0;
+//   SkPoint pagept;
+//   ViewPointToPageAndPoint(pt, &page, &pagept);
+//   if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
+//     fprintf(stderr, "doc point %f %f to pg %d  %f %f\n",
+//             pt.x(), pt.y(), page, pagept.x(), pagept.y());
+//     doc_.ModifyPage(page, pagept);
+//   }
+//   if (editing_text_page_ >= 0) {
     
-    if (!editing_text_str_.empty()) {
-      fprintf(stderr, "Commit: %s\n", editing_text_str_.c_str());
-      bridge_stopComposingText();
-      doc_.PlaceText(editing_text_page_, editing_text_point_,
-                     editing_text_str_);
-    }
-    editing_text_str_.clear();
-    editing_text_page_ = -1;
-  } else if (toolbox_.current_tool() == Toolbox::kText_Tool) {
-    editing_text_page_ = page;
-    editing_text_point_ = pagept;
-    bridge_startComposingText(0, 0, zoom_);
-  }
-}
+//     if (!editing_text_str_.empty()) {
+//       fprintf(stderr, "Commit: %s\n", editing_text_str_.c_str());
+//       bridge_stopComposingText();
+//       doc_.PlaceText(editing_text_page_, editing_text_point_,
+//                      editing_text_str_);
+//     }
+//     editing_text_str_.clear();
+//     editing_text_page_ = -1;
+//   } else if (toolbox_.current_tool() == Toolbox::kText_Tool) {
+//     editing_text_page_ = page;
+//     editing_text_point_ = pagept;
+//     bridge_startComposingText(0, 0, zoom_);
+//   }
+// }
 
 }  // namespace formulate

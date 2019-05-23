@@ -16,8 +16,6 @@ namespace formulate {
 class DocView : public View {
  public:
   DocView() {}
-  float Width() const;
-  float Height() const;
   void Draw(SkCanvas* canvas, SkRect rect);
   void SetZoom(float zoom) { zoom_ = zoom; }
 
@@ -37,9 +35,9 @@ class DocView : public View {
   // The inverse of ViewPointToPageAndPoint().
   SkPoint PagePointToViewPoint(int page, const SkPoint& pagept) const;
 
-  void MouseDown(SkPoint pt);
-  void MouseDrag(SkPoint pt);
-  void MouseUp(SkPoint pt);
+  // void MouseDown(SkPoint pt);
+  // void MouseDrag(SkPoint pt);
+  // void MouseUp(SkPoint pt);
 
   PDFDoc doc_;
   Toolbox toolbox_;

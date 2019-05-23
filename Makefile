@@ -18,6 +18,7 @@ OBJS=\
 	scrollview.o \
 	pdfdoc.o \
 	view.o \
+	rootview.o \
 	undo_manager.o \
 	NotoMono-Regular.ttf.o \
 	skia/skia/out/canvaskit_wasm/libskia.a \

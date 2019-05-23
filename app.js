@@ -17,8 +17,7 @@ var throttle = function(type, name, obj) {
 let runtime_ready = false;
 
 let SetZoom = null;
-let SetScale = null;
-let SetSize = null;
+let SetScaleAndSize = null;
 let SetScrollOrigin = null;
 let Init = null;
 let SetFileSize = null;
@@ -167,8 +166,8 @@ document.addEventListener('DOMContentLoaded', function() {
   //                         ['number',  // width
   //                          'number']);  // height
   SetZoom = Module.cwrap('SetZoom', null, ['number']);
-  SetScale = Module.cwrap('SetScale', null, ['number']);
-  SetSize = Module.cwrap('SetSize', null, ['number', 'number']);
+  SetScaleAndSize = Module.cwrap('SetScaleAndSize', null,
+                                 ['number', 'number', 'number']);
   SetScrollOrigin = Module.cwrap('SetScrollOrigin', null,
                                  ['number', 'number']);
   Init = Module.cwrap('Init', null, []);
@@ -198,8 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
-    SetScale(dpr);
-    SetSize(rect.width, rect.height);
+    SetScaleAndSize(dpr, rect.width, rect.height);
   };
   window.addEventListener('optimizedResize', fixupContentSize);
   
@@ -310,32 +308,24 @@ var PushCanvas = (bufptr, width, height) => {
   ctx.putImageData(img, 0, 0);
 };
 
-// let g_zoom = 1.0;
-
-// const zoomIn = function(ev) {
-//   if (!runtime_ready) return;
-//   g_zoom *= 1.1;
-//   SetZoom(g_zoom);
-// };
-// const zoomOut = function(ev) {
-//   if (!runtime_ready) return;
-//   g_zoom /= 1.1;
-//   SetZoom(g_zoom);
-// };
-// const zoom100 = function() {
-//   if (!runtime_ready) return;
-// };
+var PushCanvasXYWH = (bufptr, xpos, ypos, width, height) => {
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  let arr = new Uint8ClampedArray(Module.HEAPU8.buffer,
+                                  bufptr, width * height * 4);
+  let img = new ImageData(arr, width, height);
+  ctx.putImageData(img, xpos, ypos);
+};
 
 // set the size/position of the scrollbar view
 let bridge_setSize = function(width, height, xpos, ypos) {
+  console.log(`setSize: ${width}, ${height}, ${xpos}, ${ypos}`);
   let inner = document.getElementById('inner');
   inner.style.width = width + 'px';
   inner.style.height = height + 'px';
   let outer = document.getElementById('outer');
   outer.scrollLeft = xpos;
   outer.scrollTop = ypos;
-  // console.log('setsize ' +
-  //             width + ', ' + height + ', ' + xpos + ', ' + ypos);
 };
 
 let bridge_downloadBytes = (addr, len) => {

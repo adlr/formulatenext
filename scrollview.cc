@@ -10,32 +10,35 @@
 
 namespace formulate {
 
-void ScrollView::Draw(SkCanvas* canvas, SkRect rect) {
-  canvas->scale(scale_, scale_);
-  rect = ScaleRect(rect, scale_);
-  canvas->translate(-origin_.x(), -origin_.y());
-  rect.offset(origin_);
-  child_->Draw(canvas, rect);
-}
-
 void ScrollView::RepositionChild() {
-  if (size_.width() > child_->Width()) {
-    // center child
-    origin_.fX = -(size_.width() - child_->Width()) / 2;
-  } else {
-    origin_.fX = Clamp(origin_.fX, 0.0f,
-                       child_->Width() - size_.width());
+  if (children_.size() != 1) {
+    fprintf(stderr, "ScrollView has wrong number of children! (%zu)\n",
+            children_.size());
+    return;
   }
-  if (size_.height() > child_->Height()) {
+  View* child = children_[0];
+  SkPoint neworigin = child->origin();
+
+  if (size_.width() > child->Width()) {
     // center child
-    origin_.fY = -(size_.height() - child_->Height()) / 2;
+    neworigin.fX = (size_.width() - child->Width()) / 2;
   } else {
-    origin_.fY = Clamp(origin_.fY, 0.0f,
-                       child_->Height() - size_.height());
+    neworigin.fX = Clamp(neworigin.fX, 0.0f,
+                         size_.width() - child->Width());
   }
+  if (size_.height() > child->Height()) {
+    // center child
+    neworigin.fY = (size_.height() - child->Height()) / 2;
+  } else {
+    neworigin.fY = Clamp(neworigin.fY, 0.0f,
+                         size_.height() - child->Height());
+  }
+  child->SetOrigin(neworigin);
   EM_ASM_({
       bridge_setSize($0, $1, $2, $3);
-    }, child_->Width(), child_->Height(), origin_.fX, origin_.fY);
+    }, child->Width(), child->Height(),
+    std::max(-child->origin().x(), 0.0f),
+    std::max(-child->origin().y(), 0.0f));
 }
 
 SkPoint ScrollView::ChildVisibleCenter() const {
@@ -56,47 +59,47 @@ void ScrollView::CenterOnChildPoint(SkPoint point) {
   RepositionChild();
 }
 
-void ScrollView::DoDraw() {
-  // Allocate a buffer
-  SkISize bufsize({static_cast<int32_t>(Width()),
-        static_cast<int32_t>(Height())});
-  SkBitmap bitmap;
-  bitmap.setInfo(SkImageInfo::Make(bufsize.width(),
-                                   bufsize.height(),
-                                   kRGBA_8888_SkColorType,
-                                   kUnpremul_SkAlphaType));
-  if (!bitmap.tryAllocPixels()) {
-    fprintf(stderr, "failed to alloc bitmap\n");
-    return;
-  }
-  SkCanvas offscreen(bitmap);
-  Draw(&offscreen, SkRect::MakeWH(bitmap.width(), bitmap.height()));
-  // Push to HTML canvas now
-  EM_ASM_({
-      PushCanvas($0, $1, $2);
-    }, bitmap.getPixels(), bitmap.width(), bitmap.height());
-}
+// void ScrollView::DoDraw() {
+//   // Allocate a buffer
+//   SkISize bufsize({static_cast<int32_t>(Width()),
+//         static_cast<int32_t>(Height())});
+//   SkBitmap bitmap;
+//   bitmap.setInfo(SkImageInfo::Make(bufsize.width(),
+//                                    bufsize.height(),
+//                                    kRGBA_8888_SkColorType,
+//                                    kUnpremul_SkAlphaType));
+//   if (!bitmap.tryAllocPixels()) {
+//     fprintf(stderr, "failed to alloc bitmap\n");
+//     return;
+//   }
+//   SkCanvas offscreen(bitmap);
+//   Draw(&offscreen, SkRect::MakeWH(bitmap.width(), bitmap.height()));
+//   // Push to HTML canvas now
+//   EM_ASM_({
+//       PushCanvas($0, $1, $2);
+//     }, bitmap.getPixels(), bitmap.width(), bitmap.height());
+// }
 
-void ScrollView::MouseDown(SkPoint pt) {
-  pt.offset(origin_.x(), origin_.y());
-  SkRect child_bounds =
-    SkRect::MakeXYWH(0, 0, child_->Width(), child_->Height());
-  if (child_bounds.contains(pt.x(), pt.y())) {
-    sent_child_mousedown_ = true;
-    child_->MouseDown(pt);
-  }
-}
-void ScrollView::MouseDrag(SkPoint pt) {
-  pt.offset(origin_.x(), origin_.y());
-  if (sent_child_mousedown_)
-    child_->MouseDrag(pt);
-}
-void ScrollView::MouseUp(SkPoint pt) {
-  pt.offset(origin_.x(), origin_.y());
-  if (sent_child_mousedown_) {
-    child_->MouseUp(pt);
-    sent_child_mousedown_ = false;
-  }
-}
+// void ScrollView::MouseDown(SkPoint pt) {
+//   pt.offset(origin_.x(), origin_.y());
+//   SkRect child_bounds =
+//     SkRect::MakeXYWH(0, 0, child_->Width(), child_->Height());
+//   if (child_bounds.contains(pt.x(), pt.y())) {
+//     sent_child_mousedown_ = true;
+//     child_->MouseDown(pt);
+//   }
+// }
+// void ScrollView::MouseDrag(SkPoint pt) {
+//   pt.offset(origin_.x(), origin_.y());
+//   if (sent_child_mousedown_)
+//     child_->MouseDrag(pt);
+// }
+// void ScrollView::MouseUp(SkPoint pt) {
+//   pt.offset(origin_.x(), origin_.y());
+//   if (sent_child_mousedown_) {
+//     child_->MouseUp(pt);
+//     sent_child_mousedown_ = false;
+//   }
+// }
 
 }  // namespace formulate
