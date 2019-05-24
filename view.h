@@ -9,6 +9,37 @@
 
 namespace formulate {
 
+static const int kControlKey = 1;
+static const int kAltKey = 2;
+static const int kShiftKey = 4;
+
+class View;
+
+class MouseInputEvent {
+ public:
+  enum Type {
+    DOWN, DRAG, UP, MOVE
+  };
+  MouseInputEvent(SkPoint position, Type type,
+                  int32_t click_count,
+                  int32_t modifiers)
+      : position_(position),
+        type_(type),
+        click_count_(click_count),
+        modifiers_(modifiers) {}
+  void UpdateToChild(View* child, View* from_parent);
+  //void UpdateFromSubview(View* subview);
+  const SkPoint& position() const { return position_; }
+  uint32_t modifiers() const { return modifiers_; }
+  int32_t ClickCount() const { return click_count_; }
+
+ private:
+  SkPoint position_;
+  Type type_;
+  int32_t click_count_;
+  uint32_t modifiers_;  // Same from KeyboardInputEvent
+};
+
 class View {
  public:
   View() {}
@@ -66,9 +97,12 @@ class View {
   // than what is actually visible.
   SkRect VisibleSubrect() const;
 
-  virtual void MouseDown(SkPoint pt) {}
-  virtual void MouseDrag(SkPoint pt) {}
-  virtual void MouseUp(SkPoint pt) {}
+  // MouseDown returns null if not consumed, or the consumer if consumed.
+  // MouseDrag/MouseUp reported to the consumer of the down.
+  // Default implementation calls to children
+  virtual View* MouseDown(MouseInputEvent ev);
+  virtual void MouseDrag(MouseInputEvent ev) {}
+  virtual void MouseUp(MouseInputEvent ev) {}
 
   void Dump(int indent) const;
  protected:
@@ -77,6 +111,8 @@ class View {
   float scale_{1.0f};  // relative to parent
   View* parent_{nullptr};
   std::vector<View*> children_;
+
+  View* drag_consumer_{nullptr};
 };
 
 template<typename T>

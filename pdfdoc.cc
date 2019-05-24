@@ -355,23 +355,23 @@ void PDFDoc::InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj) {
       });
 }
 
-void PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
+SkRect PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
   ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
   if (!page) {
     fprintf(stderr, "failed to load PDFPage\n");
-    return;
+    return SkRect::MakeEmpty();
   }
   FPDF_PAGEOBJECT textobj =
       FPDFPageObj_NewTextObj(doc_.get(), "Helvetica", 12.0f);
   if (!textobj) {
     fprintf(stderr, "Unable to allocate text obj\n");
-    return;
+    return SkRect::MakeEmpty();
   }
   std::string message = StrConv(ascii);
   FPDF_WIDESTRING pdf_str = reinterpret_cast<FPDF_WIDESTRING>(message.c_str());
   if (!FPDFText_SetText(textobj, pdf_str)) {
     fprintf(stderr, "failed to set text\n");
-    return;
+    return SkRect::MakeEmpty();
   }
 
   FPDFPageObj_Transform(textobj, 1, 0, 0, 1, pagept.x(), pagept.y());
@@ -389,6 +389,14 @@ void PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
       [this, pageno, index] () {
         DeleteObject(pageno, index);
       });
+  SkRect ret;
+  if (FPDFPageObj_GetBounds(textobj, &ret.fLeft, &ret.fTop,
+                            &ret.fRight, &ret.fBottom)) {
+    return ret;
+  } else {
+    fprintf(stderr, "Failed to get bounds for new text obj\n");
+  }
+  return SkRect::MakeEmpty();
 }
 
 class FileSaver : public FPDF_FILEWRITE {

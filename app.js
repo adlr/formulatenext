@@ -23,9 +23,7 @@ let Init = null;
 let SetFileSize = null;
 let AppendFileBytes = null;
 let FinishFileLoad = null;
-let MouseDown = null
-let MouseDrag = null;
-let MouseUp = null
+let MouseEvent = null;
 let DownloadFile = null;
 let UndoRedoClicked = null;
 let ToolbarClicked = null;
@@ -174,9 +172,8 @@ document.addEventListener('DOMContentLoaded', function() {
   SetFileSize = Module.cwrap('SetFileSize', null, ['number']);
   AppendFileBytes = Module.cwrap('AppendFileBytes', null, ['number', 'number']);
   FinishFileLoad = Module.cwrap('FinishFileLoad', null, []);
-  MouseDown = Module.cwrap('MouseDown', null, ['number', 'number']);
-  MouseDrag = Module.cwrap('MouseDrag', null, ['number', 'number']);
-  MouseUp = Module.cwrap('MouseUp', null, ['number', 'number']);
+  MouseEvent = Module.cwrap('MouseEvent', 'number',
+                            ['number', 'number', 'number', 'number']);
   DownloadFile = Module.cwrap('DownloadFile', null, []);
   UndoRedoClicked = Module.cwrap('UndoRedoClicked', null, ['number']);
   ToolbarClicked = Module.cwrap('ToolbarClicked', null, ['number']);
@@ -201,13 +198,13 @@ document.addEventListener('DOMContentLoaded', function() {
   };
   window.addEventListener('optimizedResize', fixupContentSize);
   
-  let calcFontMetrics = () => {
+  let calcFontMetrics = (fontsize) => {
     let div = document.createElement('div');
     div.style.position = 'absolute';
     div.style.top = '-10000px';
     div.style.left = '-10000px';
     div.style.fontFamily = 'Arial';
-    div.style.fontSize = '12px';
+    div.style.fontSize = '' + fontsize + 'px';
     let span = document.createElement('span');
     span.style.fontSize = '0%';
     span.innerText = 'x';
@@ -224,7 +221,11 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   let launchEditor = (xpos, ypos, zoom) => {
-    let vertOffset = calcFontMetrics();
+    const dpr = window.devicePixelRatio || 1;
+    xpos /= dpr;
+    ypos /= dpr;
+    console.log(`Edit at ${xpos} ${ypos}`);
+    let vertOffset = calcFontMetrics((zoom * 12) | 0);
     let padding = 5;
     xpos -= padding;
     ypos -= padding + vertOffset;
@@ -261,34 +262,46 @@ document.addEventListener('DOMContentLoaded', function() {
   };
   bridge_startComposingText = launchEditor;
 
-  // document.getElementById('zoom-in').onclick = zoomIn;
-  // document.getElementById('zoom-out').onclick = zoomOut;
-  let mouse_down = false;
-  outer.addEventListener('mousedown', ev => {
-    // if (ev.ctrlKey) {
-    //   launchEditor(ev.offsetX - outer.scrollLeft,
-    //                ev.offsetY - outer.scrollTop);
-    //   return;
-    // }
+  const kEventKindDown = 0;
+  const kEventKindDrag = 1;
+  const kEventKindUp = 2;
+  const kEventKindMove = 3;
+  let pushMouseEvent = (ev, kind) => {
+    if (MouseEvent === null)
+      return;
+    const kControlKey = 1;
+    const kAltKey = 2;
+    const kShiftKey = 4;
 
-    if (MouseDown) {
-      MouseDown(ev.offsetX - outer.scrollLeft,
-                ev.offsetY - outer.scrollTop);
-    }
-    mouse_down = true;
+    const dpr = window.devicePixelRatio || 1;
+    const xpos = (ev.offsetX - outer.scrollLeft) * dpr;
+    const ypos = (ev.offsetY - outer.scrollTop) * dpr;
+    const keys = (ev.ctrlKey ? kControlKey : 0) |
+          (ev.altKey ? kAltKey : 0) |
+          (ev.shiftKey ? kShiftKey : 0);
+    return MouseEvent(xpos, ypos, kind, keys);
+  };
+
+  let dragInProgress = false;
+  outer.addEventListener('mousedown', ev => {
+    dragInProgress = pushMouseEvent(ev, kEventKindDown);
+    console.log("drag ip: " + dragInProgress);
   });
   outer.addEventListener('mousemove', ev => {
-    if (mouse_down && MouseDrag) {
-      MouseDrag(ev.offsetX - outer.scrollLeft,
-                ev.offsetY - outer.scrollTop);
+    if (ev.buttons) {
+      if (dragInProgress) {
+        pushMouseEvent(ev, kEventKindDrag);
+      }
+    } else {
+      pushMouseEvent(ev, kEventKindMove);
     }
   });
   outer.addEventListener('mouseup', ev => {
-    if (mouse_down && MouseUp) {
-      MouseUp(ev.offsetX - outer.scrollLeft,
-                ev.offsetY - outer.scrollTop);
+    console.log("mouse up drag ip: " + dragInProgress);
+    if (dragInProgress) {
+      pushMouseEvent(ev, kEventKindUp);
+      dragInProgress = false;
     }
-    mouse_down = false;
   });
 
   document.getElementById('file-input').addEventListener('change',

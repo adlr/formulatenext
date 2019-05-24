@@ -8,6 +8,10 @@
 
 namespace formulate {
 
+void MouseInputEvent::UpdateToChild(View* child, View* from_parent) {
+  position_ = from_parent->ConvertPointToChild(child, position_);
+}
+
 void RootView::SetNeedsDisplayInRect(const SkRect& rect) {
   if (!redraw_) {
     fprintf(stderr, "Don't have redraw object!\n");
@@ -50,6 +54,30 @@ void RootView::DoDraw(SkRect rect) {
       PushCanvasXYWH($0, $1, $2, $3, $4);
     }, bitmap.getPixels(), irect.left(), irect.top(),
     bitmap.width(), bitmap.height());
+}
+
+View* RootView::MouseDown(MouseInputEvent ev) {
+  if (drag_consumer_) {
+    fprintf(stderr, "Already have drag consumer!\n");
+    return nullptr;
+  }
+  drag_consumer_ = View::MouseDown(ev);
+  return drag_consumer_;
+}
+
+void RootView::MouseDrag(MouseInputEvent ev) {
+  if (drag_consumer_) {
+    ev.UpdateToChild(drag_consumer_, this);
+    drag_consumer_->MouseDrag(ev);
+  }
+}
+
+void RootView::MouseUp(MouseInputEvent ev) {
+  if (drag_consumer_) {
+    ev.UpdateToChild(drag_consumer_, this);
+    drag_consumer_->MouseUp(ev);
+    drag_consumer_ = nullptr;
+  }
 }
 
 ScopedRedraw::~ScopedRedraw() {

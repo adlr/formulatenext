@@ -14,6 +14,11 @@ class RootView : public View {
   void SetNeedsDisplayInRect(const SkRect& rect);
   void SetRedraw(ScopedRedraw* redraw);
   void DoDraw(SkRect rect);
+
+  View* MouseDown(MouseInputEvent ev);
+  void MouseDrag(MouseInputEvent ev);
+  void MouseUp(MouseInputEvent ev);
+
  private:
   ScopedRedraw* redraw_{nullptr};
 };

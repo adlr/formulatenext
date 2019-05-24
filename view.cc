@@ -36,6 +36,8 @@ SkSize View::ConvertSizeToChild(const View* child, SkSize size) const {
   return size;
 }
 
+//R->S->D
+
 SkPoint View::ConvertPointFromChild(const View* child, SkPoint pt) const {
   if (child->Parent() != this) {
     if (!child->Parent()) {
@@ -43,10 +45,13 @@ SkPoint View::ConvertPointFromChild(const View* child, SkPoint pt) const {
       return SkPoint();
     }
     pt = child->Parent()->ConvertPointFromChild(child, pt);
-    return ConvertPointToChild(child->Parent(), pt);
+    return ConvertPointFromChild(child->Parent(), pt);
   }
+  // fprintf(stderr, "Conv %f %f %f (in %f %f)\n", child->scale_,
+  //         child->origin_.x(), child->origin_.y(), pt.x(), pt.y());
   pt *= child->scale_;
   pt.offset(child->origin_.x(), child->origin_.y());
+  // fprintf(stderr, "Conv (out %f %f)\n", pt.x(), pt.y());
   return pt;
 }
 
@@ -56,8 +61,8 @@ SkSize View::ConvertSizeFromChild(const View* child, SkSize size) const {
       fprintf(stderr, "Child has no parent!\n");
       return SkSize();
     }
-    size = child->Parent()->ConvertSizeToChild(child, size);
-    return ConvertSizeToChild(child->Parent(), size);
+    size = child->Parent()->ConvertSizeFromChild(child, size);
+    return ConvertSizeFromChild(child->Parent(), size);
   }
   size.fWidth *= child->scale_;
   size.fHeight *= child->scale_;
@@ -79,6 +84,8 @@ void View::Draw(SkCanvas* canvas, SkRect rect) {
 }
 
 void View::SetNeedsDisplayInRect(const SkRect& rect) {
+  if (rect.isEmpty())
+    return;
   if (!parent_) {
     fprintf(stderr, "no parent!\n");
     return;
@@ -94,6 +101,18 @@ SkRect View::VisibleSubrect() const {
                                                       parent_->VisibleSubrect());
   parent_visible.intersect(bounds);
   return parent_visible;
+}
+
+View* View::MouseDown(MouseInputEvent ev) {
+  for (ssize_t i = children_.size() - 1; i >= 0; i--) {
+    View* child = children_[i];
+    MouseInputEvent child_evt = ev;
+    child_evt.UpdateToChild(child, this);
+    View* ret = child->MouseDown(child_evt);
+    if (ret)
+      return ret;
+  }
+  return nullptr;
 }
 
 void View::Dump(int indent) const {

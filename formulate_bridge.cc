@@ -24,13 +24,9 @@ void SetZoom(float zoom) {
   int page = 1;
   SkPoint pagept;
   doc_view_->ViewPointToPageAndPoint(pt, &page, &pagept);
-  // fprintf(stderr, "\nsc center: %f %f page: %d, pt: %f %f\n",
-  //         pt.x(), pt.y(), page, pagept.x(), pagept.y());
-  // fprintf(stderr, "set zoom to %f\n", zoom);
   doc_view_->SetNeedsDisplay();
   doc_view_->SetZoom(zoom);
   pt = doc_view_->PagePointToViewPoint(page, pagept);
-  // fprintf(stderr, "new sc center: %f %f\n", pt.x(), pt.y());
   scroll_view_->CenterOnChildPoint(pt);
   doc_view_->SetNeedsDisplay();
 }
@@ -80,30 +76,32 @@ void FinishFileLoad() {
   doc_view_->doc_.FinishLoad();
   doc_view_->RecomputePageSizes();
   scroll_view_->RepositionChild();
+  doc_view_->SetNeedsDisplay();
   doc_view_->toolbox_.UpdateUI();
 }
 
 EMSCRIPTEN_KEEPALIVE
-void MouseDown(float xpos, float ypos) {
+bool MouseEvent(float xpos, float ypos, int type, int modifiers) {
   ScopedRedraw redraw(root_view_);
-  scroll_view_->MouseDown(SkPoint::Make(xpos, ypos));
-}
-
-EMSCRIPTEN_KEEPALIVE
-void MouseDrag(float xpos, float ypos) {
-  ScopedRedraw redraw(root_view_);
-  scroll_view_->MouseDrag(SkPoint::Make(xpos, ypos));
-}
-
-float hack_xpos;
-float hack_ypos;
-
-EMSCRIPTEN_KEEPALIVE
-void MouseUp(float xpos, float ypos) {
-  ScopedRedraw redraw(root_view_);
-  hack_xpos = xpos;
-  hack_ypos = ypos;
-  scroll_view_->MouseUp(SkPoint::Make(xpos, ypos));
+  MouseInputEvent::Type ty = static_cast<MouseInputEvent::Type>(type);
+  MouseInputEvent ev(SkPoint::Make(xpos, ypos), ty, 1, modifiers);
+  switch (ty) {
+    case MouseInputEvent::DOWN:
+      return root_view_->MouseDown(ev) != nullptr;
+      break;
+    case MouseInputEvent::DRAG:
+      root_view_->MouseDrag(ev);
+      return false;
+      break;
+    case MouseInputEvent::UP:
+      root_view_->MouseUp(ev);
+      return false;
+      break;
+    case MouseInputEvent::MOVE:
+      // TODO(adlr): support hover events
+      break;
+  }
+  return false;
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -151,10 +149,11 @@ void bridge_setToolboxState(bool enabled, int tool) {
     }, enabled, tool);
 }
 
-void bridge_startComposingText(float xpos, float ypos, float zoom) {
+void bridge_startComposingText(SkPoint docpoint, View* view, float zoom) {
+  SkPoint pt = root_view_->ConvertPointFromChild(view, docpoint);
   EM_ASM_({
-      bridge_startComposingText($0, $1);
-    }, hack_xpos, hack_ypos);
+      bridge_startComposingText($0, $1, $2);
+    }, pt.x(), pt.y(), zoom);
 }
 
 void bridge_stopComposingText() {

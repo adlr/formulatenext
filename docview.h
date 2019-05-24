@@ -34,10 +34,11 @@ class DocView : public View {
   // Converts a point in PDF coordinates of a given page to view coords.
   // The inverse of ViewPointToPageAndPoint().
   SkPoint PagePointToViewPoint(int page, const SkPoint& pagept) const;
+  SkRect ConvertRectFromPage(int page, const SkRect& rect) const;
 
-  // void MouseDown(SkPoint pt);
-  // void MouseDrag(SkPoint pt);
-  // void MouseUp(SkPoint pt);
+  View* MouseDown(MouseInputEvent ev);
+  void MouseDrag(MouseInputEvent ev) {}
+  void MouseUp(MouseInputEvent ev);
 
   PDFDoc doc_;
   Toolbox toolbox_;

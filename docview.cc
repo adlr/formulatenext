@@ -124,34 +124,50 @@ SkPoint DocView::PagePointToViewPoint(int page, const SkPoint& pagept) const {
                        (page_sizes_[page].height() - pagept.y()) * zoom_ + top);
 }
 
-// void DocView::MouseDown(SkPoint pt) {
-// }
-// void DocView::MouseDrag(SkPoint pt) {
-// }
-// void DocView::MouseUp(SkPoint pt) {
-//   int page = 0;
-//   SkPoint pagept;
-//   ViewPointToPageAndPoint(pt, &page, &pagept);
-//   if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
-//     fprintf(stderr, "doc point %f %f to pg %d  %f %f\n",
-//             pt.x(), pt.y(), page, pagept.x(), pagept.y());
-//     doc_.ModifyPage(page, pagept);
-//   }
-//   if (editing_text_page_ >= 0) {
-    
-//     if (!editing_text_str_.empty()) {
-//       fprintf(stderr, "Commit: %s\n", editing_text_str_.c_str());
-//       bridge_stopComposingText();
-//       doc_.PlaceText(editing_text_page_, editing_text_point_,
-//                      editing_text_str_);
-//     }
-//     editing_text_str_.clear();
-//     editing_text_page_ = -1;
-//   } else if (toolbox_.current_tool() == Toolbox::kText_Tool) {
-//     editing_text_page_ = page;
-//     editing_text_point_ = pagept;
-//     bridge_startComposingText(0, 0, zoom_);
-//   }
-// }
+SkRect DocView::ConvertRectFromPage(int page, const SkRect& rect) const {
+  SkPoint topleft = SkPoint::Make(rect.left(), rect.top());
+  SkPoint botright = SkPoint::Make(rect.right(), rect.bottom());
+  topleft = PagePointToViewPoint(page, topleft);
+  botright = PagePointToViewPoint(page, botright);
+  // Note we are flipping y coordinate in this transform
+  if (!rect.isEmpty()) {
+    if (topleft.y() < botright.y()) {
+      fprintf(stderr, "failed to flip y coordinate!\n");
+    }
+  }
+  return SkRect::MakeLTRB(topleft.x(), botright.y(),
+                          botright.x(), topleft.y());
+}
+
+View* DocView::MouseDown(MouseInputEvent ev) {
+  return this;
+}
+
+void DocView::MouseUp(MouseInputEvent ev) {
+  int page = 0;
+  SkPoint pagept;
+  ViewPointToPageAndPoint(ev.position(), &page, &pagept);
+  if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
+    doc_.ModifyPage(page, pagept);
+  }
+  if (editing_text_page_ >= 0) {
+    if (!editing_text_str_.empty()) {
+      fprintf(stderr, "Commit: %s\n", editing_text_str_.c_str());
+      bridge_stopComposingText();
+      SkRect dirty =
+          doc_.PlaceText(editing_text_page_, editing_text_point_,
+                         editing_text_str_);
+      SetNeedsDisplayInRect(ConvertRectFromPage(editing_text_page_, dirty));
+    }
+    editing_text_str_.clear();
+    editing_text_page_ = -1;
+  } else if (toolbox_.current_tool() == Toolbox::kText_Tool) {
+    editing_text_page_ = page;
+    editing_text_point_ = pagept;
+    fprintf(stderr, "edit at %f %f\n", ev.position().x(),
+            ev.position().y());
+    bridge_startComposingText(ev.position(), this, zoom_);
+  }
+}
 
 }  // namespace formulate
