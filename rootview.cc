@@ -26,6 +26,10 @@ void RootView::SetRedraw(ScopedRedraw* redraw) {
 }
 
 void RootView::DoDraw(SkRect rect) {
+  if (!rect.intersect(Bounds())) {
+    fprintf(stderr, "Nothing to draw\n");
+    return;
+  }
   // Get pixels to redraw
   SkIRect irect;
   rect.roundOut(&irect);
@@ -39,6 +43,7 @@ void RootView::DoDraw(SkRect rect) {
     return;
   }
   SkCanvas offscreen(bitmap);
+  offscreen.translate(-irect.left(), -irect.top());
   Draw(&offscreen, SkRect::Make(irect));
   // Push to HTML canvas now
   EM_ASM_({

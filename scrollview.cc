@@ -42,20 +42,32 @@ void ScrollView::RepositionChild() {
 }
 
 SkPoint ScrollView::ChildVisibleCenter() const {
+  if (children_.size() != 1) {
+    fprintf(stderr, "ScrollView has wrong number of children! (%zu)\n",
+            children_.size());
+    return SkPoint();
+  }
+  View* child = children_[0];
   // Find center of this view
   SkPoint center = SkPoint::Make(size_.width() / 2,
                                  size_.height() / 2);
   // shift by origin of child
-  center.offset(origin_.x(), origin_.y());
+  center.offset(-child->origin().x(), -child->origin().y());
   return center;
 }
 
 void ScrollView::CenterOnChildPoint(SkPoint point) {
+  if (children_.size() != 1) {
+    fprintf(stderr, "ScrollView has wrong number of children! (%zu)\n",
+            children_.size());
+    return;
+  }
+  View* child = children_[0];
   // Find center of this view
   SkPoint center = SkPoint::Make(size_.width() / 2,
                                  size_.height() / 2);
-  origin_ = SkPoint::Make(point.x() - center.x(),
-                          point.y() - center.y());
+  child->SetOrigin(SkPoint::Make(center.x() - point.x(),
+                                 center.y() - point.y()));
   RepositionChild();
 }
 

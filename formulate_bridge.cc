@@ -51,7 +51,6 @@ void SetScrollOrigin(float xpos, float ypos) {
   doc_view_->SetOrigin(SkPoint::Make(-xpos, -ypos));
   scroll_view_->RepositionChild();
   doc_view_->SetNeedsDisplay();
-  root_view_->Dump(0);
 }
 
 EMSCRIPTEN_KEEPALIVE

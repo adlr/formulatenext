@@ -45,8 +45,8 @@ SkPoint View::ConvertPointFromChild(const View* child, SkPoint pt) const {
     pt = child->Parent()->ConvertPointFromChild(child, pt);
     return ConvertPointToChild(child->Parent(), pt);
   }
-  pt.offset(child->origin_.x(), child->origin_.y());
   pt *= child->scale_;
+  pt.offset(child->origin_.x(), child->origin_.y());
   return pt;
 }
 

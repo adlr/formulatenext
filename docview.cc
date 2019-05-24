@@ -68,6 +68,11 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
   }
 }
 
+void DocView::SetZoom(float zoom) {
+  zoom_ = zoom;
+  RecomputePageSizes();
+}
+
 void DocView::RecomputePageSizes() {
   page_sizes_.resize(doc_.Pages());
   max_page_width_ = 0.0;
