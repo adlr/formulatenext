@@ -46,10 +46,20 @@ namespace formulate {
 
 void PrintLastError();
 
+class PDFDocEventHandler {
+ public:
+  // Number of pages and/or page sizes changed
+  virtual void PagesChanged() {}
+  virtual void NeedsDisplayInRect(int page, SkRect rect) {}
+};
+
 class PDFDoc {
  public:
   PDFDoc() {}
   ~PDFDoc() {}
+  void AddEventHandler(PDFDocEventHandler* handler) {
+    event_handlers_.push_back(handler);
+  }
 
   // Load the initial doc from byte buffer
   void SetLength(size_t len) { bytes_.reserve(len); }
@@ -70,7 +80,7 @@ class PDFDoc {
   void InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj);
 
   // Returns modified rect of the page
-  SkRect PlaceText(int pageno, SkPoint pagept, const std::string& ascii);
+  void PlaceText(int pageno, SkPoint pagept, const std::string& ascii);
 
   // Calls into JS to do the save
   void DownloadDoc() const;
@@ -81,6 +91,7 @@ class PDFDoc {
   std::unique_ptr<TestLoader> loader_;
   FPDF_FILEACCESS file_access_;
   ScopedFPDFDocument doc_;
+  std::vector<PDFDocEventHandler*> event_handlers_;
 };
 
 }  // namespace formulate

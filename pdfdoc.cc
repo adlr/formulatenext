@@ -65,6 +65,8 @@ void PDFDoc::FinishLoad() {
 
   (void)FPDF_GetDocPermissions(doc_.get());
   valid_ = true;
+  for (PDFDocEventHandler* handler : event_handlers_)
+    handler->PagesChanged();
 }
 
 int PDFDoc::Pages() const {
@@ -291,6 +293,11 @@ void PDFDoc::DeleteObject(int pageno, int index) {
       fprintf(stderr, "Unable to get page obj\n");
       return;
     }
+    SkRect dirty;
+    if (!FPDFPageObj_GetBounds(pageobj, &dirty.fLeft, &dirty.fTop,
+                              &dirty.fRight, &dirty.fBottom)) {
+      fprintf(stderr, "Failed to get bounds for new text obj\n");
+    }
     fprintf(stderr, "Deleting of type %d\n",
             FPDFPageObj_GetType(pageobj));
     int beforeocnt = FPDFPage_CountObjects(page.get());
@@ -310,6 +317,8 @@ void PDFDoc::DeleteObject(int pageno, int index) {
     // Generate undo op.
     // TODO(adlr): This is leaking pageojb if the UndoManager removes
     // this undo op without performing it
+    for (PDFDocEventHandler* handler : event_handlers_)
+      handler->NeedsDisplayInRect(pageno, dirty);
     undo_manager_.PushUndoOp(
         [this, pageno, index, pageobj] () {
           InsertObject(pageno, index, pageobj);
@@ -353,25 +362,33 @@ void PDFDoc::InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj) {
       [this, pageno, index] () {
         DeleteObject(pageno, index);
       });
+  SkRect dirty;
+  if (FPDFPageObj_GetBounds(pageobj, &dirty.fLeft, &dirty.fTop,
+                            &dirty.fRight, &dirty.fBottom)) {
+    for (PDFDocEventHandler* handler : event_handlers_)
+      handler->NeedsDisplayInRect(pageno, dirty);
+  } else {
+    fprintf(stderr, "Failed to get bounds for new text obj\n");
+  }
 }
 
-SkRect PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
+void PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
   ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
   if (!page) {
     fprintf(stderr, "failed to load PDFPage\n");
-    return SkRect::MakeEmpty();
+    return;
   }
   FPDF_PAGEOBJECT textobj =
       FPDFPageObj_NewTextObj(doc_.get(), "Helvetica", 12.0f);
   if (!textobj) {
     fprintf(stderr, "Unable to allocate text obj\n");
-    return SkRect::MakeEmpty();
+    return;
   }
   std::string message = StrConv(ascii);
   FPDF_WIDESTRING pdf_str = reinterpret_cast<FPDF_WIDESTRING>(message.c_str());
   if (!FPDFText_SetText(textobj, pdf_str)) {
     fprintf(stderr, "failed to set text\n");
-    return SkRect::MakeEmpty();
+    return;
   }
 
   FPDFPageObj_Transform(textobj, 1, 0, 0, 1, pagept.x(), pagept.y());
@@ -389,14 +406,14 @@ SkRect PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
       [this, pageno, index] () {
         DeleteObject(pageno, index);
       });
-  SkRect ret;
-  if (FPDFPageObj_GetBounds(textobj, &ret.fLeft, &ret.fTop,
-                            &ret.fRight, &ret.fBottom)) {
-    return ret;
+  SkRect dirty;
+  if (FPDFPageObj_GetBounds(textobj, &dirty.fLeft, &dirty.fTop,
+                            &dirty.fRight, &dirty.fBottom)) {
+    for (PDFDocEventHandler* handler : event_handlers_)
+      handler->NeedsDisplayInRect(pageno, dirty);
   } else {
     fprintf(stderr, "Failed to get bounds for new text obj\n");
   }
-  return SkRect::MakeEmpty();
 }
 
 class FileSaver : public FPDF_FILEWRITE {

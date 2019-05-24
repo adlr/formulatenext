@@ -84,6 +84,7 @@ void DocView::RecomputePageSizes() {
   }
   SetSize(SkSize::Make(max_page_width_ * zoom_ + kBorderPixels * 2,
                        height));
+  SetNeedsDisplay();
 }
 
 void DocView::ViewPointToPageAndPoint(const SkPoint& viewpt,
@@ -154,10 +155,8 @@ void DocView::MouseUp(MouseInputEvent ev) {
     if (!editing_text_str_.empty()) {
       fprintf(stderr, "Commit: %s\n", editing_text_str_.c_str());
       bridge_stopComposingText();
-      SkRect dirty =
-          doc_.PlaceText(editing_text_page_, editing_text_point_,
-                         editing_text_str_);
-      SetNeedsDisplayInRect(ConvertRectFromPage(editing_text_page_, dirty));
+      doc_.PlaceText(editing_text_page_, editing_text_point_,
+                     editing_text_str_);
     }
     editing_text_str_.clear();
     editing_text_page_ = -1;

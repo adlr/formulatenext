@@ -13,9 +13,9 @@
 
 namespace formulate {
 
-class DocView : public View {
+class DocView : public View, public PDFDocEventHandler {
  public:
-  DocView() {}
+  DocView() { doc_.AddEventHandler(this); }
   void Draw(SkCanvas* canvas, SkRect rect);
   void SetZoom(float zoom);
 
@@ -46,6 +46,15 @@ class DocView : public View {
   void SetEditingString(const char* str) {
     editing_text_str_ = str;
   }
+
+  // PDFDocEventHandler methods
+  void PagesChanged() {
+    RecomputePageSizes();
+  }
+  void NeedsDisplayInRect(int page, SkRect rect) {
+    SetNeedsDisplayInRect(ConvertRectFromPage(page, rect));
+  }
+
  private:
   std::vector<SkSize> page_sizes_;  // in PDF points
   float max_page_width_{0};  // in PDF points
