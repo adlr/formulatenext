@@ -30,6 +30,9 @@ class DocView : public View, public PDFDocEventHandler {
   void ViewPointToPageAndPoint(const SkPoint& viewpt,
                                int* out_page,
                                SkPoint* out_pagept) const;
+  // Convert 'point' in this' view coordinate space to a point in page's
+  // coordinate space
+  SkPoint ViewPointToPagePoint(const SkPoint& point, int page);
 
   // Converts a point in PDF coordinates of a given page to view coords.
   // The inverse of ViewPointToPageAndPoint().
@@ -37,7 +40,7 @@ class DocView : public View, public PDFDocEventHandler {
   SkRect ConvertRectFromPage(int page, const SkRect& rect) const;
 
   View* MouseDown(MouseInputEvent ev);
-  void MouseDrag(MouseInputEvent ev) {}
+  void MouseDrag(MouseInputEvent ev);
   void MouseUp(MouseInputEvent ev);
 
   PDFDoc doc_;
@@ -59,9 +62,14 @@ class DocView : public View, public PDFDocEventHandler {
   std::vector<SkSize> page_sizes_;  // in PDF points
   float max_page_width_{0};  // in PDF points
   float zoom_{1};  // user zoom in/out
+
   int editing_text_page_{-1};
   SkPoint editing_text_point_;  // in PDF points
   std::string editing_text_str_;
+
+  int freehand_page_{-1};
+  std::vector<SkPoint> freehand_points_;
+  int freehand_merge_obj_index_{-1};
 };
 
 }  // namespace formulate

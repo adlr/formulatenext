@@ -4,6 +4,8 @@
 
 #include "SkPaint.h"
 
+#include "formulate_bridge.h"
+
 namespace formulate {
 
 namespace {
@@ -109,6 +111,21 @@ void DocView::ViewPointToPageAndPoint(const SkPoint& viewpt,
   out_pagept->fY = page_sizes_[i].height() - out_pagept->fY;
 }
 
+SkPoint DocView::ViewPointToPagePoint(const SkPoint& point, int page) {
+  // find the page
+  float top = kBorderPixels / 2;
+  for (int i = 0; i < page; i++)
+    top += page_sizes_[i].height() * zoom_ + kBorderPixels;
+  // use this page
+  float left =
+      kBorderPixels + (max_page_width_ - page_sizes_[page].width()) * zoom_ / 2;
+  SkPoint ret = SkPoint::Make((point.x() - left) / zoom_,
+                              (point.y() - top) / zoom_);
+  // flip y on page
+  ret.fY = page_sizes_[page].height() - ret.fY;
+  return ret;
+}
+
 SkPoint DocView::PagePointToViewPoint(int page, const SkPoint& pagept) const {
   if (page >= page_sizes_.size()) {
     fprintf(stderr, "PagePointToViewPoint: invalid page!\n");
@@ -141,16 +158,67 @@ SkRect DocView::ConvertRectFromPage(int page, const SkRect& rect) const {
 }
 
 View* DocView::MouseDown(MouseInputEvent ev) {
+  if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
+    int page = -1;
+    SkPoint pt;
+    ViewPointToPageAndPoint(ev.position(), &page, &pt);
+    freehand_page_ = page;
+    freehand_points_.push_back(pt);
+  }
   return this;
+}
+
+namespace {
+// From https://gist.github.com/njvack/6925609
+// |pts| point to an array of 4 points. Control points for the middle
+// segment are returned.
+// For the first segment, pass the first point twice. For the last segment,
+// pass the last point twice.
+std::pair<SkPoint, SkPoint> ControlPoints(const SkPoint* pts) {
+  std::pair<SkPoint, SkPoint> ret;
+  ret.first.fX = (-pts[0].x() + 6*pts[1].x() + pts[2].x()) / 6;
+  ret.first.fY = (-pts[0].y() + 6*pts[1].y() + pts[2].y()) / 6;
+  ret.second.fX = (pts[1].x() + 6*pts[2].x() - pts[3].x()) / 6;
+  ret.second.fY = (pts[1].y() + 6*pts[2].y() - pts[3].y()) / 6;
+  return ret;
+}
+}  // namespace {}
+
+void DocView::MouseDrag(MouseInputEvent ev) {
+  if (freehand_page_ >= 0) {
+    // continue line drawing
+    freehand_points_.push_back(
+        ViewPointToPagePoint(ev.position(), freehand_page_));
+    if (freehand_points_.size() > 2) {
+      // Draw up to previous point
+      std::pair<SkPoint, SkPoint> ctrlpoints;
+      if (freehand_points_.size() < 4) {
+        SkPoint input[4] = {
+          freehand_points_[0], freehand_points_[0],
+          freehand_points_[1], freehand_points_[2]
+        };
+        ctrlpoints = ControlPoints(input);
+      } else {
+        ctrlpoints = ControlPoints(
+            &freehand_points_[freehand_points_.size() - 4]);
+      }
+      SkPoint bezier[4] = {
+        PagePointToViewPoint(freehand_page_,
+                             freehand_points_[freehand_points_.size() - 3]),
+        PagePointToViewPoint(freehand_page_, ctrlpoints.first),
+        PagePointToViewPoint(freehand_page_, ctrlpoints.second),
+        PagePointToViewPoint(freehand_page_,
+                             freehand_points_[freehand_points_.size() - 2])
+      };
+      bridge_drawBezier(this, bezier);
+    }
+  }
 }
 
 void DocView::MouseUp(MouseInputEvent ev) {
   int page = 0;
   SkPoint pagept;
   ViewPointToPageAndPoint(ev.position(), &page, &pagept);
-  if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
-    doc_.ModifyPage(page, pagept);
-  }
   if (editing_text_page_ >= 0) {
     if (!editing_text_str_.empty()) {
       fprintf(stderr, "Commit: %s\n", editing_text_str_.c_str());
@@ -166,6 +234,28 @@ void DocView::MouseUp(MouseInputEvent ev) {
     fprintf(stderr, "edit at %f %f\n", ev.position().x(),
             ev.position().y());
     bridge_startComposingText(ev.position(), this, zoom_);
+  } else if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
+    if (!freehand_points_.empty()) {
+      std::vector<SkPoint> bezier_path;
+      bezier_path.push_back(freehand_points_[0]);
+      for (size_t i = 1; i < freehand_points_.size(); i++) {
+        SkPoint input[4] = {
+          i == 1 ? freehand_points_[i - 1] : freehand_points_[i - 2],
+          freehand_points_[i - 1],
+          freehand_points_[i],
+          i + 1 == freehand_points_.size() ?
+          freehand_points_[i] : freehand_points_[i + 1]
+        };
+        std::pair<SkPoint, SkPoint> ctrl = ControlPoints(input);
+        bezier_path.push_back(ctrl.first);
+        bezier_path.push_back(ctrl.second);
+        bezier_path.push_back(freehand_points_[i]);
+      }
+      doc_.InsertFreehandDrawing(freehand_page_, bezier_path);
+      SetNeedsDisplay();
+      freehand_page_ = -1;
+      freehand_points_.clear();
+    }
   }
 }
 

@@ -416,6 +416,23 @@ void PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
   }
 }
 
+void InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& bezier) {
+  ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return;
+  }
+  ScopedFPDFPageObject path(FPDFPageObj_CreateNewPath(pts[0].x(), pts[0].y()));
+  for (size_t i = 1; (i + 2) < bezier.size(); i += 3) {
+    if (!FPDFPath_BezierTo(path, bezier[i].x(), bezier[i].y(),
+                           bezier[i + 1].x(), bezier[i + 1].y(),
+                           bezier[i + 2].x(), bezier[i + 2].y())) {
+      fprintf(stderr, "Failed to do BezierTo\n");
+      return;
+    }
+  }
+}
+
 class FileSaver : public FPDF_FILEWRITE {
  public:
   FileSaver() {

@@ -330,6 +330,17 @@ var PushCanvasXYWH = (bufptr, xpos, ypos, width, height) => {
   ctx.putImageData(img, xpos, ypos);
 };
 
+let bridge_drawBezier =
+    (startx, starty, ctrl1x, ctrl1y, ctrl2x, ctrl2y, stopx, stopy, width) => {
+      let canvas = document.getElementById('canvas');
+      let ctx = canvas.getContext('2d');
+      ctx.beginPath();
+      ctx.lineWidth = width;
+      ctx.moveTo(startx, starty);
+      ctx.bezierCurveTo(ctrl1x, ctrl1y, ctrl2x, ctrl2y, stopx, stopy);
+      ctx.stroke();
+    };
+
 // set the size/position of the scrollbar view
 let bridge_setSize = function(width, height, xpos, ypos) {
   let inner = document.getElementById('inner');

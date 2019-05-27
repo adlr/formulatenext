@@ -79,8 +79,8 @@ class PDFDoc {
   void DeleteObject(int pageno, int index);
   void InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj);
 
-  // Returns modified rect of the page
   void PlaceText(int pageno, SkPoint pagept, const std::string& ascii);
+  void InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& pts);
 
   // Calls into JS to do the save
   void DownloadDoc() const;
