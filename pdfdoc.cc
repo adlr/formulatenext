@@ -416,20 +416,52 @@ void PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
   }
 }
 
-void InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& bezier) {
+void PDFDoc::InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& bezier) {
   ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
   if (!page) {
     fprintf(stderr, "failed to load PDFPage\n");
     return;
   }
-  ScopedFPDFPageObject path(FPDFPageObj_CreateNewPath(pts[0].x(), pts[0].y()));
+  ScopedFPDFPageObject path(FPDFPageObj_CreateNewPath(bezier[0].x(),
+                                                      bezier[0].y()));
   for (size_t i = 1; (i + 2) < bezier.size(); i += 3) {
-    if (!FPDFPath_BezierTo(path, bezier[i].x(), bezier[i].y(),
+    if (!FPDFPath_BezierTo(path.get(), bezier[i].x(), bezier[i].y(),
                            bezier[i + 1].x(), bezier[i + 1].y(),
                            bezier[i + 2].x(), bezier[i + 2].y())) {
       fprintf(stderr, "Failed to do BezierTo\n");
       return;
     }
+  }
+  if (!FPDFPath_SetStrokeColor(path.get(), 0, 0, 0, 250)) {
+    fprintf(stderr, "FPDFPath_SetStrokeColor failed!\n");
+    return;
+  }
+  if (!FPDFPath_SetStrokeWidth(path.get(), 1)) {
+    fprintf(stderr, "FPDFPath_SetStrokeWidth failed!\n");
+    return;
+  }
+  if (!FPDFPath_SetDrawMode(path.get(), 0, 1)) {
+    fprintf(stderr, "FPDFPath_SetDrawMode failed!\n");
+    return;
+  }
+  FPDF_PAGEOBJECT unowned_path = path.release();
+  FPDFPage_InsertObject(page.get(), unowned_path);
+  if (!FPDFPage_GenerateContent(page.get())) {
+    fprintf(stderr, "PDFPage_GenerateContent failed\n");
+  }
+  // Handle Undo
+  int index = FPDFPage_CountObjects(page.get()) - 1;
+  undo_manager_.PushUndoOp(
+      [this, pageno, index] () {
+        DeleteObject(pageno, index);
+      });
+  SkRect dirty;
+  if (FPDFPageObj_GetBounds(unowned_path, &dirty.fLeft, &dirty.fTop,
+                            &dirty.fRight, &dirty.fBottom)) {
+    for (PDFDocEventHandler* handler : event_handlers_)
+      handler->NeedsDisplayInRect(pageno, dirty);
+  } else {
+    fprintf(stderr, "Failed to get bounds for new path obj\n");
   }
 }
 
