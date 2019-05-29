@@ -14,8 +14,9 @@ void bridge_stopComposingText();
 
 // Draw a bezier right on the doc canvas using points in child's view space.
 // |bezier| is array of 4 SkPoints, with the following meaning:
-// [draw start, ctrl point 1, ctrl point 2, end point]
-void bridge_drawBezier(View* child, SkPoint* bezier);
+// [draw start, ctrl point 1, ctrl point 2, end point].
+// |line_width| is in units of child's view space
+void bridge_drawBezier(View* child, SkPoint* bezier, float line_width);
 
 }  // namespace formulate
 

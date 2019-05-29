@@ -13,7 +13,7 @@ body {
   margin: 5px 0 0 5px;
 }
 
-#outer {
+#main-scroll-outer {
   width: 100%;
   height: calc(100% - 81px);
   top: 81px;
@@ -24,7 +24,7 @@ body {
   z-index: 10;
 }
 
-#inner {
+#main-scroll-inner {
   width: 3000px;
   height: 3000px;
   border: 0px solid #f00;
@@ -45,7 +45,7 @@ body {
   display: block;
 }
 
-canvas {
+#main-canvas {
   border: 0px solid #00f;
   width: 100%;
   height: calc(100% - 81px);

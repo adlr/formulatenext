@@ -25,9 +25,16 @@
   <div class="toolbar-button" id="tb-tool-text"><i class="material-icons">text_fields</i></div>
   <div class="toolbar-button" id="tb-tool-freehand"><i class="material-icons">create</i></div>
 </div>
-<canvas id="canvas"></canvas>
-<div id="outer">
-  <div id="inner">
+<div id="thumb-view">
+  <canvas id="thumb-canvas"></canvas>
+  <div id="thumb-scroll-outer">
+    <div id="thumb-scroll-inner"></div>
+  </div>
+</div>
+<div id="main-view">
+  <canvas id="main-canvas"></canvas>
+  <div id="main-scroll-outer">
+    <div id="main-scroll-inner"></div>
   </div>
 </div>
 <input type="file" id="file-input" />

@@ -162,12 +162,12 @@ void bridge_stopComposingText() {
     });
 }
 
-void bridge_drawBezier(View* child, SkPoint* bezier) {
+void bridge_drawBezier(View* child, SkPoint* bezier, float line_width) {
   SkPoint start = root_view_->ConvertPointFromChild(child, bezier[0]);
   SkPoint ctrl1 = root_view_->ConvertPointFromChild(child, bezier[1]);
   SkPoint ctrl2 = root_view_->ConvertPointFromChild(child, bezier[2]);
   SkPoint stop = root_view_->ConvertPointFromChild(child, bezier[3]);
-  SkSize width = root_view_->ConvertSizeFromChild(child, {1, 0});
+  SkSize width = root_view_->ConvertSizeFromChild(child, {line_width, 0});
   EM_ASM_({
       bridge_drawBezier($0, $1, $2, $3, $4, $5, $6, $7, $8);
     }, start.x(), start.y(), ctrl1.x(), ctrl1.y(),

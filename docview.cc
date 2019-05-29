@@ -113,7 +113,7 @@ void DocView::ViewPointToPageAndPoint(const SkPoint& viewpt,
 
 SkPoint DocView::ViewPointToPagePoint(const SkPoint& point, int page) {
   // find the page
-  float top = kBorderPixels / 2;
+  float top = kBorderPixels;
   for (int i = 0; i < page; i++)
     top += page_sizes_[i].height() * zoom_ + kBorderPixels;
   // use this page
@@ -187,8 +187,8 @@ std::pair<SkPoint, SkPoint> ControlPoints(const SkPoint* pts) {
 void DocView::MouseDrag(MouseInputEvent ev) {
   if (freehand_page_ >= 0) {
     // continue line drawing
-    freehand_points_.push_back(
-        ViewPointToPagePoint(ev.position(), freehand_page_));
+    SkPoint pt = ViewPointToPagePoint(ev.position(), freehand_page_);
+    freehand_points_.push_back(pt);
     if (freehand_points_.size() > 2) {
       // Draw up to previous point
       std::pair<SkPoint, SkPoint> ctrlpoints;
@@ -210,7 +210,7 @@ void DocView::MouseDrag(MouseInputEvent ev) {
         PagePointToViewPoint(freehand_page_,
                              freehand_points_[freehand_points_.size() - 2])
       };
-      bridge_drawBezier(this, bezier);
+      bridge_drawBezier(this, bezier, zoom_);
     }
   }
 }

@@ -179,8 +179,8 @@ document.addEventListener('DOMContentLoaded', function() {
   ToolbarClicked = Module.cwrap('ToolbarClicked', null, ['number']);
   UpdateEditText = Module.cwrap('UpdateEditText', null, ['string']);
 
-  var outer = document.getElementById('outer');
-  var canvas = document.getElementById('canvas');
+  var outer = document.getElementById('main-scroll-outer');
+  var canvas = document.getElementById('main-canvas');
   throttle('scroll', 'optimizedScroll', outer);
   outer.addEventListener('optimizedScroll', function() {
     if (!runtime_ready) return;
@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
 }, false);
 
 var PushCanvas = (bufptr, width, height) => {
-  var canvas = document.getElementById('canvas');
+  var canvas = document.getElementById('main-canvas');
   if (canvas.width != width || canvas.height != height) {
     console.log(`Size mismatch! Canvas is (${canvas.width}, ${canvas.height}). Given (${width}, ${height})`);
   }
@@ -322,7 +322,7 @@ var PushCanvas = (bufptr, width, height) => {
 };
 
 var PushCanvasXYWH = (bufptr, xpos, ypos, width, height) => {
-  var canvas = document.getElementById('canvas');
+  var canvas = document.getElementById('main-canvas');
   var ctx = canvas.getContext('2d');
   let arr = new Uint8ClampedArray(Module.HEAPU8.buffer,
                                   bufptr, width * height * 4);
@@ -332,7 +332,7 @@ var PushCanvasXYWH = (bufptr, xpos, ypos, width, height) => {
 
 let bridge_drawBezier =
     (startx, starty, ctrl1x, ctrl1y, ctrl2x, ctrl2y, stopx, stopy, width) => {
-      let canvas = document.getElementById('canvas');
+      let canvas = document.getElementById('main-canvas');
       let ctx = canvas.getContext('2d');
       ctx.beginPath();
       ctx.lineWidth = width;
@@ -343,10 +343,10 @@ let bridge_drawBezier =
 
 // set the size/position of the scrollbar view
 let bridge_setSize = function(width, height, xpos, ypos) {
-  let inner = document.getElementById('inner');
+  let inner = document.getElementById('main-scroll-inner');
   inner.style.width = width + 'px';
   inner.style.height = height + 'px';
-  let outer = document.getElementById('outer');
+  let outer = document.getElementById('main-scroll-outer');
   outer.scrollLeft = xpos;
   outer.scrollTop = ypos;
 };
