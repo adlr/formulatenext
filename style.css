@@ -1,23 +1,42 @@
 body {
   font-family: 'Roboto', sans-serif;
   margin: 0;
-}
-
-#filename {
-  font-size: 24px;
-  margin: 10px 0 0 10px;
-  display: none;
+  display: flex;
+  flex-direction: column;
 }
 
 #menubar {
   margin: 5px 0 0 5px;
 }
 
+#flex-main {
+  flex-grow: 1;
+  position: relative;
+}
+
+#thumb-view {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 100px;
+  border: 1px solid #0f0;
+}
+
+#main-view {
+  position: absolute;
+  left: 100px;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  border: 1px solid #00f;
+}
+
 #main-scroll-outer {
   width: 100%;
   height: calc(100% - 81px);
   top: 81px;
-  position: absolute;
+  position: fixed;
   left: 0px;
   overflow: auto;
   border: 0px solid #f00;

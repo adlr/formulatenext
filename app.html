@@ -10,7 +10,6 @@
 <script src="menu.js"></script>
 </head>
 <body>
-<div id="filename"></div>
 <div class="menubar" id="menubar"></div>
 <div class="toolbar">
   <div class="toolbar-button" id="zoom-in"><i class="material-icons">zoom_in</i></div>
@@ -25,16 +24,18 @@
   <div class="toolbar-button" id="tb-tool-text"><i class="material-icons">text_fields</i></div>
   <div class="toolbar-button" id="tb-tool-freehand"><i class="material-icons">create</i></div>
 </div>
-<div id="thumb-view">
-  <canvas id="thumb-canvas"></canvas>
-  <div id="thumb-scroll-outer">
-    <div id="thumb-scroll-inner"></div>
+<div id="flex-main">
+  <div id="thumb-view">
+    <canvas id="thumb-canvas"></canvas>
+    <div id="thumb-scroll-outer">
+      <div id="thumb-scroll-inner"></div>
+    </div>
   </div>
-</div>
-<div id="main-view">
-  <canvas id="main-canvas"></canvas>
-  <div id="main-scroll-outer">
-    <div id="main-scroll-inner"></div>
+  <div id="main-view">
+    <canvas id="main-canvas"></canvas>
+    <div id="main-scroll-outer">
+      <div id="main-scroll-inner"></div>
+    </div>
   </div>
 </div>
 <input type="file" id="file-input" />
