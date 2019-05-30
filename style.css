@@ -12,6 +12,8 @@ body {
 #flex-main {
   flex-grow: 1;
   position: relative;
+  --thumb-width: 100px;
+  --thumb-resize-width: 2px;
 }
 
 #thumb-view {
@@ -19,60 +21,55 @@ body {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 100px;
-  border: 1px solid #0f0;
+  width: var(--thumb-width);
+  background-color: rgb(234, 248, 255);
+}
+
+#thumb-resize {
+  position: absolute;
+  left: var(--thumb-width);
+  top: 0;
+  bottom: 0;
+  width: var(--thumb-resize-width);
+  background-color: rgb(218, 220, 224);
+  cursor: ew-resize;
 }
 
 #main-view {
   position: absolute;
-  left: 100px;
+  left: calc(var(--thumb-width) + var(--thumb-resize-width));
   top: 0;
   bottom: 0;
   right: 0;
-  border: 1px solid #00f;
+}
+
+#main-canvas {
+  border: 0px solid #00f;
+  width: 100%;
+  height: 100%;
+  top: 0px;
+  position: absolute;
+  left: 0px;
+  display: block;
+  z-index: 2;
 }
 
 #main-scroll-outer {
   width: 100%;
-  height: calc(100% - 81px);
-  top: 81px;
-  position: fixed;
+  height: 100%;
+  top: 0px;
+  position: absolute;
   left: 0px;
+  display: block;
+
   overflow: auto;
-  border: 0px solid #f00;
   z-index: 10;
 }
 
 #main-scroll-inner {
   width: 3000px;
   height: 3000px;
-  border: 0px solid #f00;
-  /*overflow: hidden;*/
   display: block;
-}
-
-#container {
-  display: block;
-  border: 0px solid #0f0;
-}
-
-#content {
-  position: relative;
-  user-select: none;
-  width: 200px;
-  height: 200px;
-  display: block;
-}
-
-#main-canvas {
-  border: 0px solid #00f;
-  width: 100%;
-  height: calc(100% - 81px);
-  top: 81px;
-  position: absolute;
-  left: 0px;
-  display: block;
-  z-index: 2;
 }
 
 #file-input {

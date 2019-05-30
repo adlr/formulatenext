@@ -196,8 +196,32 @@ document.addEventListener('DOMContentLoaded', function() {
     canvas.height = rect.height * dpr;
     SetScaleAndSize(dpr, rect.width, rect.height);
   };
-  window.addEventListener('optimizedResize', fixupContentSize);
   
+  // setup thumbnail resize
+  let thumbResize = document.getElementById('thumb-resize');
+  let flexMain = document.getElementById('flex-main');
+  let thumbResizePosition = -1;
+  let thumbWidth = getComputedStyle(flexMain).getPropertyValue(
+    '--thumb-width').match(/\d+/)[0] | 0;
+  let thumbMouseDrag = (ev) => {
+    const delta = ev.clientX - thumbResizePosition;
+    thumbResizePosition = ev.clientX;
+    thumbWidth += delta;
+    let useValue = Math.min(800, Math.max(50, thumbWidth));
+    flexMain.style.setProperty('--thumb-width', useValue + 'px');
+    fixupContentSize();
+  };
+  let thumbMouseUp = (ev) => {
+    document.removeEventListener('mousemove', thumbMouseDrag);
+    document.removeEventListener('mouseup', thumbMouseUp);
+  }
+  thumbResize.addEventListener('mousedown', (ev) => {
+    ev.preventDefault();
+    thumbResizePosition = ev.clientX;
+    document.addEventListener('mousemove', thumbMouseDrag);
+    document.addEventListener('mouseup', thumbMouseUp);
+  });
+
   let calcFontMetrics = (fontsize) => {
     let div = document.createElement('div');
     div.style.position = 'absolute';
