@@ -21,7 +21,7 @@ OBJS=\
 	rootview.o \
 	undo_manager.o \
 	NotoMono-Regular.ttf.o \
-	skia/skia/out/canvaskit_wasm/libskia.a \
+	skia/skia/formulate_out/libskia.a \
 	pdfium/pdfium/out/Debug/obj/libpdfium.a
 
 MATERIAL_FONTS_FILES=\
