@@ -11,6 +11,8 @@ namespace formulate {
 
 class ScrollView : public View {
  public:
+  explicit ScrollView(bool vertically_center)
+      : vertically_center_(vertically_center) {}
   void SetSize(const SkSize& size) {
     View::SetSize(size);
     RepositionChild();
@@ -23,6 +25,8 @@ class ScrollView : public View {
 
   SkPoint ChildVisibleCenter() const;
   void CenterOnChildPoint(SkPoint point);
+ private:
+  bool vertically_center_{true};
 };
 
 }  // namespace formulate

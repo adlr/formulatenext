@@ -28,7 +28,10 @@ void ScrollView::RepositionChild() {
   }
   if (size_.height() > child->Height()) {
     // center child
-    neworigin.fY = (size_.height() - child->Height()) / 2;
+    if (vertically_center_)
+      neworigin.fY = (size_.height() - child->Height()) / 2;
+    else
+      neworigin.fY = 0;
   } else {
     neworigin.fY = Clamp(neworigin.fY, 0.0f,
                          size_.height() - child->Height());

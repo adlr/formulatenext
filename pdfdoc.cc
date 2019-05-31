@@ -156,33 +156,6 @@ void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const {
     fprintf(stderr, "can't get page size\n");
     return;
   }
-
-  // SkPaint paint;
-  // paint.setStyle(SkPaint::kStroke_Style);
-  // paint.setColor(0xff808080);  // opaque grey
-  // paint.setStrokeWidth(1);
-
-  // int objcnt = FPDFPage_CountObjects(page.get());
-  // for (int i = 0; i < objcnt; i++) {
-  //   FPDF_PAGEOBJECT pageobj = FPDFPage_GetObject(page.get(), i);
-  //   if (!pageobj) {
-  //     fprintf(stderr, "Unable to get pageobj!\n");
-  //     return;
-  //   }
-  //   SkRect bounds;
-  //   if (!FPDFPageObj_GetBounds(pageobj,
-  //                              &bounds.fLeft,
-  //                              &bounds.fBottom,
-  //                              &bounds.fRight,
-  //                              &bounds.fTop)) {
-  //     fprintf(stderr, "Unable to get bounds\n");
-  //     return;
-  //   }
-  //   bounds.fTop = page_height - bounds.fTop;
-  //   bounds.fBottom = page_height - bounds.fBottom;
-  //   canvas->drawRect(bounds, paint);
-  // }
-  // fprintf(stderr, "Drawing found %d objects\n", objcnt);
 }
 
 std::string StrConv(const std::wstring& wstr) {

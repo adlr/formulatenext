@@ -23,13 +23,24 @@ class ThumbnailView : public View, public PDFDocEventHandler {
   void MouseDrag(MouseInputEvent ev) {}
   void MouseUp(MouseInputEvent ev) {}
 
+  void SetNeedsDisplayForPage(int page) {
+    // TODO(adlr): optimize
+    SetNeedsDisplay();
+  }
+
+  // Handle page selection
+  void SelectPage(int page);  // think: normal click
+  void TogglePageSelected(int page);  // think ctrl-click
+  void SelectToPage(int page);  // think: shift-click
+
   // PDFDocEventHandler methods
-  void PagesChanged() {
-  }
-  void NeedsDisplayInRect(int page, SkRect rect) {
-  }
+  void PagesChanged();
+  void NeedsDisplayInRect(int page, SkRect rect);
+
  private:
   PDFDoc* doc_;
+  std::vector<bool> selected_pages_;
+  int last_selected_page_{-1};
 };
 
 }  // namespace formulate

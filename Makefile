@@ -7,7 +7,8 @@ INC=\
 	-Ipdfium/pdfium \
 	-Iskia/skia \
 	-Iskia/skia/include/core \
-	-Iskia/skia/include/config
+	-Iskia/skia/include/config \
+	-Iskia/skia/include/utils
 
 %.o : %.cc
 	emcc $(CFLAGS) -MMD -std=c++14 $(INC) -o $@ $<

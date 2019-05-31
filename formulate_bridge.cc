@@ -73,7 +73,7 @@ bool Init() {
   leaf_views_[0] = doc_view_ = new DocView();
   leaf_views_[1] = thumb_view_ = new ThumbnailView(&doc_view_->doc_);
   for (int i = 0; i < 2; i++) {
-    scroll_views_[i] = new ScrollView();
+    scroll_views_[i] = new ScrollView(i == kIDMain);
     scroll_views_[i]->AddChild(leaf_views_[i]);
     root_views_[i] = new RootView(i);
     root_views_[i]->AddChild(scroll_views_[i]);
@@ -95,9 +95,10 @@ EMSCRIPTEN_KEEPALIVE
 void FinishFileLoad() {
   ScopedRedraw redraw(root_views_[kIDMain]);
   doc_view_->doc_.FinishLoad();
-  doc_view_->RecomputePageSizes();
   scroll_views_[kIDMain]->RepositionChild();
+  scroll_views_[kIDThumb]->RepositionChild();
   doc_view_->SetNeedsDisplay();
+  thumb_view_->SetNeedsDisplay();
   doc_view_->toolbox_.UpdateUI();
 }
 

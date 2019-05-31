@@ -35,6 +35,24 @@ body {
   z-index: 2;
 }
 
+#thumb-scroll-outer {
+  width: 100%;
+  height: 100%;
+  top: 0px;
+  position: absolute;
+  left: 0px;
+  display: block;
+
+  overflow: auto;
+  z-index: 10;
+}
+
+#thumb-scroll-inner {
+  width: 3000px;
+  height: 3000px;
+  display: block;
+}
+
 #thumb-resize {
   position: absolute;
   left: var(--thumb-width);

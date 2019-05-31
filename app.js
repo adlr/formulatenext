@@ -186,17 +186,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
   var outer = document.getElementById('main-scroll-outer');
   var canvas = document.getElementById('main-canvas');
-  throttle('scroll', 'optimizedScroll', outer);
-  outer.addEventListener('optimizedScroll', function() {
-    if (!runtime_ready) return;
-    SetScrollOrigin(ID_MAIN, outer.scrollLeft, outer.scrollTop);
-  });
-
-  document.getElementById('thumb-scroll-outer').addEventListener(
-    'optimizedScroll', (ev) => {
+  let initScrollHandler = (div, id) => {
+    throttle('scroll', 'optimizedScroll', div);
+    div.addEventListener('optimizedScroll', function() {
       if (!runtime_ready) return;
-      SetScrollOrigin(ID_THUMB, outer.scrollLeft, outer.scrollTop);
+      SetScrollOrigin(id, div.scrollLeft, div.scrollTop);
     });
+  };
+  initScrollHandler(outer, ID_MAIN);
+  initScrollHandler(document.getElementById('thumb-scroll-outer'),
+                    ID_THUMB);
 
   throttle('resize', 'optimizedResize');
   fixupContentSize = function() {
