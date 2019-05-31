@@ -51,8 +51,8 @@ void RootView::DoDraw(SkRect rect) {
   Draw(&offscreen, SkRect::Make(irect));
   // Push to HTML canvas now
   EM_ASM_({
-      PushCanvasXYWH($0, $1, $2, $3, $4);
-    }, bitmap.getPixels(), irect.left(), irect.top(),
+      PushCanvasXYWH($0, $1, $2, $3, $4, $5);
+    }, id_, bitmap.getPixels(), irect.left(), irect.top(),
     bitmap.width(), bitmap.height());
 }
 

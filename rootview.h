@@ -11,6 +11,7 @@ class ScopedRedraw;
 
 class RootView : public View {
  public:
+  explicit RootView(int id) : id_(id) {}
   void SetNeedsDisplayInRect(const SkRect& rect);
   void SetRedraw(ScopedRedraw* redraw);
   void DoDraw(SkRect rect);
@@ -21,6 +22,7 @@ class RootView : public View {
 
  private:
   ScopedRedraw* redraw_{nullptr};
+  int id_{-1};
 };
 
 class ScopedRedraw {

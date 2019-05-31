@@ -25,6 +25,16 @@ body {
   background-color: rgb(234, 248, 255);
 }
 
+#thumb-canvas {
+  width: 100%;
+  height: 100%;
+  top: 0px;
+  position: absolute;
+  left: 0px;
+  display: block;
+  z-index: 2;
+}
+
 #thumb-resize {
   position: absolute;
   left: var(--thumb-width);

@@ -29,6 +29,9 @@ let UndoRedoClicked = null;
 let ToolbarClicked = null;
 let UpdateEditText = null;
 
+const ID_MAIN = 0;
+const ID_THUMB = 1;
+
 class ButtonMenuHelper {
   constructor(path, buttonid, clicked) {
     this.button = null;
@@ -114,11 +117,13 @@ document.addEventListener('DOMContentLoaded', function() {
   initGlobalMenuBar();
 
   let fixupContentSize = null;
+  let fixupThumbnailSize = null;
   Module['onRuntimeInitialized'] = function() {
     runtime_ready = true;
     console.log("runtime is ready");
     Init();
     fixupContentSize();
+    fixupThumbnailSize();
 
     let zoom_level = 1.0;
     let zoomInButtonMenuHelper =
@@ -165,9 +170,9 @@ document.addEventListener('DOMContentLoaded', function() {
   //                          'number']);  // height
   SetZoom = Module.cwrap('SetZoom', null, ['number']);
   SetScaleAndSize = Module.cwrap('SetScaleAndSize', null,
-                                 ['number', 'number', 'number']);
+                                 ['number', 'number', 'number', 'number']);
   SetScrollOrigin = Module.cwrap('SetScrollOrigin', null,
-                                 ['number', 'number']);
+                                 ['number', 'number', 'number']);
   Init = Module.cwrap('Init', null, []);
   SetFileSize = Module.cwrap('SetFileSize', null, ['number']);
   AppendFileBytes = Module.cwrap('AppendFileBytes', null, ['number', 'number']);
@@ -184,8 +189,14 @@ document.addEventListener('DOMContentLoaded', function() {
   throttle('scroll', 'optimizedScroll', outer);
   outer.addEventListener('optimizedScroll', function() {
     if (!runtime_ready) return;
-    SetScrollOrigin(outer.scrollLeft, outer.scrollTop);
+    SetScrollOrigin(ID_MAIN, outer.scrollLeft, outer.scrollTop);
   });
+
+  document.getElementById('thumb-scroll-outer').addEventListener(
+    'optimizedScroll', (ev) => {
+      if (!runtime_ready) return;
+      SetScrollOrigin(ID_THUMB, outer.scrollLeft, outer.scrollTop);
+    });
 
   throttle('resize', 'optimizedResize');
   fixupContentSize = function() {
@@ -194,9 +205,21 @@ document.addEventListener('DOMContentLoaded', function() {
     var rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
-    SetScaleAndSize(dpr, rect.width, rect.height);
+    SetScaleAndSize(ID_MAIN, dpr, rect.width, rect.height);
   };
-  
+  window.addEventListener('optimizedResize', fixupContentSize);  
+
+  let thumbCanvas = document.getElementById('thumb-canvas');
+  fixupThumbnailSize = () => {
+    if (!runtime_ready) return;
+    console.log('fixup thumbnail');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = thumbCanvas.getBoundingClientRect();
+    thumbCanvas.width = rect.width * dpr;
+    thumbCanvas.height = rect.height * dpr;
+    SetScaleAndSize(ID_THUMB, dpr, rect.width, rect.height);
+  };
+
   // setup thumbnail resize
   let thumbResize = document.getElementById('thumb-resize');
   let flexMain = document.getElementById('flex-main');
@@ -210,6 +233,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let useValue = Math.min(800, Math.max(50, thumbWidth));
     flexMain.style.setProperty('--thumb-width', useValue + 'px');
     fixupContentSize();
+    fixupThumbnailSize();
   };
   let thumbMouseUp = (ev) => {
     document.removeEventListener('mousemove', thumbMouseDrag);
@@ -290,7 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const kEventKindDrag = 1;
   const kEventKindUp = 2;
   const kEventKindMove = 3;
-  let pushMouseEvent = (ev, kind) => {
+  let pushMouseEvent = (ev, kind, id) => {
     if (MouseEvent === null)
       return;
     const kControlKey = 1;
@@ -303,50 +327,44 @@ document.addEventListener('DOMContentLoaded', function() {
     const keys = (ev.ctrlKey ? kControlKey : 0) |
           (ev.altKey ? kAltKey : 0) |
           (ev.shiftKey ? kShiftKey : 0);
-    return MouseEvent(xpos, ypos, kind, keys);
+    return MouseEvent(id, xpos, ypos, kind, keys);
   };
 
-  let dragInProgress = false;
-  outer.addEventListener('mousedown', ev => {
-    dragInProgress = pushMouseEvent(ev, kEventKindDown);
-    console.log("drag ip: " + dragInProgress);
-  });
-  outer.addEventListener('mousemove', ev => {
-    if (ev.buttons) {
-      if (dragInProgress) {
-        pushMouseEvent(ev, kEventKindDrag);
+  let setupMouseHandlers = (div, id) => {
+    let dragInProgress = false;
+    div.addEventListener('mousedown', ev => {
+      dragInProgress = pushMouseEvent(ev, kEventKindDown, id);
+    });
+    div.addEventListener('mousemove', ev => {
+      if (ev.buttons) {
+        if (dragInProgress) {
+          pushMouseEvent(ev, kEventKindDrag, id);
+        }
+      } else {
+        pushMouseEvent(ev, kEventKindMove, id);
       }
-    } else {
-      pushMouseEvent(ev, kEventKindMove);
-    }
-  });
-  outer.addEventListener('mouseup', ev => {
-    console.log("mouse up drag ip: " + dragInProgress);
-    if (dragInProgress) {
-      pushMouseEvent(ev, kEventKindUp);
-      dragInProgress = false;
-    }
-  });
+    });
+    div.addEventListener('mouseup', ev => {
+      if (dragInProgress) {
+        pushMouseEvent(ev, kEventKindUp, id);
+        dragInProgress = false;
+      }
+    });
+  };
+  setupMouseHandlers(outer, ID_MAIN);
+  setupMouseHandlers(document.getElementById('thumb-scroll-outer'), ID_THUMB);
 
   document.getElementById('file-input').addEventListener('change',
                                                          loadFile, false);
 }, false);
 
-var PushCanvas = (bufptr, width, height) => {
-  var canvas = document.getElementById('main-canvas');
-  if (canvas.width != width || canvas.height != height) {
-    console.log(`Size mismatch! Canvas is (${canvas.width}, ${canvas.height}). Given (${width}, ${height})`);
+let PushCanvasXYWH = (id, bufptr, xpos, ypos, width, height) => {
+  if (id != ID_MAIN && id != ID_THUMB) {
+    console.log("Invalid ID!\n");
+    return;
   }
-  var ctx = canvas.getContext('2d');
-  let arr = new Uint8ClampedArray(Module.HEAPU8.buffer,
-                                  bufptr, canvas.width *
-                                  canvas.height * 4);
-  let img = new ImageData(arr, canvas.width, canvas.height);
-  ctx.putImageData(img, 0, 0);
-};
-
-var PushCanvasXYWH = (bufptr, xpos, ypos, width, height) => {
-  var canvas = document.getElementById('main-canvas');
+  var canvas = document.getElementById(id == ID_MAIN ?
+                                       'main-canvas' : 'thumb-canvas');
   var ctx = canvas.getContext('2d');
   let arr = new Uint8ClampedArray(Module.HEAPU8.buffer,
                                   bufptr, width * height * 4);
@@ -366,11 +384,17 @@ let bridge_drawBezier =
     };
 
 // set the size/position of the scrollbar view
-let bridge_setSize = function(width, height, xpos, ypos) {
-  let inner = document.getElementById('main-scroll-inner');
+let bridge_setSize = function(id, width, height, xpos, ypos) {
+  if (id != ID_MAIN && id != ID_THUMB) {
+    console.log("Invalid ID!\n");
+    return;
+  }
+  let inner = document.getElementById(
+    id == ID_MAIN ? 'main-scroll-inner' : 'thumb-scroll-inner');
   inner.style.width = width + 'px';
   inner.style.height = height + 'px';
-  let outer = document.getElementById('main-scroll-outer');
+  let outer = document.getElementById(
+    id == ID_MAIN ? 'main-scroll-outer' : 'thumb-scroll-outer');
   outer.scrollLeft = xpos;
   outer.scrollTop = ypos;
 };

@@ -3,10 +3,13 @@
 #ifndef FORMULATE_BRIDGE_H_
 #define FORMULATE_BRIDGE_H_
 
+#include "scrollview.h"
 #include "view.h"
 
 namespace formulate {
 
+void bridge_setSize(ScrollView* view, float width, float height,
+                    float xpos, float ypos);
 void bridge_UpdateUndoRedoUI(bool undo_enabled, bool redo_unabled);
 void bridge_setToolboxState(bool enabled, int tool);
 void bridge_startComposingText(SkPoint docpoint, View* view, float zoom);

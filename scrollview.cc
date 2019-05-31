@@ -34,11 +34,9 @@ void ScrollView::RepositionChild() {
                          size_.height() - child->Height());
   }
   child->SetOrigin(neworigin);
-  EM_ASM_({
-      bridge_setSize($0, $1, $2, $3);
-    }, child->Width(), child->Height(),
-    std::max(-child->origin().x(), 0.0f),
-    std::max(-child->origin().y(), 0.0f));
+  bridge_setSize(this, child->Width(), child->Height(),
+                 std::max(-child->origin().x(), 0.0f),
+                 std::max(-child->origin().y(), 0.0f));
 }
 
 SkPoint ScrollView::ChildVisibleCenter() const {

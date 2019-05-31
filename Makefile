@@ -19,6 +19,7 @@ OBJS=\
 	pdfdoc.o \
 	view.o \
 	rootview.o \
+	thumbnailview.o \
 	undo_manager.o \
 	NotoMono-Regular.ttf.o \
 	skia/skia/formulate_out/libskia.a \
