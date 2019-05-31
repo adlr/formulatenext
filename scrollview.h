@@ -23,12 +23,6 @@ class ScrollView : public View {
 
   SkPoint ChildVisibleCenter() const;
   void CenterOnChildPoint(SkPoint point);
-
-  // void MouseDown(SkPoint pt);
-  // void MouseDrag(SkPoint pt);
-  // void MouseUp(SkPoint pt);
- private:
-  bool sent_child_mousedown_{false};
 };
 
 }  // namespace formulate

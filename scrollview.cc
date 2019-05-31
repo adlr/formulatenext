@@ -69,47 +69,4 @@ void ScrollView::CenterOnChildPoint(SkPoint point) {
   RepositionChild();
 }
 
-// void ScrollView::DoDraw() {
-//   // Allocate a buffer
-//   SkISize bufsize({static_cast<int32_t>(Width()),
-//         static_cast<int32_t>(Height())});
-//   SkBitmap bitmap;
-//   bitmap.setInfo(SkImageInfo::Make(bufsize.width(),
-//                                    bufsize.height(),
-//                                    kRGBA_8888_SkColorType,
-//                                    kUnpremul_SkAlphaType));
-//   if (!bitmap.tryAllocPixels()) {
-//     fprintf(stderr, "failed to alloc bitmap\n");
-//     return;
-//   }
-//   SkCanvas offscreen(bitmap);
-//   Draw(&offscreen, SkRect::MakeWH(bitmap.width(), bitmap.height()));
-//   // Push to HTML canvas now
-//   EM_ASM_({
-//       PushCanvas($0, $1, $2);
-//     }, bitmap.getPixels(), bitmap.width(), bitmap.height());
-// }
-
-// void ScrollView::MouseDown(SkPoint pt) {
-//   pt.offset(origin_.x(), origin_.y());
-//   SkRect child_bounds =
-//     SkRect::MakeXYWH(0, 0, child_->Width(), child_->Height());
-//   if (child_bounds.contains(pt.x(), pt.y())) {
-//     sent_child_mousedown_ = true;
-//     child_->MouseDown(pt);
-//   }
-// }
-// void ScrollView::MouseDrag(SkPoint pt) {
-//   pt.offset(origin_.x(), origin_.y());
-//   if (sent_child_mousedown_)
-//     child_->MouseDrag(pt);
-// }
-// void ScrollView::MouseUp(SkPoint pt) {
-//   pt.offset(origin_.x(), origin_.y());
-//   if (sent_child_mousedown_) {
-//     child_->MouseUp(pt);
-//     sent_child_mousedown_ = false;
-//   }
-// }
-
 }  // namespace formulate
