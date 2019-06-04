@@ -7,18 +7,100 @@
 
 namespace formulate {
 
+namespace {
+
+/* Visual layout in pixels from top to bottom:
+ * kTop* = top of view
+ * kPage* = repeated per page
+ * kBottom* = bottom of view
+ */
+const float kTopPadding = 2.0f;
+const float kPageHorizCursor = 2.0f;
+const float kPageTopSpacing = 2.0f;
+const float kPageTopBorder = 2.0f;
+const float kPageBottomBorder = kPageTopBorder;
+const float kPageNumberSpacing = 2.0f;
+const float kPageNumberHeight = 12.0f;
+const float kPageBottomSpacing = 2.0f;
+const float kBottomHorizCursor = kPageHorizCursor;
+const float kBottomPadding = kTopPadding;
+
+// Horizontal visual layout:
+const float kLeftPadding = 2.0f;
+const float kPageLeftBorder = kPageTopBorder;
+const float kPageRightBorder = kPageLeftBorder;
+const float kRightPadding = kLeftPadding;
+
+// The following functions are helpers for accessing details of the
+// layout specified in the above comment.
+
+float PageBodyWidth(float view_width) {
+  // Page body width and height are the same, as we fit the actual
+  // page into the given square.
+  return view_width -
+      (kLeftPadding +
+       kPageLeftBorder +
+       kPageRightBorder +
+       kRightPadding);
+}
+
+// Finds out how tall each individual page is (including page number)
+// if this view has a given width.
+float PageHeightForViewWidth(float view_width) {
+  return (kPageHorizCursor +
+          kPageTopSpacing +
+          kPageTopBorder +
+          PageBodyWidth(view_width) +
+          kPageBottomBorder +
+          kPageNumberSpacing +
+          kPageNumberHeight +
+          kPageBottomSpacing);
+}
+
+float ViewHeightForWidth(float view_width, int num_pages) {
+  return kTopPadding +
+      num_pages * PageHeightForViewWidth(view_width) +
+      kBottomHorizCursor +
+      kBottomPadding;
+}
+
+SkRect PageBodySquare(int page, float view_width) {
+  float page_body_width = PageBodyWidth(view_width);
+  float top = kTopPadding +
+      PageHeightForViewWidth(view_width) * page +
+      kPageHorizCursor +
+      kPageTopSpacing +
+      kPageTopBorder;
+  return SkRect::MakeXYWH(kLeftPadding + kPageLeftBorder, top,
+                          page_body_width, page_body_width);
+}
+
+SkPoint PageLabelPoint(int page, float view_width) {
+  float page_body_width = PageBodyWidth(view_width);
+  float top = kTopPadding +
+      PageHeightForViewWidth(view_width) * page +
+      kPageHorizCursor +
+      kPageTopSpacing +
+      kPageTopBorder +
+      page_body_width +  // page body height (same as width)
+      kPageBottomBorder +
+      kPageNumberSpacing +
+      kPageNumberHeight;
+  return SkPoint::Make(view_width / 2, top);
+}
+
+}  // namespace {}
+
 void ThumbnailView::SetWidth(float width) {
-  float pagesize = width - 8;
-  SetSize(SkSize::Make(width, (pagesize + 12 + 8 + 5) * doc_->Pages()));
+  SetSize(SkSize::Make(width, ViewHeightForWidth(width, doc_->Pages())));
 }
 
 void ThumbnailView::Draw(SkCanvas* canvas, SkRect rect) {
   const int pages = doc_->Pages();
-  float top = 0.0f;
-  float pagesize = Width() - 8;
+  float pagesize = PageBodyWidth(Width());
   SkPaint paint;
   for (int i = 0; i < pages; i++) {
-    SkRect pagerect = SkRect::MakeXYWH(4, 8 + top, pagesize, pagesize);
+    SkRect pagerect = PageBodySquare(i, Width());
     SkSize pdfsize = doc_->PageSize(i);
     // Avoid divide by 0
     pdfsize.fWidth = std::max(0.1f, pdfsize.fWidth);
@@ -61,10 +143,10 @@ void ThumbnailView::Draw(SkCanvas* canvas, SkRect rect) {
     paint.setStyle(SkPaint::kFill_Style);
     paint.setStrokeWidth(0);
     paint.setColor(0xff000000);  // opaque black
+    SkPoint label_point = PageLabelPoint(i, Width());
     SkTextUtils::DrawString(canvas, pagenumber,
-                            4 + pagesize / 2, 8 + top + pagesize + 4 + 12,
+                            label_point.x(), label_point.y(),
                             SkFont(), paint, SkTextUtils::kCenter_Align);
-    top += pagesize + 12 + 8 + 5;
   }
 }
 
