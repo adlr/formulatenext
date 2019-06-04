@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     textarea.value = '';
     update();
-    document.body.appendChild(textarea);
+    document.getElementById('main-view').appendChild(textarea);
     setTimeout(() => {
       textarea.focus();
       update();
