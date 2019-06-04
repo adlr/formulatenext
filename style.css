@@ -98,6 +98,7 @@ body {
   width: 3000px;
   height: 3000px;
   display: block;
+  touch-action: none;
 }
 
 #file-input {

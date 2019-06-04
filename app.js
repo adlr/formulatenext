@@ -235,14 +235,14 @@ document.addEventListener('DOMContentLoaded', function() {
     fixupThumbnailSize();
   };
   let thumbMouseUp = (ev) => {
-    document.removeEventListener('mousemove', thumbMouseDrag);
-    document.removeEventListener('mouseup', thumbMouseUp);
+    document.removeEventListener('pointermove', thumbMouseDrag);
+    document.removeEventListener('pointerup', thumbMouseUp);
   }
-  thumbResize.addEventListener('mousedown', (ev) => {
+  thumbResize.addEventListener('pointerdown', (ev) => {
     ev.preventDefault();
     thumbResizePosition = ev.clientX;
-    document.addEventListener('mousemove', thumbMouseDrag);
-    document.addEventListener('mouseup', thumbMouseUp);
+    document.addEventListener('pointermove', thumbMouseDrag);
+    document.addEventListener('pointerup', thumbMouseUp);
   });
 
   let calcFontMetrics = (fontsize) => {
@@ -331,22 +331,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
   let setupMouseHandlers = (div, id) => {
     let dragInProgress = false;
-    div.addEventListener('mousedown', ev => {
+    div.addEventListener('pointerdown', ev => {
       dragInProgress = pushMouseEvent(ev, kEventKindDown, id);
+      if (dragInProgress)
+        ev.preventDefault();
     });
-    div.addEventListener('mousemove', ev => {
-      if (ev.buttons) {
-        if (dragInProgress) {
-          pushMouseEvent(ev, kEventKindDrag, id);
-        }
+    div.addEventListener('pointermove', ev => {
+      if (dragInProgress) {
+        pushMouseEvent(ev, kEventKindDrag, id);
+        ev.preventDefault();
       } else {
         pushMouseEvent(ev, kEventKindMove, id);
       }
     });
-    div.addEventListener('mouseup', ev => {
+    div.addEventListener('pointerup', ev => {
       if (dragInProgress) {
         pushMouseEvent(ev, kEventKindUp, id);
         dragInProgress = false;
+        ev.preventDefault();
+      }
+    });
+    div.addEventListener('pointercancel', ev => {
+      if (dragInProgress) {
+        pushMouseEvent(ev, kEventKindUp, id);
+        dragInProgress = false;
+        ev.preventDefault();
       }
     });
   };
