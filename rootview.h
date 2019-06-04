@@ -12,6 +12,7 @@ class ScopedRedraw;
 class RootView : public View {
  public:
   explicit RootView(int id) : id_(id) {}
+  virtual const char* Name() const { return "RootView"; }
   void SetNeedsDisplayInRect(const SkRect& rect);
   void SetRedraw(ScopedRedraw* redraw);
   void DoDraw(SkRect rect);

@@ -18,7 +18,7 @@ class View;
 class MouseInputEvent {
  public:
   enum Type {
-    DOWN, DRAG, UP, MOVE
+    DOWN, DRAG, UP, MOVE, CLICK
   };
   MouseInputEvent(SkPoint position, Type type,
                   int32_t click_count,
@@ -37,13 +37,14 @@ class MouseInputEvent {
   SkPoint position_;
   Type type_;
   int32_t click_count_;
-  uint32_t modifiers_;  // Same from KeyboardInputEvent
+  uint32_t modifiers_;
 };
 
 class View {
  public:
   View() {}
   virtual ~View() {}
+  virtual const char* Name() const { return "View"; }
   View* Parent() const { return parent_; }
   void AddChild(View* child) {
     children_.push_back(child);
@@ -103,6 +104,8 @@ class View {
   virtual View* MouseDown(MouseInputEvent ev);
   virtual void MouseDrag(MouseInputEvent ev) {}
   virtual void MouseUp(MouseInputEvent ev) {}
+
+  virtual void OnClick(MouseInputEvent ev);
 
   void Dump(int indent) const;
  protected:

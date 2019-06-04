@@ -16,6 +16,7 @@ namespace formulate {
 class DocView : public View, public PDFDocEventHandler {
  public:
   DocView() { doc_.AddEventHandler(this); }
+  virtual const char* Name() const { return "DocView"; }
   void Draw(SkCanvas* canvas, SkRect rect);
   void SetZoom(float zoom);
 

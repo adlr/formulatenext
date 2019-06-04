@@ -13,6 +13,7 @@ class ScrollView : public View {
  public:
   explicit ScrollView(bool vertically_center)
       : vertically_center_(vertically_center) {}
+  virtual const char* Name() const { return "ScrollView"; }
   void SetSize(const SkSize& size) {
     View::SetSize(size);
     RepositionChild();

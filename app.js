@@ -313,7 +313,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const kEventKindDrag = 1;
   const kEventKindUp = 2;
   const kEventKindMove = 3;
-  let pushMouseEvent = (ev, kind, id) => {
+  const kEventKindClick = 4;
+  let pushMouseEvent = (ev, div, kind, id) => {
     if (MouseEvent === null)
       return;
     const kControlKey = 1;
@@ -321,8 +322,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const kShiftKey = 4;
 
     const dpr = window.devicePixelRatio || 1;
-    const xpos = (ev.offsetX - outer.scrollLeft) * dpr;
-    const ypos = (ev.offsetY - outer.scrollTop) * dpr;
+    const xpos = (ev.offsetX - div.scrollLeft) * dpr;
+    const ypos = (ev.offsetY - div.scrollTop) * dpr;
     const keys = (ev.ctrlKey ? kControlKey : 0) |
           (ev.altKey ? kAltKey : 0) |
           (ev.shiftKey ? kShiftKey : 0);
@@ -332,31 +333,35 @@ document.addEventListener('DOMContentLoaded', function() {
   let setupMouseHandlers = (div, id) => {
     let dragInProgress = false;
     div.addEventListener('pointerdown', ev => {
-      dragInProgress = pushMouseEvent(ev, kEventKindDown, id);
+      dragInProgress = pushMouseEvent(ev, div, kEventKindDown, id);
       if (dragInProgress)
         ev.preventDefault();
     });
     div.addEventListener('pointermove', ev => {
       if (dragInProgress) {
-        pushMouseEvent(ev, kEventKindDrag, id);
+        pushMouseEvent(ev, div, kEventKindDrag, id);
         ev.preventDefault();
       } else {
-        pushMouseEvent(ev, kEventKindMove, id);
+        pushMouseEvent(ev, div, kEventKindMove, id);
       }
     });
     div.addEventListener('pointerup', ev => {
       if (dragInProgress) {
-        pushMouseEvent(ev, kEventKindUp, id);
+        pushMouseEvent(ev, div, kEventKindUp, id);
         dragInProgress = false;
         ev.preventDefault();
       }
     });
     div.addEventListener('pointercancel', ev => {
       if (dragInProgress) {
-        pushMouseEvent(ev, kEventKindUp, id);
+        pushMouseEvent(ev, div, kEventKindUp, id);
         dragInProgress = false;
         ev.preventDefault();
       }
+    });
+    div.addEventListener('click', ev => {
+      console.log('click');
+      pushMouseEvent(ev, div, kEventKindClick, id);
     });
   };
   setupMouseHandlers(outer, ID_MAIN);

@@ -21,6 +21,20 @@ ScrollView* scroll_views_[2];
 View* leaf_views_[2];
 DocView* doc_view_;
 ThumbnailView* thumb_view_;
+
+class ThumbnailEventHandlerImpl : public ThumbnailEventHandler {
+  void ScrollToPage(int page) {
+    SkPoint pagecorner = doc_view_->PagePointToViewPoint(
+        page,
+        SkPoint::Make(0, doc_view_->PageHeight(page)));
+    doc_view_->SetNeedsDisplay();
+    doc_view_->SetOrigin(SkPoint::Make(-pagecorner.x(), -pagecorner.y()));
+    scroll_views_[kIDMain]->RepositionChild();
+    doc_view_->SetNeedsDisplay();
+  }
+};
+
+ThumbnailEventHandlerImpl* thumb_event_handler_;
 }  // namespace {}
 
 extern "C" {
@@ -78,6 +92,8 @@ bool Init() {
     root_views_[i] = new RootView(i);
     root_views_[i]->AddChild(scroll_views_[i]);
   }
+  thumb_event_handler_ = new ThumbnailEventHandlerImpl();
+  thumb_view_->SetEventHandler(thumb_event_handler_);
   return true;
 }
 
@@ -108,7 +124,8 @@ bool MouseEvent(int id, float xpos, float ypos, int type, int modifiers) {
     fprintf(stderr, "Invalid ID\n");
     return false;
   }
-  ScopedRedraw redraw(root_views_[id]);
+  ScopedRedraw redraw_main(root_views_[kIDMain]);
+  ScopedRedraw redraw_thumb(root_views_[kIDThumb]);
   MouseInputEvent::Type ty = static_cast<MouseInputEvent::Type>(type);
   MouseInputEvent ev(SkPoint::Make(xpos, ypos), ty, 1, modifiers);
   switch (ty) {
@@ -125,6 +142,9 @@ bool MouseEvent(int id, float xpos, float ypos, int type, int modifiers) {
       break;
     case MouseInputEvent::MOVE:
       // TODO(adlr): support hover events
+      break;
+    case MouseInputEvent::CLICK:
+      root_views_[id]->OnClick(ev);
       break;
   }
   return false;

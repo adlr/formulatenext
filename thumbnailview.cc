@@ -95,6 +95,18 @@ void ThumbnailView::SetWidth(float width) {
   SetSize(SkSize::Make(width, ViewHeightForWidth(width, doc_->Pages())));
 }
 
+int ThumbnailView::PageForPoint(SkPoint pt) const {
+  int pages = doc_->Pages();
+  float top = kTopPadding;
+  float dy = PageHeightForViewWidth(Width());
+  for (int i = 0; i < pages; i++) {
+    if (pt.y() < (top + dy))
+      return i;
+    top += dy;
+  }
+  return pages - 1;
+}
+
 void ThumbnailView::Draw(SkCanvas* canvas, SkRect rect) {
   const int pages = doc_->Pages();
   float pagesize = PageBodyWidth(Width());
@@ -112,10 +124,16 @@ void ThumbnailView::Draw(SkCanvas* canvas, SkRect rect) {
     float dy = (pagesize - (scale * pdfsize.height())) / 2;
     pagerect.inset(dx, dy);
     SkRect pageborder = pagerect.makeOutset(0.5, 0.5);
+    if (PageIsSelected(i)) {
+      pageborder = pageborder.makeOutset(0.5, 0.5);
+      paint.setColor(0xff2e75e8);  // opaque black
+      paint.setStrokeWidth(2);
+    } else {
+      paint.setColor(0xff000000);  // opaque black
+      paint.setStrokeWidth(1);
+    }
     if (pageborder.intersects(rect)) {
       paint.setStyle(SkPaint::kStroke_Style);
-      paint.setStrokeWidth(1);
-      paint.setColor(0xff000000);  // opaque black
       canvas->drawRect(pageborder, paint);
     }
     if (pagerect.intersects(rect)) {
@@ -150,6 +168,17 @@ void ThumbnailView::Draw(SkCanvas* canvas, SkRect rect) {
   }
 }
 
+void ThumbnailView::OnClick(MouseInputEvent ev) {
+  int page = PageForPoint(ev.position());
+  if (ev.modifiers() & kShiftKey) {
+    SelectToPage(page);
+  } else if (ev.modifiers() & kControlKey) {
+    TogglePageSelected(page);
+  } else {
+    SelectPage(page);
+  }
+}
+
 void ThumbnailView::SelectPage(int page) {
   if (page >= doc_->Pages()) {
     fprintf(stderr, "too high of page to select\n");
@@ -168,6 +197,8 @@ void ThumbnailView::SelectPage(int page) {
       SetNeedsDisplayForPage(i);
     }
   }
+  if (handler_)
+    handler_->ScrollToPage(page);
 }
 
 void ThumbnailView::TogglePageSelected(int page) {
