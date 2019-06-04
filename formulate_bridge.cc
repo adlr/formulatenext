@@ -94,11 +94,11 @@ void AppendFileBytes(char* bytes, size_t length) {
 EMSCRIPTEN_KEEPALIVE
 void FinishFileLoad() {
   ScopedRedraw redraw(root_views_[kIDMain]);
+  ScopedRedraw redraw_thumb(root_views_[kIDThumb]);
   doc_view_->doc_.FinishLoad();
   scroll_views_[kIDMain]->RepositionChild();
   scroll_views_[kIDThumb]->RepositionChild();
   doc_view_->SetNeedsDisplay();
-  thumb_view_->SetNeedsDisplay();
   doc_view_->toolbox_.UpdateUI();
 }
 

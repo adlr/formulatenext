@@ -128,6 +128,8 @@ void ThumbnailView::PagesChanged() {
   if (last_selected_page_ >= doc_->Pages())
     last_selected_page_ = -1;
   SetNeedsDisplay();
+  SetWidth(Width());  // forces height to update
+  SetNeedsDisplay();
 }
 
 void ThumbnailView::NeedsDisplayInRect(int page, SkRect rect) {
