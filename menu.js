@@ -5,55 +5,38 @@ let menuOpen = function(ev) {
   ev2.initEvent('click', true, true);
   document.getElementById('file-input').dispatchEvent(ev2);
 };
-let menuClose = function() { console.log('menuClose'); };
 let menuSave = function() {
   if (DownloadFile)
     DownloadFile();
 };
-let menuSaveAs = function() { console.log('menuSaveAs'); };
-let menuPrint = function() { console.log('menuPrint'); };
-let menuUndo = function() { console.log('menuUndo'); };
-let menuRedo = function() { console.log('menuRedo'); };
-let menuCut = function() { console.log('menuCut'); };
-let menuCopy = function() { console.log('menuCopy'); };
-let menuPaste = function() { console.log('menuPaste'); };
-let menuZoomOut = function() { zoomOut(); };
-let menuZoomIn = function() { zoomIn(); };
-let menuView100 = function() { console.log('menuView100'); };
 
 let menus = [
   {name: "File", children: [
     {name: "Open...", key: "o", action: menuOpen},
     {name: "-"},
-    {name: "Close", key: "w", action: menuClose},
     {name: "Save", key: "s", action: menuSave},
-    {name: "Save As...", key: "S", action: menuSaveAs},
     {name: "-"},
-    {name: "Print...", key: "P", action: menuPrint}
+    {name: "Append PDF..."}
   ]},
   {name: "Edit", children: [
-    {name: "Undo", key: "z", action: menuUndo},
-    {name: "Redo", key: "Z", action: menuRedo, enabled: false},
+    {name: "Undo", key: "z"},
+    {name: "Redo", key: "Z"},
     {name: "-"},
-    {name: "Cut", key: "x", action: menuCut},
-    {name: "Copy", key: "c", action: menuCopy},
-    {name: "Paste", key: "v", action: menuPaste},
-  ]},
-  {name: "View", children: [
-    {name: "Zoom", children: [
-      {name: "Out", key: "-", action: menuZoomOut},
-      {name: "In", key: "=", action: menuZoomIn},
-      {name: "100%", key: "0", action: menuView100}
+    {name: "Cut", key: "x"},
+    {name: "Copy", key: "c"},
+    {name: "Paste", key: "v"},
+    {name: "-"},
+    {name: "Rotate Selected Pagesfo ks dfsdlfkjs ldfkjsldfjk", children: [
+      {name: "90%deg; Clockwise"},
+      {name: "180%deg;"},
+      {name: "90%deg; Counterclockwise"},
     ]},
-    {name: "Zoom2", children: [
-      {name: "Out", key: "-", action: menuZoomOut},
-      {name: "In", children: [
-        {name: "Out", key: "-", action: menuZoomOut},
-        {name: "In", key: "=", action: menuZoomIn},
-        {name: "100%", key: "0", action: menuView100}
-      ]},
-      {name: "100%", key: "0", action: menuView100}
-    ]}
+    {name: "Delete Selected Pages"}
+  ]},
+  {name: "Zoom", children: [
+    {name: "Out", key: "-"},
+    {name: "In", key: "="},
+    {name: "Default", key: "0"}
   ]}
 ];
 
@@ -83,13 +66,16 @@ class ShortCutListener {
 let shortCutListener = null;
 
 class MenuItem {
-  constructor(str, shortcut, callback) {
+  constructor(str, parent, shortcut, callback) {
     this.str = str;
+    this.parent = parent;
     this.shortcut = shortcut;
     this.callback = callback;
     this.enabled = true;
     this.child = null;
     this.div = document.createElement('div');
+    this.timerToShowHide = null;
+    this.childVisible = false;
     if (!this.isSpacer()) {
       this.div.classList.add('menuitem');
       this.leftDiv = document.createElement('div');
@@ -98,6 +84,9 @@ class MenuItem {
       this.rightDiv = document.createElement('div');
       this.rightDiv.classList.add('menuitemright');
       this.div.appendChild(this.rightDiv);
+      this.div.addEventListener('click', ev => { this.clicked(ev); });
+      this.div.addEventListener('mouseenter', ev => { this.hover(true); });
+      this.div.addEventListener('mouseleave', ev => { this.hover(false); });
     }
     this.updateDom();
     shortCutListener.add(shortcut, callback)
@@ -123,6 +112,50 @@ class MenuItem {
       shortCutListener.remove(this.shortcut);
       shortCutListener.add(this.shortcut, this.callback);
     }
+  }
+  clicked(ev) {
+    hide(null);
+    if (this.callback)
+      this.callback();
+  }
+  hover(hovering) {
+    if (!this.child)
+      return;
+    if (hovering) {  // show or keep showing child
+      if (this.childVisible) {
+        // child already visible. Don't change anything in future
+        clearTimeout(this.timerToShowHide);
+      } else {
+        // Show child after delay
+        this.timerToShowHide = setTimeout(() => {
+          this.timerToShowHide = null;
+          this.setChildVisible(true);
+        }, 500);
+      }
+    } else {  // hide or keep hiding child
+      if (!this.childVisible) {
+        // keep as is
+        clearTimeout(this.timerToShowHide)
+      } else {
+        // hide after delay
+        this.timerToShowHide = setTimeout(() => {
+          this.timerToShowHide = null;
+          this.setChildVisible(false);
+        }, 500);
+      }
+    }
+  }
+  hide(child) {
+    if (this.child)
+      this.setChildVisible(false);
+    if (this.parent)
+      this.parent.hide(this);
+  }
+  setChildVisible(vis) {
+    if (!this.child)
+      return;
+    this.childVisible = vis;
+    this.child.div.style.display = vis ? 'block' : 'none';
   }
   isSpacer() {
     return this.str === '-';
@@ -157,7 +190,8 @@ class MenuItem {
 }
 
 class MenuContainer {
-  constructor() {
+  constructor(parent) {
+    this.parent = parent;
     this.items = [];
     this.div = document.createElement('div');
     this.div.classList.add('submenucontainer');
@@ -166,6 +200,10 @@ class MenuContainer {
   addMenuItem(item) {
     this.items.push(item);
     this.div.appendChild(item.div);
+  }
+  hide(child) {
+    if (this.parent)
+      this.parent.hide(this);
   }
   findMenu(path) {
     for (let i = 0; i < this.items.length; i++) {
@@ -230,6 +268,9 @@ class MenuBarLabel {
     this.container = container;
     this.div.appendChild(this.container.div);
   }
+  hide(child) {
+    this.setChildVisible(false);
+  }
   setChildVisible(vis) {
     if (vis) {
       this.div.classList.add('rootmenuitemactive');
@@ -257,7 +298,11 @@ class MenuBar {
       //console.log('doc click');
       this.hideMenu(); };
     document.addEventListener('click', this.docClick);
-    this.div.addEventListener('click', ev => { ev.stopPropagation(); });
+    this.div.addEventListener('click', ev => {
+      this.hideMenu();
+      ev.stopPropagation();
+    });
+    this.div.addEventListener('mousedown', ev => { ev.preventDefault(); });
   }
   addLabel(label) {
     this.labels.push(label);
@@ -312,6 +357,7 @@ const populate2 = function(items, container) {
       container.addLabel(item);
     } else {
       item = new MenuItem(initem.name,
+                          container,
                           initem.hasOwnProperty('key') ? initem.key : null,
                           initem.action);
       if (initem.hasOwnProperty('enabled') && !initem.enabled) {
@@ -320,7 +366,7 @@ const populate2 = function(items, container) {
       container.addMenuItem(item);
     }
     if (initem.children) {
-      let subcontainer = new MenuContainer();
+      let subcontainer = new MenuContainer(item);
       item.setContainer(subcontainer);
       populate2(initem.children, subcontainer);
     }
