@@ -26,10 +26,10 @@ let menus = [
     {name: "Copy", key: "c"},
     {name: "Paste", key: "v"},
     {name: "-"},
-    {name: "Rotate Selected Pagesfo ks dfsdlfkjs ldfkjsldfjk", children: [
-      {name: "90%deg; Clockwise"},
-      {name: "180%deg;"},
-      {name: "90%deg; Counterclockwise"},
+    {name: "Rotate Selected Pages", children: [
+      {name: "90&deg; Clockwise"},
+      {name: "180&deg;"},
+      {name: "90&deg; Counterclockwise"},
     ]},
     {name: "Delete Selected Pages"}
   ]},
@@ -114,7 +114,9 @@ class MenuItem {
     }
   }
   clicked(ev) {
-    hide(null);
+    if (this.child)
+      return;
+    this.hide(null);
     if (this.callback)
       this.callback();
   }
@@ -156,6 +158,10 @@ class MenuItem {
       return;
     this.childVisible = vis;
     this.child.div.style.display = vis ? 'block' : 'none';
+    this.child.div.style.position = 'absolute';
+    this.child.div.style.top = '-5px';
+    this.child.div.style.left =
+      window.getComputedStyle(this.parent.div).getPropertyValue('width');
   }
   isSpacer() {
     return this.str === '-';
@@ -178,6 +184,8 @@ class MenuItem {
       this.child.div.remove();
     this.child = container;
     this.div.appendChild(this.child.div);
+    this.rightDiv.innerHTML = '&#9658;';
+    this.rightDiv.classList.add('menuitemright-arrow');
   }
   findMenu(path) {
     if (path.length === 0)
@@ -217,8 +225,9 @@ class MenuContainer {
 }
 
 class MenuBarLabel {
-  constructor(str) {
+  constructor(str, parent) {
     this.str = str;
+    this.parent = parent;
     this.div = document.createElement('div');
     this.div.classList.add('rootmenuitem');
     this.div.innerHTML = str;
@@ -269,7 +278,7 @@ class MenuBarLabel {
     this.div.appendChild(this.container.div);
   }
   hide(child) {
-    this.setChildVisible(false);
+    this.parent.hideMenu();
   }
   setChildVisible(vis) {
     if (vis) {
@@ -353,7 +362,7 @@ const populate2 = function(items, container) {
     //console.log('handling ' + initem.name);
     let item = null;
     if (container instanceof MenuBar) {
-      item = new MenuBarLabel(initem.name);
+      item = new MenuBarLabel(initem.name, container);
       container.addLabel(item);
     } else {
       item = new MenuItem(initem.name,
@@ -376,9 +385,9 @@ const populate2 = function(items, container) {
 let shortcutKeyToStr = function(key) {
   const code = key.charCodeAt(0);
   if (code > 64 && code < 91) {  // upper-case
-    return "Ctrl+Shift+" + key.toUpperCase();
+    return "Ctrl + Shift + " + key.toUpperCase();
   } else {  // assume lower-case
-    return "Ctrl+" + key.toUpperCase();
+    return "Ctrl + " + key.toUpperCase();
   }
 };
 

@@ -45,8 +45,9 @@
 .menuitem {
     padding: 5px 10px 5px 10px;
     position: relative;
-    display: inline-block;
-    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    width: calc(100% - 20px);
     white-space: nowrap;
 }
 
@@ -63,15 +64,25 @@
 }
 
 .menuitemname {
-    display: inline-block;
 }
 
 .menuitemright {
-    display: inline-block;
-    float: right;
     color: #808080;
     font-weight: bold;
     font-size: 13px;
+    padding-top: 2px;
+}
+
+/* We want to have some spacing between left and right parts of the menu,
+ * but if the right side is empty, we don't need the spacing.
+ */
+.menuitemright:not(:empty) {
+    padding-left: 20px;
+}
+
+.menuitemright-arrow {
+    color: #404040;
+    padding-top: 0;
 }
 
 .menuiteminactive > .menuitemright {
@@ -82,7 +93,7 @@
     height: 1px;
     margin: 3px;
     background-color: #e0e0e0;
-    width: 100%;
+    width: calc(100% - 6px);
 }
 
 #mybutton {
