@@ -1,0 +1,42 @@
+TESTDIR=testobjs
+
+all: $(TESTDIR)/test
+
+OBJS=\
+	$(TESTDIR)/mock_bridge.o \
+	$(TESTDIR)/docview.o \
+	$(TESTDIR)/scrollview.o \
+	$(TESTDIR)/view.o \
+	$(TESTDIR)/view_unittest.o \
+	$(TESTDIR)/pdfdoc.o \
+	$(TESTDIR)/rootview.o \
+	$(TESTDIR)/rootview_unittest.o \
+	$(TESTDIR)/thumbnailview.o \
+	$(TESTDIR)/undo_manager.o \
+	$(TESTDIR)/test_main.o
+
+INC=\
+	-Iskia/skia/include/core \
+	-Iskia/skia/include/utils \
+	-Iskia/skia \
+	-Ipdfium/pdfium
+
+LIBS=\
+	-lfontconfig \
+	-lfreetype \
+	-lpthread \
+	pdfium/pdfium/out/DebugNative/obj/libpdfium.a \
+	skia/skia/out/Debug/libskia.a \
+	libgtest.a
+
+CFLAGS=-g -O0
+
+$(TESTDIR)/%.o : %.cc
+	clang++-4.0 -c -fprofile-arcs -ftest-coverage $(CFLAGS) \
+		-MMD -std=c++14 $(INC) -o $@ $<
+
+$(TESTDIR)/test: $(OBJS)
+	clang++-4.0 -fprofile-arcs -ftest-coverage \
+		-std=c++14 -o $@ $(OBJS) $(LIBS)
+
+-include $(TESTDIR)/*.d
