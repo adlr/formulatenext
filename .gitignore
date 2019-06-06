@@ -14,3 +14,4 @@ depot_tools/*
 emsdk/*
 favicon.*
 testobjs/*
+libgtest.a
