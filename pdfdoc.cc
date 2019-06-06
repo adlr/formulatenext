@@ -2,11 +2,12 @@
 
 #include "pdfdoc.h"
 
-#include <emscripten.h>
 #include <stdio.h>
 #include <wchar.h>
 
 #include "public/fpdf_save.h"
+
+#include "formulate_bridge.h"
 
 namespace formulate {
 
@@ -461,9 +462,7 @@ void PDFDoc::DownloadDoc() const {
     fprintf(stderr, "FPDF_SaveAsCopy failed\n");
     return;
   }
-  EM_ASM_({
-      bridge_downloadBytes($0, $1);
-    }, &fs.data_[0], fs.data_.size());
+  bridge_downloadBytes(&fs.data_[0], fs.data_.size());
 }
 
 }  // namespace formulate

@@ -2,8 +2,6 @@
 
 #include "scrollview.h"
 
-#include <emscripten.h>
-
 #include "SkBitmap.h"
 
 #include "docview.h"

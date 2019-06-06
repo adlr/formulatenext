@@ -13,3 +13,4 @@ skia/*
 depot_tools/*
 emsdk/*
 favicon.*
+testobjs/*

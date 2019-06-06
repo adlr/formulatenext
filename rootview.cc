@@ -2,9 +2,9 @@
 
 #include "rootview.h"
 
-#include <emscripten.h>
-
 #include "SkBitmap.h"
+
+#include "formulate_bridge.h"
 
 namespace formulate {
 
@@ -50,10 +50,8 @@ void RootView::DoDraw(SkRect rect) {
   offscreen.translate(-irect.left(), -irect.top());
   Draw(&offscreen, SkRect::Make(irect));
   // Push to HTML canvas now
-  EM_ASM_({
-      PushCanvasXYWH($0, $1, $2, $3, $4, $5);
-    }, id_, bitmap.getPixels(), irect.left(), irect.top(),
-    bitmap.width(), bitmap.height());
+  bridge_drawPixels(id_, bitmap.getPixels(), irect.left(), irect.top(),
+                    bitmap.width(), bitmap.height());
 }
 
 View* RootView::MouseDown(MouseInputEvent ev) {

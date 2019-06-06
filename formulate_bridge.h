@@ -21,6 +21,11 @@ void bridge_stopComposingText();
 // |line_width| is in units of child's view space
 void bridge_drawBezier(View* child, SkPoint* bezier, float line_width);
 
+void bridge_drawPixels(int id, void* ptr, int xpos,
+                       int ypos, int width, int height);
+
+void bridge_downloadBytes(void* ptr, int len);
+
 }  // namespace formulate
 
 #endif  // FORMULATE_BRIDGE_H_

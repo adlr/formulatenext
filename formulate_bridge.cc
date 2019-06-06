@@ -238,4 +238,17 @@ void bridge_drawBezier(View* child, SkPoint* bezier, float line_width) {
     ctrl2.x(), ctrl2.y(), stop.x(), stop.y(), width.width());
 }
 
+void bridge_drawPixels(int id, void* ptr, int xpos,
+                       int ypos, int width, int height) {
+  EM_ASM_({
+      PushCanvasXYWH($0, $1, $2, $3, $4, $5);
+    }, id, ptr, xpos, ypos, width, height);
+}
+
+void bridge_downloadBytes(void* ptr, int len) {
+  EM_ASM_({
+      bridge_downloadBytes($0, $1);
+    }, ptr, len);
+}
+
 }  // namespace formulate
