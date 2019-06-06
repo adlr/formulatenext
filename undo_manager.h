@@ -6,6 +6,8 @@
 #include <deque>
 #include <functional>
 
+#include <gtest/gtest.h>
+
 namespace formulate {
 
 class UndoManager {
@@ -22,6 +24,7 @@ class UndoManager {
   bool redo_in_progress_{false};
   std::deque<std::function<void ()>> undo_ops_;
   std::deque<std::function<void ()>> redo_ops_;
+  FRIEND_TEST(UndoManagerTest, UndoRedoTest);
 };
 
 }  // namespace formulate
