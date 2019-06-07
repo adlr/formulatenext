@@ -1,0 +1,99 @@
+From d86b822ed54d983f5868925567bc741904aca1f1 Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Fri, 7 Jun 2019 10:16:25 -0700
+Subject: [PATCH 6/6] debug prints
+
+---
+ core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp | 17 ++++++++++-------
+ core/fpdfapi/page/cpdf_textobject.cpp           |  4 +++-
+ 2 files changed, 13 insertions(+), 8 deletions(-)
+
+diff --git a/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp b/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
+index 2beab0bee..0bb8a2e09 100644
+--- a/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
++++ b/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
+@@ -118,9 +118,9 @@ CPDF_PageContentGenerator::GenerateModifiedStreams() {
+         pdfium::MakeUnique<std::ostringstream>();
+ 
+     // Set the default graphic state values
+-    *buf << "q\n";
++    *buf << "q  % GenerateModifiedStreams\n";
+     if (!m_pObjHolder->GetLastCTM().IsIdentity())
+-      *buf << m_pObjHolder->GetLastCTM().GetInverse() << " cm\n";
++      *buf << m_pObjHolder->GetLastCTM().GetInverse() << " cm % GetLastCTM\n";
+ 
+     ProcessDefaultGraphics(buf.get());
+ 
+@@ -153,7 +153,7 @@ CPDF_PageContentGenerator::GenerateModifiedStreams() {
+       FinishMarks(buf, current_content_marks[dirty_stream]);
+ 
+       // Return graphics to original state
+-      *buf << "Q\n";
++      *buf << "Q  % GenerateModifiedStreams\n";
+     }
+   }
+ 
+@@ -318,6 +318,9 @@ void CPDF_PageContentGenerator::ProcessPageObject(std::ostringstream* buf,
+     ProcessPath(buf, pPathObj);
+   else if (CPDF_TextObject* pTextObj = pPageObj->AsText())
+     ProcessText(buf, pTextObj);
++  else {
++    fprintf(stderr, "Can't process obj of type %d\n", pPageObj->GetType());
++  }
+   pPageObj->SetDirty(false);
+ }
+ 
+@@ -327,7 +330,7 @@ void CPDF_PageContentGenerator::ProcessImage(std::ostringstream* buf,
+       (pImageObj->matrix().c == 0 && pImageObj->matrix().d == 0)) {
+     return;
+   }
+-  *buf << "q " << pImageObj->matrix() << " cm ";
++  *buf << "q % ProcessImage\n" << pImageObj->matrix() << " cm ";
+ 
+   RetainPtr<CPDF_Image> pImage = pImageObj->GetImage();
+   if (pImage->IsInline())
+@@ -346,7 +349,7 @@ void CPDF_PageContentGenerator::ProcessImage(std::ostringstream* buf,
+     pImageObj->SetImage(
+         m_pDocument->GetPageData()->GetImage(pStream->GetObjNum()));
+ 
+-  *buf << "/" << PDF_NameEncode(name) << " Do Q\n";
++  *buf << "/" << PDF_NameEncode(name) << " Do Q  % ProcessImage\n";
+ }
+ 
+ // Processing path with operators from Tables 4.9 and 4.10 of PDF spec 1.7:
+@@ -412,7 +415,7 @@ void CPDF_PageContentGenerator::ProcessPath(std::ostringstream* buf,
+     *buf << (pPathObj->stroke() ? " B" : " f");
+   else if (pPathObj->filltype() == FXFILL_ALTERNATE)
+     *buf << (pPathObj->stroke() ? " B*" : " f*");
+-  *buf << " Q\n";
++  *buf << " Q  % ProcessPath\n";
+ }
+ 
+ // This method supports color operators rg and RGB from Table 4.24 of PDF spec
+@@ -425,7 +428,7 @@ void CPDF_PageContentGenerator::ProcessPath(std::ostringstream* buf,
+ // "q" saves the graphics state, so that the settings can later be reversed
+ void CPDF_PageContentGenerator::ProcessGraphics(std::ostringstream* buf,
+                                                 CPDF_PageObject* pPageObj) {
+-  *buf << "q ";
++  *buf << "q %ProcessGraphics\n ";
+   float fillColor[3];
+   if (GetColor(pPageObj->m_ColorState.GetFillColor(), fillColor)) {
+     *buf << fillColor[0] << " " << fillColor[1] << " " << fillColor[2]
+diff --git a/core/fpdfapi/page/cpdf_textobject.cpp b/core/fpdfapi/page/cpdf_textobject.cpp
+index c554113f2..cc0827812 100644
+--- a/core/fpdfapi/page/cpdf_textobject.cpp
++++ b/core/fpdfapi/page/cpdf_textobject.cpp
+@@ -15,7 +15,9 @@
+ 
+ CPDF_TextObjectItem::CPDF_TextObjectItem() : m_CharCode(0) {}
+ 
+-CPDF_TextObjectItem::~CPDF_TextObjectItem() = default;
++CPDF_TextObjectItem::~CPDF_TextObjectItem() {
++  fprintf(stderr, "text object deleted\n");
++}
+ 
+ CPDF_TextObject::CPDF_TextObject(int32_t content_stream)
+     : CPDF_PageObject(content_stream) {}
+-- 
+2.11.0
+

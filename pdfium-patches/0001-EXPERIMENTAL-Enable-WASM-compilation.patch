@@ -1,0 +1,67 @@
+From 2d3cd8353fbf54d215af86fce49f341d6f207cf8 Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Fri, 7 Jun 2019 10:05:06 -0700
+Subject: [PATCH 1/6] EXPERIMENTAL: Enable WASM compilation
+
+---
+ core/fxge/BUILD.gn                                          | 2 +-
+ testing/utils/path_service.cpp                              | 3 ++-
+ third_party/BUILD.gn                                        | 1 +
+ third_party/base/allocator/partition_allocator/spin_lock.cc | 2 +-
+ 4 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/core/fxge/BUILD.gn b/core/fxge/BUILD.gn
+index 83374cc0e..11fa8ec50 100644
+--- a/core/fxge/BUILD.gn
++++ b/core/fxge/BUILD.gn
+@@ -157,7 +157,7 @@ jumbo_source_set("fxge") {
+     ]
+   }
+ 
+-  if (is_linux) {
++  if (is_linux || current_os == "wasm") {
+     sources += [ "fx_ge_linux.cpp" ]
+   }
+ 
+diff --git a/testing/utils/path_service.cpp b/testing/utils/path_service.cpp
+index 5e1ce3960..91bd60e85 100644
+--- a/testing/utils/path_service.cpp
++++ b/testing/utils/path_service.cpp
+@@ -10,7 +10,8 @@
+ #include <mach-o/dyld.h>
+ #include <sys/stat.h>
+ #else  // Linux
+-#include <linux/limits.h>
++//#include <linux/limits.h>
++#define PATH_MAX 4096
+ #include <sys/stat.h>
+ #include <unistd.h>
+ #endif  // _WIN32
+diff --git a/third_party/BUILD.gn b/third_party/BUILD.gn
+index 3863ad2f8..9d24e1cf9 100644
+--- a/third_party/BUILD.gn
++++ b/third_party/BUILD.gn
+@@ -446,6 +446,7 @@ source_set("fx_libopenjpeg") {
+     "libopenjpeg20/tgt.c",
+     "libopenjpeg20/thread.c",
+   ]
++  defines = [ "_GNU_SOURCE" ]
+ }
+ 
+ config("system_libpng_config") {
+diff --git a/third_party/base/allocator/partition_allocator/spin_lock.cc b/third_party/base/allocator/partition_allocator/spin_lock.cc
+index 42055836b..1aa96a72a 100644
+--- a/third_party/base/allocator/partition_allocator/spin_lock.cc
++++ b/third_party/base/allocator/partition_allocator/spin_lock.cc
+@@ -51,7 +51,7 @@
+ #endif  // ARCH
+ 
+ #ifndef YIELD_PROCESSOR
+-#warning "Processor yield not supported on this architecture."
++//#warning "Processor yield not supported on this architecture."
+ #define YIELD_PROCESSOR ((void)0)
+ #endif
+ 
+-- 
+2.11.0
+

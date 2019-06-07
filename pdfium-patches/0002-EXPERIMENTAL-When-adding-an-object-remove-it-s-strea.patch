@@ -1,0 +1,27 @@
+From 60bb7d2c76ffc1f810aa57a9a8c70a32a9831dd7 Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Fri, 7 Jun 2019 10:06:12 -0700
+Subject: [PATCH 2/6] EXPERIMENTAL: When adding an object, remove it's stream
+ index
+
+This is a problem if you remove an object from a page and add it
+back. Need to write test for this.
+---
+ fpdfsdk/fpdf_editpage.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/fpdfsdk/fpdf_editpage.cpp b/fpdfsdk/fpdf_editpage.cpp
+index 09b287dc3..f0aef4c2d 100644
+--- a/fpdfsdk/fpdf_editpage.cpp
++++ b/fpdfsdk/fpdf_editpage.cpp
+@@ -252,6 +252,7 @@ FPDF_EXPORT void FPDF_CALLCONV FPDFPage_InsertObject(FPDF_PAGE page,
+     return;
+ 
+   pPageObj->SetDirty(true);
++  pPageObj->SetContentStream(CPDF_PageObject::kNoContentStream);
+   pPage->AppendPageObject(std::move(pPageObjHolder));
+   CalcBoundingBox(pPageObj);
+ }
+-- 
+2.11.0
+

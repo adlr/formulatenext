@@ -1,0 +1,47 @@
+From 8bfa4b6fc7ebf745c440cc012cf00c486fe16cc6 Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Fri, 7 Jun 2019 10:15:41 -0700
+Subject: [PATCH 5/6] EXPERIMENTAL: Honor kerneing when writing text object
+
+Changes text obj stream generation from using Tj to TJ
+---
+ core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp | 20 ++++++++++++++++----
+ 1 file changed, 16 insertions(+), 4 deletions(-)
+
+diff --git a/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp b/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
+index d4f66edeb..2beab0bee 100644
+--- a/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
++++ b/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
+@@ -557,13 +557,25 @@ void CPDF_PageContentGenerator::ProcessText(std::ostringstream* buf,
+     m_pObjHolder->m_FontsMap[data] = dictName;
+   }
+   *buf << "/" << PDF_NameEncode(dictName) << " ";
+-  WriteFloat(*buf, pTextObj->GetFontSize()) << " Tf ";
+   WriteFloat(*buf, pTextObj->m_TextState.GetCharSpace()) << " Tc ";
++  WriteFloat(*buf, pTextObj->GetFontSize()) << " Tf [";
+   ByteString text;
++  size_t count = 0;
+   for (uint32_t charcode : pTextObj->GetCharCodes()) {
+-    if (charcode != CPDF_Font::kInvalidCharCode)
++    if (charcode != CPDF_Font::kInvalidCharCode) {
+       pFont->AppendChar(&text, charcode);
++    } else if (count > 0) {
++      *buf << PDF_EncodeString(text, true);
++      *buf << " ";
++      WriteFloat(*buf, pTextObj->GetCharPositions()[count - 1]);
++      *buf << " ";
++      text.clear();
++    }
++    count++;
+   }
+-  *buf << PDF_EncodeString(text, true) << " Tj ET";
+-  *buf << " Q\n";
++  if (!text.IsEmpty()) {
++    *buf << PDF_EncodeString(text, true);
++  }
++  *buf << "] TJ ET";
++  *buf << " Q  % ProcessText\n";
+ }
+-- 
+2.11.0
+

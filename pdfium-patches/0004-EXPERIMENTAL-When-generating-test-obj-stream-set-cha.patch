@@ -1,0 +1,26 @@
+From 137b96284fd8f3917e11abf0f00c429b042f316f Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Fri, 7 Jun 2019 10:13:16 -0700
+Subject: [PATCH 4/6] EXPERIMENTAL: When generating test obj stream, set char
+ spacing (Tc)
+
+This is needed when regenerating existing streams that use it
+---
+ core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp b/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
+index fd4a2efe9..d4f66edeb 100644
+--- a/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
++++ b/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
+@@ -558,6 +558,7 @@ void CPDF_PageContentGenerator::ProcessText(std::ostringstream* buf,
+   }
+   *buf << "/" << PDF_NameEncode(dictName) << " ";
+   WriteFloat(*buf, pTextObj->GetFontSize()) << " Tf ";
++  WriteFloat(*buf, pTextObj->m_TextState.GetCharSpace()) << " Tc ";
+   ByteString text;
+   for (uint32_t charcode : pTextObj->GetCharCodes()) {
+     if (charcode != CPDF_Font::kInvalidCharCode)
+-- 
+2.11.0
+
