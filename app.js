@@ -452,8 +452,5 @@ let bridge_downloadBytes = (addr, len) => {
   link.href = data;
   link.download="file.pdf";
   link.click();
-  setTimeout(() => {
-    console.log('freeing memory for firefox');
-    window.URL.revokeObjectURL(data);
-  }, 100);
+  setTimeout(() => { window.URL.revokeObjectURL(data); }, 100);
 };
