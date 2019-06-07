@@ -1,10 +1,5 @@
 'use strict';
 
-let menuOpen = function(ev) {
-  let ev2 = document.createEvent('MouseEvents');
-  ev2.initEvent('click', true, true);
-  document.getElementById('file-input').dispatchEvent(ev2);
-};
 let menuSave = function() {
   if (DownloadFile)
     DownloadFile();
@@ -12,7 +7,7 @@ let menuSave = function() {
 
 let menus = [
   {name: "File", children: [
-    {name: "Open...", key: "o", action: menuOpen},
+    {name: "Open...", key: "o"},
     {name: "-"},
     {name: "Save", key: "s", action: menuSave},
     {name: "-"},
@@ -401,5 +396,3 @@ let initGlobalMenuBar = () => {
   globalMenuBar = new MenuBar(document.getElementById('menubar'));
   populate2(menus, globalMenuBar);
 };
-
-document.addEventListener('DOMContentLoaded', initGlobalMenuBar, false);

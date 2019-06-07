@@ -84,6 +84,7 @@ void SetScrollOrigin(int id, float xpos, float ypos) {
 
 EMSCRIPTEN_KEEPALIVE
 bool Init() {
+  InitPDFium();
   leaf_views_[0] = doc_view_ = new DocView();
   leaf_views_[1] = thumb_view_ = new ThumbnailView(&doc_view_->doc_);
   for (int i = 0; i < 2; i++) {
@@ -116,6 +117,13 @@ void FinishFileLoad() {
   scroll_views_[kIDThumb]->RepositionChild();
   doc_view_->SetNeedsDisplay();
   doc_view_->toolbox_.UpdateUI();
+}
+
+EMSCRIPTEN_KEEPALIVE
+void AppendPDF(const char* bytes, int length) {
+  ScopedRedraw redraw(root_views_[kIDMain]);
+  ScopedRedraw redraw_thumb(root_views_[kIDThumb]);
+  doc_view_->doc_.AppendPDF(bytes, length);
 }
 
 EMSCRIPTEN_KEEPALIVE

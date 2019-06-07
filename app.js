@@ -23,6 +23,7 @@ let Init = null;
 let SetFileSize = null;
 let AppendFileBytes = null;
 let FinishFileLoad = null;
+let AppendPDF = null;
 let MouseEvent = null;
 let DownloadFile = null;
 let UndoRedoClicked = null;
@@ -177,6 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
   SetFileSize = Module.cwrap('SetFileSize', null, ['number']);
   AppendFileBytes = Module.cwrap('AppendFileBytes', null, ['number', 'number']);
   FinishFileLoad = Module.cwrap('FinishFileLoad', null, []);
+  AppendPDF = Module.cwrap('AppendPDF', null, ['number', 'number']);
   MouseEvent = Module.cwrap('MouseEvent', 'number',
                             ['number', 'number', 'number', 'number']);
   DownloadFile = Module.cwrap('DownloadFile', null, []);
@@ -367,8 +369,38 @@ document.addEventListener('DOMContentLoaded', function() {
   setupMouseHandlers(outer, ID_MAIN);
   setupMouseHandlers(document.getElementById('thumb-scroll-outer'), ID_THUMB);
 
-  document.getElementById('file-input').addEventListener('change',
-                                                         loadFile, false);
+  // if |isOpen| is true, it's for file open, otherwise for append
+  let setupFileChooserMenu = (path, isOpen) => {
+    globalMenuBar.findMenu(path).setCallback((ev) => {
+      document.getElementById('file-input').onchange = (elt) => {
+        let file = elt.target.files[0];
+        if (!file)
+          return;
+        if (isOpen)
+          SetFileSize(file.size);
+        let reader = new FileReader();
+        reader.onload = (el) => {
+          console.log('got a file ' + isOpen);
+          let data = new Uint8Array(reader.result);
+          let buf = Module._malloc(data.length);
+          Module.HEAPU8.set(data, buf);
+          if (isOpen)
+            AppendFileBytes(buf, data.length);
+          else
+            AppendPDF(buf, data.length);
+          Module._free(buf);
+          if (isOpen)
+            FinishFileLoad();
+        };
+        reader.readAsArrayBuffer(file);
+      };
+      let ev2 = document.createEvent('MouseEvents');
+      ev2.initEvent('click', true, true);
+      document.getElementById('file-input').dispatchEvent(ev2);
+    });
+  };
+  setupFileChooserMenu(['File', 'Open...'], true);
+  setupFileChooserMenu(['File', 'Append PDF...'], false);
 }, false);
 
 let PushCanvasXYWH = (id, bufptr, xpos, ypos, width, height) => {
@@ -425,24 +457,3 @@ let bridge_downloadBytes = (addr, len) => {
     window.URL.revokeObjectURL(data);
   }, 100);
 };
-
-let loadFile = function(element) {
-  let file = element.target.files[0];
-  if (!file) {
-    return;
-  }
-  SetFileSize(file.size);
-
-  let reader = new FileReader();
-  reader.onload = function(el) {
-    console.log('got a file');
-    let data = new Uint8Array(reader.result);
-    let buf = Module._malloc(data.length);
-    Module.HEAPU8.set(data, buf);
-    AppendFileBytes(buf, data.length);
-    Module._free(buf);
-    FinishFileLoad();
-  }
-  reader.readAsArrayBuffer(file);
-}
-

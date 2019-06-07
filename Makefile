@@ -8,7 +8,8 @@ INC=\
 	-Iskia/skia \
 	-Iskia/skia/include/core \
 	-Iskia/skia/include/config \
-	-Iskia/skia/include/utils
+	-Iskia/skia/include/utils \
+	-Inon-test-include
 
 %.o : %.cc
 	emcc $(CFLAGS) -MMD -std=c++14 $(INC) -o $@ $<

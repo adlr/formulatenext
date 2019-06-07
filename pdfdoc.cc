@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <wchar.h>
 
+#include "public/fpdf_ppo.h"
 #include "public/fpdf_save.h"
 
 #include "formulate_bridge.h"
@@ -43,16 +44,16 @@ void PrintLastError() {
   return;
 }
 
-void PDFDoc::FinishLoad() {
-  {
-    FPDF_LIBRARY_CONFIG config;
-    config.version = 2;
-    config.m_pUserFontPaths = nullptr;
-    config.m_pIsolate = nullptr;
-    config.m_v8EmbedderSlot = 0;
-    FPDF_InitLibraryWithConfig(&config);
-  }
+void InitPDFium() {
+  FPDF_LIBRARY_CONFIG config;
+  config.version = 2;
+  config.m_pUserFontPaths = nullptr;
+  config.m_pIsolate = nullptr;
+  config.m_v8EmbedderSlot = 0;
+  FPDF_InitLibraryWithConfig(&config);
+}
 
+void PDFDoc::FinishLoad() {
   loader_.reset(new TestLoader({&bytes_[0], bytes_.size()}));
   file_access_ = {bytes_.size(), TestLoader::GetBlock, loader_.get()};
   // TODO: support for Linearized PDFs
@@ -159,7 +160,7 @@ void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const {
   }
 }
 
-std::string StrConv(const std::wstring& wstr) {
+std::string StrToUTF16LE(const std::wstring& wstr) {
   std::string ret;
   for (wchar_t w : wstr) {
     ret.push_back(w & 0xff);
@@ -170,7 +171,7 @@ std::string StrConv(const std::wstring& wstr) {
   return ret;
 }
 
-std::string StrConv(const std::string& ascii) {
+std::string StrToUTF16LE(const std::string& ascii) {
   // Convert low-order ascii string to UTF-16LE
   std::string ret;
   for (char c : ascii) {
@@ -240,7 +241,7 @@ void PDFDoc::ModifyPage(int pageno, SkPoint point) {
     fprintf(stderr, "Unable to allocate text obj\n");
     return;
   }
-  std::string message = StrConv(L"Hello, world! 5%pz&*$gdkt\nline2");
+  std::string message = StrToUTF16LE(L"Hello, world! 5%pz&*$gdkt\nline2");
   FPDF_WIDESTRING pdf_str = reinterpret_cast<FPDF_WIDESTRING>(message.c_str());
   if (!FPDFText_SetText(textobj, pdf_str)) {
     fprintf(stderr, "failed to set text\n");
@@ -358,7 +359,7 @@ void PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
     fprintf(stderr, "Unable to allocate text obj\n");
     return;
   }
-  std::string message = StrConv(ascii);
+  std::string message = StrToUTF16LE(ascii);
   FPDF_WIDESTRING pdf_str = reinterpret_cast<FPDF_WIDESTRING>(message.c_str());
   if (!FPDFText_SetText(textobj, pdf_str)) {
     fprintf(stderr, "failed to set text\n");
@@ -439,23 +440,6 @@ void PDFDoc::InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& bezie
   }
 }
 
-class FileSaver : public FPDF_FILEWRITE {
- public:
-  FileSaver() {
-    version = 1;
-    WriteBlock = StaticWriteBlock;
-  }
-  static int StaticWriteBlock(FPDF_FILEWRITE* pthis,
-                              const void* data,
-                              unsigned long size) {
-    FileSaver* fs = static_cast<FileSaver*>(pthis);
-    const char* cdata = static_cast<const char*>(data);
-    fs->data_.insert(fs->data_.end(), cdata, cdata + size);
-    return 1;  // success
-  }
-  std::vector<char> data_;
-};
-
 void PDFDoc::DownloadDoc() const {
   FileSaver fs;
   if (!FPDF_SaveAsCopy(doc_.get(), &fs, FPDF_REMOVE_SECURITY)) {
@@ -463,6 +447,26 @@ void PDFDoc::DownloadDoc() const {
     return;
   }
   bridge_downloadBytes(&fs.data_[0], fs.data_.size());
+}
+
+void PDFDoc::AppendPDF(const char* bytes, size_t length) {
+  TestLoader loader({bytes, length});
+  FPDF_FILEACCESS file_access = {length, TestLoader::GetBlock, &loader};
+  ScopedFPDFDocument doc(FPDF_LoadCustomDocument(&file_access, nullptr));
+  if (!doc) {
+    PrintLastError();
+    return;
+  }
+  if (!FPDF_DocumentHasValidCrossReferenceTable(doc.get()))
+    fprintf(stderr, "Document has invalid cross reference table\n");
+  (void)FPDF_GetDocPermissions(doc.get());
+
+  if (!FPDF_ImportPages(doc_.get(), doc.get(), nullptr, Pages())) {
+    fprintf(stderr, "FPDF_ImportPages failed!\n");
+    return;
+  }
+  for (PDFDocEventHandler* handler : event_handlers_)
+    handler->PagesChanged();
 }
 
 }  // namespace formulate

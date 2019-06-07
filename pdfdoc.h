@@ -8,6 +8,7 @@
 #include "public/cpp/fpdf_scopers.h"
 #include "public/fpdf_dataavail.h"
 #include "public/fpdf_edit.h"
+#include "public/fpdf_save.h"
 #include "public/fpdfview.h"
 #include "SkCanvas.h"
 #include "SkSize.h"
@@ -16,6 +17,23 @@
 #include "undo_manager.h"
 
 namespace {
+
+class FileSaver : public FPDF_FILEWRITE {
+ public:
+  FileSaver() {
+    version = 1;
+    WriteBlock = StaticWriteBlock;
+  }
+  static int StaticWriteBlock(FPDF_FILEWRITE* pthis,
+                              const void* data,
+                              unsigned long size) {
+    FileSaver* fs = static_cast<FileSaver*>(pthis);
+    const char* cdata = static_cast<const char*>(data);
+    fs->data_.insert(fs->data_.end(), cdata, cdata + size);
+    return 1;  // success
+  }
+  std::vector<char> data_;
+};
 
 class TestLoader {
  public:
@@ -45,6 +63,11 @@ class TestLoader {
 namespace formulate {
 
 void PrintLastError();
+
+std::string StrToUTF16LE(const std::wstring& wstr);
+std::string StrToUTF16LE(const std::string& ascii);
+
+void InitPDFium();
 
 class PDFDocEventHandler {
  public:
@@ -84,6 +107,9 @@ class PDFDoc {
 
   // Calls into JS to do the save
   void DownloadDoc() const;
+
+  void AppendPDF(const char* bytes, size_t length);
+
   UndoManager undo_manager_;
  private:
   bool valid_{false};

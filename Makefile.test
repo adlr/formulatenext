@@ -9,6 +9,7 @@ OBJS=\
 	$(TESTDIR)/view.o \
 	$(TESTDIR)/view_unittest.o \
 	$(TESTDIR)/pdfdoc.o \
+	$(TESTDIR)/pdfdoc_unittest.o \
 	$(TESTDIR)/rootview.o \
 	$(TESTDIR)/rootview_unittest.o \
 	$(TESTDIR)/toolbox_unittest.o \
