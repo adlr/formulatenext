@@ -89,6 +89,13 @@ SkPoint PageLabelPoint(int page, float view_width) {
   return SkPoint::Make(view_width / 2, top);
 }
 
+SkRect CursorRect(int index, float view_width) {
+  float top = kTopPadding + PageHeightForViewWidth(view_width) * index;
+  return SkRect::MakeXYWH(kLeftPadding, top,
+                          view_width - (kLeftPadding + kRightPadding),
+                          kPageHorizCursor);
+}
+
 }  // namespace {}
 
 void ThumbnailView::SetWidth(float width) {
@@ -105,6 +112,19 @@ int ThumbnailView::PageForPoint(SkPoint pt) const {
     top += dy;
   }
   return pages - 1;
+}
+
+int ThumbnailView::CursorIndexForPoint(SkPoint pt) const {
+  int pages = doc_->Pages();
+  float top = kTopPadding;
+  float dy = PageHeightForViewWidth(Width());
+  top += dy / 2;
+  for (int i = 0; i < pages; i++) {
+    if (pt.y() < top)
+      return i;
+    top += dy;
+  }
+  return pages;
 }
 
 void ThumbnailView::Draw(SkCanvas* canvas, SkRect rect) {
@@ -126,7 +146,7 @@ void ThumbnailView::Draw(SkCanvas* canvas, SkRect rect) {
     SkRect pageborder = pagerect.makeOutset(0.5, 0.5);
     if (PageIsSelected(i)) {
       pageborder = pageborder.makeOutset(0.5, 0.5);
-      paint.setColor(0xff2e75e8);  // opaque black
+      paint.setColor(0xff2e75e8);  // opaque blue
       paint.setStrokeWidth(2);
     } else {
       paint.setColor(0xff000000);  // opaque black
@@ -166,17 +186,83 @@ void ThumbnailView::Draw(SkCanvas* canvas, SkRect rect) {
                             label_point.x(), label_point.y(),
                             SkFont(), paint, SkTextUtils::kCenter_Align);
   }
+  // cursor, if needed
+  if (drag_index_ >= 0) {
+    paint.setStyle(SkPaint::kFill_Style);
+    paint.setColor(0xff2e75e8);  // opaque blue
+    paint.setStrokeWidth(0);
+    canvas->drawRect(CursorRect(drag_index_, Width()), paint);
+  }
 }
 
-void ThumbnailView::OnClick(MouseInputEvent ev) {
-  int page = PageForPoint(ev.position());
-  if (ev.modifiers() & kShiftKey) {
-    SelectToPage(page);
-  } else if (ev.modifiers() & kControlKey) {
-    TogglePageSelected(page);
-  } else {
-    SelectPage(page);
+View* ThumbnailView::MouseDown(MouseInputEvent ev) {
+  mouse_down_position_ = ev.position();
+  drag_index_ = -1;
+  return this;
+}
+
+void ThumbnailView::MouseDrag(MouseInputEvent ev) {
+  const float kMinDragDist = 5.0f;
+  SkPoint pos = ev.position();
+  SkPoint delta = pos - mouse_down_position_;
+  if (drag_index_ < 0 &&
+      (delta.x() * delta.x() + delta.y() * delta.y()) <
+      kMinDragDist * kMinDragDist)
+    return;
+  int new_drag_index = CursorIndexForPoint(pos);
+  if (drag_index_ >= 0 && new_drag_index != drag_index_) {
+    // Redraw old cursor location
+    SetNeedsDisplayInRect(CursorRect(drag_index_, Width()));
   }
+  drag_index_ = new_drag_index;
+  // Redraw new cursor location
+  SetNeedsDisplayInRect(CursorRect(drag_index_, Width()));
+}
+
+void ThumbnailView::MouseUp(MouseInputEvent ev) {
+  if (drag_index_ < 0) {
+    // This was a click, not a drag.
+    int page = PageForPoint(ev.position());
+    if (ev.modifiers() & kShiftKey) {
+      SelectToPage(page);
+    } else if (ev.modifiers() & kControlKey) {
+      TogglePageSelected(page);
+    } else {
+      SelectPage(page);
+    }
+    return;
+  }
+  std::vector<std::pair<int, int>> ranges;
+  int last_added_page = -2;
+  int num_selected_pages = 0;
+  int final_drag_index = drag_index_;
+  for (int i = 0; i < static_cast<int>(selected_pages_.size()); i++) {
+    if (!selected_pages_[i])
+      continue;
+    num_selected_pages++;
+    if (i < drag_index_)
+      final_drag_index--;
+    if (last_added_page + 1 == i) {
+      // extend previous range to include this page
+      (--(ranges.end()))->second += 1;
+    } else {
+      // start a new range
+      ranges.emplace_back(i, i + 1);
+    }
+    last_added_page = i;
+  }
+  if (ranges.empty())
+    return;
+  doc_->MovePages(ranges, drag_index_);
+  // update which pages are selected
+  for (int i = 0; i < static_cast<int>(selected_pages_.size()); i++) {
+    selected_pages_[i] =
+        !(i < final_drag_index || i >= final_drag_index + num_selected_pages);
+    if (selected_pages_[i])
+      last_selected_page_ = i;
+  }
+  drag_index_ = -1;
+  SetNeedsDisplay();
 }
 
 void ThumbnailView::SelectPage(int page) {

@@ -27,13 +27,17 @@ class ThumbnailView : public View, public PDFDocEventHandler {
 
   // When the user changes the width. We must update our height.
   void SetWidth(float width);
+
+  // PageForPoint returns the page under the point.
+  // Return value is in range [0, NumPages).
   int PageForPoint(SkPoint pt) const;
+  // CursorIndexForPoint returns the index of the space between two pages
+  // Return value is in range [0, NumPages].
+  int CursorIndexForPoint(SkPoint pt) const;
 
-  View* MouseDown(MouseInputEvent ev) { return nullptr; }
-  void MouseDrag(MouseInputEvent ev) {}
-  void MouseUp(MouseInputEvent ev) {}
-
-  void OnClick(MouseInputEvent ev);
+  View* MouseDown(MouseInputEvent ev);
+  void MouseDrag(MouseInputEvent ev);
+  void MouseUp(MouseInputEvent ev);
 
   void SetNeedsDisplayForPage(int page) {
     // TODO(adlr): optimize
@@ -55,6 +59,10 @@ class ThumbnailView : public View, public PDFDocEventHandler {
   ThumbnailEventHandler* handler_{nullptr};
   std::vector<bool> selected_pages_;
   int last_selected_page_{-1};
+
+  SkPoint mouse_down_position_;
+  // Index of where we will drop the current drag. -1 if not set.
+  int drag_index_{-1};
 };
 
 }  // namespace formulate

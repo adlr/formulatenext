@@ -440,6 +440,19 @@ void PDFDoc::InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& bezie
   }
 }
 
+void PDFDoc::MovePages(const std::vector<std::pair<int, int>>& from, int to) {
+  int ranges[from.size() * 2 + 2];
+  for (size_t i = 0; i < from.size(); i++) {
+    ranges[i * 2] = from[i].first;
+    ranges[i * 2 + 1] = from[i].second;
+  }
+  ranges[from.size() * 2] = 0;
+  ranges[from.size() * 2 + 1] = 0;
+  FPDFPage_Move(doc_.get(), ranges, to);
+  for (PDFDocEventHandler* handler : event_handlers_)
+    handler->PagesChanged();
+}
+
 void PDFDoc::DownloadDoc() const {
   FileSaver fs;
   if (!FPDF_SaveAsCopy(doc_.get(), &fs, FPDF_REMOVE_SECURITY)) {

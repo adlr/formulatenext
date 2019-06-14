@@ -105,6 +105,8 @@ class PDFDoc {
   void PlaceText(int pageno, SkPoint pagept, const std::string& ascii);
   void InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& pts);
 
+  void MovePages(const std::vector<std::pair<int, int>>& from, int to);
+
   // Calls into JS to do the save
   void DownloadDoc() const;
 
