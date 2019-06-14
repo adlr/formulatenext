@@ -1,7 +1,7 @@
 From 137b96284fd8f3917e11abf0f00c429b042f316f Mon Sep 17 00:00:00 2001
 From: Andrew de los Reyes <adlr@chromium.org>
 Date: Fri, 7 Jun 2019 10:13:16 -0700
-Subject: [PATCH 4/6] EXPERIMENTAL: When generating test obj stream, set char
+Subject: [PATCH] EXPERIMENTAL: When generating test obj stream, set char
  spacing (Tc)
 
 This is needed when regenerating existing streams that use it

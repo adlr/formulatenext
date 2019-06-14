@@ -1,7 +1,7 @@
 From 2354498d6299406e3004c15b1ee2f45f3c9582eb Mon Sep 17 00:00:00 2001
 From: Andrew de los Reyes <adlr@chromium.org>
 Date: Fri, 7 Jun 2019 10:09:12 -0700
-Subject: [PATCH 3/6] EXPERIMENTAL: Remove stream compression when generating a
+Subject: [PATCH] EXPERIMENTAL: Remove stream compression when generating a
  stream.
 
 This is a problem when updating a preexisting stream that was Flate

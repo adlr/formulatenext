@@ -1,0 +1,234 @@
+From 02e6346f974a3cac36fec7b136df03ef6eb8cd4d Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Thu, 13 Jun 2019 13:58:36 -0700
+Subject: [PATCH] MovePage API to rearrange pages in a PDF document.
+
+XFA is unsupported and untested
+
+BUG=None
+TEST=FPDFEditMoveEmbedderTest.MovePagesTest/*
+
+Change-Id: I3aa6392711b415004636d2ae431eee3cc8c4b59f
+---
+ core/fpdfapi/parser/cpdf_document.cpp | 56 ++++++++++++++++++++++++++++++++
+ core/fpdfapi/parser/cpdf_document.h   |  1 +
+ fpdfsdk/fpdf_edit_embeddertest.cpp    | 60 +++++++++++++++++++++++++++++++++++
+ fpdfsdk/fpdf_editpage.cpp             | 10 ++++++
+ fpdfsdk/fpdf_view_c_api_test.c        |  1 +
+ public/fpdf_edit.h                    | 20 ++++++++++++
+ 6 files changed, 148 insertions(+)
+
+diff --git a/core/fpdfapi/parser/cpdf_document.cpp b/core/fpdfapi/parser/cpdf_document.cpp
+index 2d0e4f734..41309c0b4 100644
+--- a/core/fpdfapi/parser/cpdf_document.cpp
++++ b/core/fpdfapi/parser/cpdf_document.cpp
+@@ -634,6 +634,62 @@ CPDF_Font* CPDF_Document::AddStandardFont(const char* font,
+   return GetPageData()->GetStandardFont(name, pEncoding);
+ }
+ 
++void CPDF_Document::MovePages(int* iOldIndexes, int iNewIndex) {
++  CPDF_Dictionary* pPages = GetPagesDict();
++  if (!pPages)
++    return;
++
++  int nPages = pPages->GetIntegerFor("Count");
++  if (iNewIndex < 0 || iNewIndex > nPages) {
++    fprintf(stderr, "Invalid new index in MovePages.\n");
++    return;
++  }
++
++  std::vector<std::pair<int, CPDF_Dictionary*>> pages;
++
++  for (int* i = iOldIndexes; i[0] || i[1]; i += 2) {
++    int start = i[0];
++    int end = i[1];
++    if (i != iOldIndexes) {
++      int prev_end = i[-1];
++      if (prev_end > start) {
++        fprintf(stderr, "Overlapping range in MovePages.\n");
++        return;
++      }
++    }
++    if (start >= end || start < 0 || end < 1 || start >= nPages ||
++        end > nPages) {
++      fprintf(stderr, "Invalid range in MovePages\n");
++      return;
++    }
++    for (int pg = start; pg < end; pg++) {
++      CPDF_Dictionary* page = GetPageDictionary(pg);
++      if (!page)
++        return;
++      pages.push_back(std::make_pair(pg, page));
++    }
++  }
++
++  // Delete the pages in question
++  for (auto it = pages.rbegin(); it != pages.rend(); ++it) {
++    int pg = it->first;
++    // Adjust iNewIndex as we remove pages so it's still pointing
++    // to the right place.
++    if (pg < iNewIndex)
++      iNewIndex--;
++    DeletePage(pg);
++  }
++
++  // Now put the pages back at the right place.
++  for (auto it = pages.rbegin(); it != pages.rend(); ++it) {
++    CPDF_Dictionary* page = it->second;
++    if (!InsertNewPage(iNewIndex, page)) {
++      // Unhandled error! Not sure how to handle
++      return;
++    }
++  }
++}
++
+ size_t CPDF_Document::CalculateEncodingDict(int charset,
+                                             CPDF_Dictionary* pBaseDict) {
+   size_t i;
+diff --git a/core/fpdfapi/parser/cpdf_document.h b/core/fpdfapi/parser/cpdf_document.h
+index 3ef4ff6de..856ba78a0 100644
+--- a/core/fpdfapi/parser/cpdf_document.h
++++ b/core/fpdfapi/parser/cpdf_document.h
+@@ -71,6 +71,7 @@ class CPDF_Document : public Observable<CPDF_Document>,
+   CPDF_Dictionary* GetInfo();
+ 
+   void DeletePage(int iPage);
++  void MovePages(int* iOldIndexes, int iNewIndex);
+   int GetPageCount() const;
+   bool IsPageLoaded(int iPage) const;
+   CPDF_Dictionary* GetPageDictionary(int iPage);
+diff --git a/fpdfsdk/fpdf_edit_embeddertest.cpp b/fpdfsdk/fpdf_edit_embeddertest.cpp
+index 66e8962b2..c41425e31 100644
+--- a/fpdfsdk/fpdf_edit_embeddertest.cpp
++++ b/fpdfsdk/fpdf_edit_embeddertest.cpp
+@@ -3163,3 +3163,63 @@ TEST_F(FPDFEditEmbedderTest, GetImageMetadata) {
+ 
+   UnloadPage(page);
+ }
++
++struct FPDFEditMoveEmbedderTestCase {
++  std::vector<int> from;
++  int to;
++  std::vector<int> expected;
++};
++
++class FPDFEditMoveEmbedderTest
++    : public virtual testing::TestWithParam<FPDFEditMoveEmbedderTestCase> {
++ public:
++  std::string HashForPage(int pageno) {
++    FPDF_PAGE page = et_.LoadPage(pageno);
++    EXPECT_TRUE(page);
++    ScopedFPDFBitmap bitmap = et_.RenderLoadedPage(page);
++    std::string ret = et_.HashBitmap(bitmap.get());
++    et_.UnloadPage(page);
++    return ret;
++  }
++  void SetUp() override { et_.SetUp(); }
++  void TearDown() override { et_.TearDown(); }
++  class : public EmbedderTest {
++   public:
++    void TestBody() {}
++    using EmbedderTest::document_;
++    using EmbedderTest::HashBitmap;
++  } et_;
++};
++
++TEST_P(FPDFEditMoveEmbedderTest, MovePagesTest) {
++  FPDFEditMoveEmbedderTestCase params = GetParam();
++  EXPECT_TRUE(et_.OpenDocument("rectangles_multi_pages.pdf"));
++  int pages = FPDF_GetPageCount(et_.document_);
++
++  std::vector<std::string> orig_hashes;
++  for (int i = 0; i < pages; i++) {
++    std::string hash = HashForPage(i);
++    // Ensure this hash isn't repeated
++    EXPECT_EQ(std::find(orig_hashes.begin(), orig_hashes.end(), hash),
++              orig_hashes.end());
++    orig_hashes.push_back(hash);
++  }
++  FPDFPage_Move(et_.document_, &params.from[0], params.to);
++  for (int i = 0; i < pages; i++) {
++    std::string hash = HashForPage(i);
++    EXPECT_EQ(hash, orig_hashes[params.expected[i]]) << " page " << i;
++  }
++}
++
++FPDFEditMoveEmbedderTestCase move_pages_test_cases[] = {
++    {{0, 0}, 0, {0, 1, 2, 3, 4}},
++    {{1, 2, 0, 0}, 4, {0, 2, 3, 1, 4}},
++    {{0, 2, 4, 5, 0, 0}, 3, {2, 0, 1, 4, 3}},
++    {{3, 5, 0, 0}, 1, {0, 3, 4, 1, 2}},
++    {{1, 3, 0, 0}, 1, {0, 1, 2, 3, 4}},
++    {{1, 3, 0, 0}, 2, {0, 1, 2, 3, 4}},
++    {{1, 3, 0, 0}, 3, {0, 1, 2, 3, 4}}};
++
++INSTANTIATE_TEST_SUITE_P(FPDFEditMoveEmbedderTestParameters,
++                         FPDFEditMoveEmbedderTest,
++                         testing::ValuesIn(move_pages_test_cases));
+diff --git a/fpdfsdk/fpdf_editpage.cpp b/fpdfsdk/fpdf_editpage.cpp
+index f0aef4c2d..3a804e5fa 100644
+--- a/fpdfsdk/fpdf_editpage.cpp
++++ b/fpdfsdk/fpdf_editpage.cpp
+@@ -203,6 +203,16 @@ FPDF_EXPORT void FPDF_CALLCONV FPDFPage_Delete(FPDF_DOCUMENT document,
+   pDoc->DeletePage(page_index);
+ }
+ 
++FPDF_EXPORT void FPDF_CALLCONV FPDFPage_Move(FPDF_DOCUMENT document,
++                                             int* old_indexes,
++                                             int new_index) {
++  auto* pDoc = CPDFDocumentFromFPDFDocument(document);
++  if (!pDoc)
++    return;
++
++  pDoc->MovePages(old_indexes, new_index);
++}
++
+ FPDF_EXPORT FPDF_PAGE FPDF_CALLCONV FPDFPage_New(FPDF_DOCUMENT document,
+                                                  int page_index,
+                                                  double width,
+diff --git a/fpdfsdk/fpdf_view_c_api_test.c b/fpdfsdk/fpdf_view_c_api_test.c
+index 0af6df70c..622505ecd 100644
+--- a/fpdfsdk/fpdf_view_c_api_test.c
++++ b/fpdfsdk/fpdf_view_c_api_test.c
+@@ -186,6 +186,7 @@ int CheckPDFiumCApi() {
+     CHK(FPDFPage_GetRotation);
+     CHK(FPDFPage_HasTransparency);
+     CHK(FPDFPage_InsertObject);
++    CHK(FPDFPage_Move);
+     CHK(FPDFPage_New);
+     CHK(FPDFPage_RemoveObject);
+     CHK(FPDFPage_SetRotation);
+diff --git a/public/fpdf_edit.h b/public/fpdf_edit.h
+index 4f3843232..bd8461e2a 100644
+--- a/public/fpdf_edit.h
++++ b/public/fpdf_edit.h
+@@ -131,6 +131,26 @@ FPDF_EXPORT FPDF_PAGE FPDF_CALLCONV FPDFPage_New(FPDF_DOCUMENT document,
+ FPDF_EXPORT void FPDF_CALLCONV FPDFPage_Delete(FPDF_DOCUMENT document,
+                                                int page_index);
+ 
++// Move the pages at |old_indexes| to |new_index|.
++//
++//   document    - handle to document.
++//   old_indexes - the indexes of the pages to move. Must point to an
++//                 array with even number of elements. Each consecutive
++//                 pair of elements indicates a subrange of page indexes
++//                 [first, last). Subranges must be sequential and non-
++//                 overlapping. The final subrange [0, 0) indicates
++//                 the end of the input array.
++//   new_index   - final index of the page after being moved. Must be in
++//                 range [0, NumPages] inclusive.
++//
++// Examples: doc has pages [A, B, C, D].
++// Move(doc, [0, 1, 0, 0],       4) => [B, C, D, A]
++// Move(doc, [1, 2, 3, 4, 0, 0], 0) => [B, D, A, C]
++// Move(doc, [1, 2, 0, 0],       3) => [A, C, B, D]
++FPDF_EXPORT void FPDF_CALLCONV FPDFPage_Move(FPDF_DOCUMENT document,
++                                             int* old_index,
++                                             int new_index);
++
+ // Get the rotation of |page|.
+ //
+ //   page - handle to a page
+-- 
+2.11.0
+

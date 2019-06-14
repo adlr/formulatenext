@@ -1,7 +1,7 @@
 From 2d3cd8353fbf54d215af86fce49f341d6f207cf8 Mon Sep 17 00:00:00 2001
 From: Andrew de los Reyes <adlr@chromium.org>
 Date: Fri, 7 Jun 2019 10:05:06 -0700
-Subject: [PATCH 1/6] EXPERIMENTAL: Enable WASM compilation
+Subject: [PATCH] EXPERIMENTAL: Enable WASM compilation
 
 ---
  core/fxge/BUILD.gn                                          | 2 +-

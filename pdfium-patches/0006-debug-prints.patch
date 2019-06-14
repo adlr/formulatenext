@@ -1,7 +1,7 @@
 From d86b822ed54d983f5868925567bc741904aca1f1 Mon Sep 17 00:00:00 2001
 From: Andrew de los Reyes <adlr@chromium.org>
 Date: Fri, 7 Jun 2019 10:16:25 -0700
-Subject: [PATCH 6/6] debug prints
+Subject: [PATCH] debug prints
 
 ---
  core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp | 17 ++++++++++-------
