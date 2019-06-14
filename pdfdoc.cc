@@ -441,6 +441,12 @@ void PDFDoc::InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& bezie
 }
 
 void PDFDoc::MovePages(const std::vector<std::pair<int, int>>& from, int to) {
+  fprintf(stderr, "Called MovePages: %zu -> %d\n", from.size(), to);
+  for (auto range : from) {
+    fprintf(stderr, "  %d %d\n", range.first, range.second);
+  }
+  if (from.empty())
+    return;
   int ranges[from.size() * 2 + 2];
   for (size_t i = 0; i < from.size(); i++) {
     ranges[i * 2] = from[i].first;
@@ -451,6 +457,21 @@ void PDFDoc::MovePages(const std::vector<std::pair<int, int>>& from, int to) {
   FPDFPage_Move(doc_.get(), ranges, to);
   for (PDFDocEventHandler* handler : event_handlers_)
     handler->PagesChanged();
+
+  // Split into multiple ranges for undo
+  ScopedUndoManagerGroup group(&undo_manager_);
+  int undo_to = to;
+  for (auto range : from) {
+    int start = range.first;
+    int len = range.second - range.first;
+    undo_manager_.PushUndoOp(
+        [this, start, len, undo_to] () {
+          std::vector<std::pair<int, int>> undo_range;
+          undo_range.emplace_back(undo_to, undo_to + len);
+          MovePages(undo_range, start);
+        });
+    undo_to += len;
+  }
 }
 
 void PDFDoc::DownloadDoc() const {
