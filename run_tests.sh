@@ -6,7 +6,12 @@ TESTOBJS=testobjs
 
 cd "${TESTOBJS}"
 rm -f *.gcda
-(cd .. && make -f Makefile.test -j4 && ${TESTOBJS}/test)
+(cd .. && make -f Makefile.test -j4 && ${TESTOBJS}/test $@)
+
+if [ $# -gt 1 ]; then
+  exit 0
+fi
+
 lcov --directory . \
      --base-directory . \
      --gcov-tool $(readlink -f ../llvm-gcov.sh) \
