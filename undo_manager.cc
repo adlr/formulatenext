@@ -50,6 +50,13 @@ void UndoManager::EndGroup() {
   group_--;
   if (group_)
     return;
+  if (group_ops_.empty())
+    return;
+  if (group_ops_.size() == 1) {
+    PushUndoOp(std::move(group_ops_[0]));
+    group_ops_.clear();
+    return;
+  }
   PushUndoOp([this, group_ops_{move(group_ops_)}] () {
       StartGroup();
       for (auto it = group_ops_.rbegin(); it != group_ops_.rend(); ++it) {

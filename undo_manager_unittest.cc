@@ -99,6 +99,20 @@ TEST(UndoManagerTest, GroupTest) {
   EXPECT_EQ(2, undo_manager.undo_ops_.size());
   EXPECT_EQ(0, undo_manager.redo_ops_.size());
   EXPECT_EQ(0, undo_manager.group_ops_.size());
+  undo_manager.StartGroup();
+  undo_manager.EndGroup();
+  EXPECT_EQ(2, undo_manager.undo_ops_.size());
+  EXPECT_EQ(0, undo_manager.redo_ops_.size());
+  EXPECT_EQ(0, undo_manager.group_ops_.size());
+  undo_manager.StartGroup();
+  client.Double();
+  EXPECT_EQ(2, undo_manager.undo_ops_.size());
+  EXPECT_EQ(0, undo_manager.redo_ops_.size());
+  EXPECT_EQ(1, undo_manager.group_ops_.size());
+  undo_manager.EndGroup();
+  EXPECT_EQ(3, undo_manager.undo_ops_.size());
+  EXPECT_EQ(0, undo_manager.redo_ops_.size());
+  EXPECT_EQ(0, undo_manager.group_ops_.size()) << undo_manager.group_;
 }
 
 }  // namespace formulate
