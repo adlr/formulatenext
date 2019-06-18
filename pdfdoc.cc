@@ -450,7 +450,6 @@ void PDFDoc::InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& bezie
 }
 
 void PDFDoc::MovePages(int start, int end, int to) {
-  fprintf(stderr, "(MP(%d, %d, %d))\n", start, end, to);
   if (to > start && to <= end)
     to = start;
   int ranges[4] = {start, end, 0, 0};
@@ -460,10 +459,10 @@ void PDFDoc::MovePages(int start, int end, int to) {
   int len = end - start;
   if (to > start)
     to -= len;
+  else
+    start += len;
   undo_manager_.PushUndoOp(
       [this, start, len, to] () {
-        fprintf(stderr, "undo: MovePages(%d, %d + %d, %d)\n",
-                to, to, len, start);
         MovePages(to, to + len, start);
       });
 }
@@ -480,7 +479,6 @@ void PDFDoc::MovePages(const std::vector<std::pair<int, int>>& from, int to) {
                                });
     if (it != from.end() && to > it->first) {
       to = it->first;
-      fprintf(stderr, "rewinding to to %d\n", to);
     }
   }
   ScopedUndoManagerGroup undo_group(&undo_manager_);
@@ -488,15 +486,12 @@ void PDFDoc::MovePages(const std::vector<std::pair<int, int>>& from, int to) {
   int delta = 0;
   for (auto it = from.rbegin(); it != from.rend(); ++it) {
     if (to > it->first) {
-      fprintf(stderr, "MovePages(%d, %d, %d)\n", it->first, it->second, to);
       MovePages(it->first, it->second, to);
       continue;
     }
-    if (to == it->first)
+    if (to == (it->first + delta))
       continue;
     int len = it->second - it->first;
-    fprintf(stderr, "MovePages(%d + %d, %d + %d, %d)\n",
-            it->first, delta, it->second, delta, to);
     MovePages(it->first + delta, it->second + delta, to);
     delta += len;
   }
