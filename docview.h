@@ -70,6 +70,13 @@ class DocView : public View, public PDFDocEventHandler {
   void MouseDrag(MouseInputEvent ev);
   void MouseUp(MouseInputEvent ev);
 
+  // These trigger redraw requests
+  void SelectOneObject(int pageno, int index);
+  void AddObjectToSelection(int pageno, int index);
+  void UnselectObject(int pageno, int index);
+  void ClearSelection();
+  void SetNeedsDisplayInSelection();
+
   PDFDoc doc_;
   Toolbox toolbox_;
 
@@ -84,6 +91,9 @@ class DocView : public View, public PDFDocEventHandler {
   void NeedsDisplayInRect(int page, SkRect rect) {
     SetNeedsDisplayInRect(ConvertRectFromPage(page, rect));
   }
+
+  // if |index| is -1, redraw whole page. Includes knobs.
+  void SetNeedsDisplayInObj(int pageno, int index);
 
  private:
   std::vector<SkSize> page_sizes_;  // in PDF points
@@ -101,6 +111,7 @@ class DocView : public View, public PDFDocEventHandler {
   // Selected objects
   int selected_page_{-1};
   std::set<int> selected_objs_;
+
   FRIEND_TEST(DocViewTest, KnobsTest);
 };
 

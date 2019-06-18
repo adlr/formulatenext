@@ -345,4 +345,60 @@ void DocView::MouseUp(MouseInputEvent ev) {
   }
 }
 
+void DocView::SelectOneObject(int pageno, int index) {
+  SetNeedsDisplayInSelection();  // previously selected object(s)
+  selected_page_ = pageno;
+  selected_objs_.clear();
+  selected_objs_.push_back(index);
+  SetNeedsDisplayInSelection();  // new object
+}
+
+void DocView::AddObjectToSelection(int pageno, int index) {
+  if (selected_page_ >= 0 && pageno != selected_page_) {
+    fprintf(stderr, "Can't add to selection in different page\n");
+    return;
+  }
+  if (selected_objs_.find(index) != selected_objs_.end()) {
+    // Already selected
+    return;
+  }
+  selected_objs_.insert(index);
+  SetNeedsDisplayInObj(pageno, index);
+}
+
+void DocView::UnselectObject(int pageno, int index) {
+  if (selected_page_ != pageno) {
+    fprintf(stderr, "Invalid page in UnselectObject\n");
+    return;
+  }
+  if (selected_objs_.find(index) == selected_objs_.end()) {
+    fprintf(stderr, "Invalid index in UnselectObject\n");
+    return;
+  }
+  SetNeedsDisplayInObj(pageno, index);
+  selected_objs_.erase(index);
+  if (selected_objs_.empty())
+    selected_page_ = -1;
+}
+
+void DocView::ClearSelection() {
+  SetNeedsDisplayInSelection();
+  selected_page_ = -1;
+  selected_objs_.clear();
+}
+
+void DocView::SetNeedsDisplayInSelection() {
+  if (selected_page_ < 0)
+    return;
+  for (int index : selected_objs_) {
+    SetNeedsDisplayInObj(selected_page_, index);
+  }
+}
+
+void SetNeedsDisplayInObj(int pageno, int index) {
+  if (pageno < 0) {
+    
+  }
+}
+
 }  // namespace formulate
