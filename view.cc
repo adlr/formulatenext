@@ -152,3 +152,8 @@ SkRect ScaleRect(SkRect rect, float scale) {
 }
 
 }  // namespace formulate
+
+std::ostream& operator<<(std::ostream& os, const SkRect& rect) {
+  return os << "{L: " << rect.fLeft << ", T: " << rect.fTop
+     << ", R: " << rect.fRight << ", B: " << rect.fBottom << "}";
+}

@@ -261,7 +261,14 @@ int PDFDoc::ObjectUnderPoint(int pageno, SkPoint pt, bool native) const {
     fprintf(stderr, "failed to load PDFPage\n");
     return -1;
   }
-  
+  float pageheight = PageSize(pageno).height();
+  int objcount = FPDFPage_CountObjects(page.get());
+  for (int i = objcount - 1; i >= 0; i--) {
+    SkRect bbox = BoundingBoxForObj(page, pageheight, i);
+    if (bbox.contains(pt.x(), pt.y()))
+      return i;
+  }
+  return -1;
 }
 
 SkRect PDFDoc::BoundingBoxForObj(const ScopedFPDFPage& page, float pageheight,
@@ -282,7 +289,7 @@ SkRect PDFDoc::BoundingBoxForObj(const ScopedFPDFPage& page, float pageheight,
 }
 
 SkRect PDFDoc::BoundingBoxForObj(int pageno, int index) const {
-  float pagewidth, pageheight;
+  double pagewidth, pageheight;
   if (!FPDF_GetPageSizeByIndex(doc_.get(), pageno, &pagewidth, &pageheight)) {
     fprintf(stderr, "FPDF_GetPageSizeByIndex error\n");
     return SkRect();
@@ -295,8 +302,18 @@ SkRect PDFDoc::BoundingBoxForObj(int pageno, int index) const {
   return BoundingBoxForObj(page, pageheight, index);
 }
 
-ObjType PDFDoc::ObjectType(int pageno, int index) const {
-
+PDFDoc::ObjType PDFDoc::ObjectType(int pageno, int index) const {
+  ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return kUnknown;
+  }
+  FPDF_PAGEOBJECT obj = FPDFPage_GetObject(page.get(), index);
+  if (!obj) {
+    fprintf(stderr, "Page has no object at index %d\n", index);
+    return kUnknown;
+  }
+  return static_cast<ObjType>(FPDFPageObj_GetType(obj));
 }
 
 void PDFDoc::DeleteObject(int pageno, int index) {

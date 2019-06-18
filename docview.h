@@ -5,6 +5,7 @@
 
 #include <vector>
 
+#include <gtest/gtest.h>
 #include "SkCanvas.h"
 
 #include "pdfdoc.h"
@@ -13,11 +14,36 @@
 
 namespace formulate {
 
+typedef char Knobmask;
+const char kTopLeftKnob      = 0b10000000;
+const char kTopCenterKnob    = 0b01000000;
+const char kTopRightKnob     = 0b00100000;
+const char kMiddleLeftKnob   = 0b00010000;
+const char kMiddleRightKnob  = 0b00001000;
+const char kBottomLeftKnob   = 0b00000100;
+const char kBottomCenterKnob = 0b00000010;
+const char kBottomRightKnob  = 0b00000001;
+const char kAllKnobs         = 0b11111111;
+const char kNoKnobs          = 0;
+
+char KnobsForType(PDFDoc::ObjType type);
+
 class DocView : public View, public PDFDocEventHandler {
  public:
   DocView() { doc_.AddEventHandler(this); }
   virtual const char* Name() const { return "DocView"; }
   void Draw(SkCanvas* canvas, SkRect rect);
+ private:
+  static float KnobWidth() { return 6.0f; }
+  static float KnobBorderWidth() { return 1.0f; }
+  void DrawKnobs(SkRect rect);
+  // Returns the rect (not including border) for the given |knob|
+  // of the given |objbounds|.
+  static SkRect KnobRect(Knobmask knob, SkRect objbounds);
+  // Returns the bounding box of the knobs (including border) for the
+  // given |knobs| around the given |objbounds|.
+  static SkRect KnobBounds(Knobmask knobs, SkRect objbounds);
+ public:
   void SetZoom(float zoom);
 
   void RecomputePageSizes();
@@ -71,6 +97,11 @@ class DocView : public View, public PDFDocEventHandler {
   int freehand_page_{-1};
   std::vector<SkPoint> freehand_points_;
   int freehand_merge_obj_index_{-1};
+
+  // Selected objects
+  int selected_page_{-1};
+  std::set<int> selected_objs_;
+  FRIEND_TEST(DocViewTest, KnobsTest);
 };
 
 }  // namespace formulate

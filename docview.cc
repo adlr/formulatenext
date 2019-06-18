@@ -8,6 +8,20 @@
 
 namespace formulate {
 
+char KnobsForType(PDFDoc::ObjType type) {
+  switch (type) {
+    case PDFDoc::kUnknown:
+    case PDFDoc::kShading:
+    case PDFDoc::kForm:
+      return kNoKnobs;
+    case PDFDoc::kText:
+      return kMiddleLeftKnob;
+    case PDFDoc::kPath:
+    case PDFDoc::kImage:
+      return kAllKnobs;
+  }
+}
+
 namespace {
   float kBorderPixels = 20.0;
 }
@@ -68,6 +82,78 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
     }
     pagetop += pgsize.height() * zoom_ + kBorderPixels;
   }
+}
+
+void DrawKnobs(SkRect rect) {}
+
+SkRect DocView::KnobRect(Knobmask knob, SkRect objbounds) {
+  float xcenter;
+  switch (knob) {
+    default:
+      fprintf(stderr, "Illegal knob passed 0x%08x\n", knob);
+      return SkRect();
+    case kTopLeftKnob:
+    case kMiddleLeftKnob:
+    case kBottomLeftKnob:
+      xcenter = objbounds.left();
+      break;
+    case kTopCenterKnob:
+    case kBottomCenterKnob:
+      xcenter = objbounds.centerX();
+      break;
+    case kTopRightKnob:
+    case kMiddleRightKnob:
+    case kBottomRightKnob:
+      xcenter = objbounds.right();
+      break;
+  }
+
+  float ycenter;
+  switch (knob) {
+    default:
+      fprintf(stderr, "Illegal knob passed 0x%08x\n", knob);
+      return SkRect();
+    case kTopLeftKnob:
+    case kTopCenterKnob:
+    case kTopRightKnob:
+      ycenter = objbounds.top();
+      break;
+    case kMiddleLeftKnob:
+    case kMiddleRightKnob:
+      ycenter = objbounds.centerY();
+      break;
+    case kBottomLeftKnob:
+    case kBottomCenterKnob:
+    case kBottomRightKnob:
+      ycenter = objbounds.bottom();
+      break;
+  }
+  return SkRect::MakeXYWH(xcenter - KnobWidth() / 2,
+                          ycenter - KnobWidth() / 2,
+                          KnobWidth(),
+                          KnobWidth());
+}
+
+SkRect DocView::KnobBounds(Knobmask knobs, SkRect objbounds) {
+  if (knobs == kMiddleLeftKnob)
+    return KnobRect(knobs, objbounds).makeOutset(KnobBorderWidth() / 2,
+                                                 KnobBorderWidth() / 2);
+  if (knobs == kAllKnobs) {
+    SkRect ret = KnobRect(kTopLeftKnob, objbounds);
+    ret.join(KnobRect(kBottomRightKnob, objbounds));
+    return ret.makeOutset(KnobBorderWidth() / 2,
+                          KnobBorderWidth() / 2);
+  }
+  fprintf(stderr, "Please implement better case in KnobBounds()\n");
+  SkRect ret;
+  for (int i = 0; i < 8; i++) {
+    char knob = 1 << i;
+    if (knob & knobs) {
+      ret.join(KnobRect(knob, objbounds));
+    }
+  }
+  return ret.makeOutset(KnobBorderWidth() / 2,
+                        KnobBorderWidth() / 2);
 }
 
 void DocView::SetZoom(float zoom) {
