@@ -8,7 +8,7 @@ cd "${TESTOBJS}"
 rm -f *.gcda
 (cd .. && make -f Makefile.test -j4 && ${TESTOBJS}/test $@)
 
-if [ $# -gt 1 ]; then
+if [ $# -gt 0 ]; then
   exit 0
 fi
 
