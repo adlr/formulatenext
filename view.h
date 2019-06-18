@@ -130,4 +130,6 @@ SkRect ScaleRect(SkRect rect, float scale);
 
 }  // namespace formulate
 
+std::ostream& operator<<(std::ostream& os, const SkRect& rect);
+
 #endif  // FORMULATE_VIEW_H__

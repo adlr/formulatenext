@@ -269,11 +269,11 @@ document.addEventListener('DOMContentLoaded', function() {
     return ret;
   };
 
-  let launchEditor = (xpos, ypos, zoom) => {
+  let launchEditor = (xpos, ypos, zoom, text, caretPos) => {
     const dpr = window.devicePixelRatio || 1;
     xpos /= dpr;
     ypos /= dpr;
-    console.log(`Edit at ${xpos} ${ypos}`);
+    console.log(`Edit at ${xpos} ${ypos}, ${zoom}, ${text}, ${caretPos}`);
     let vertOffset = calcFontMetrics((zoom * 12) | 0);
     let padding = 5;
     xpos -= padding;
@@ -298,12 +298,14 @@ document.addEventListener('DOMContentLoaded', function() {
     textarea.addEventListener('blur', (ev) => {
       //textarea.parentNode.removeChild(textarea);
     });
-    textarea.value = '';
+    textarea.value = text;
     update();
     document.getElementById('main-view').appendChild(textarea);
     setTimeout(() => {
       textarea.focus();
       update();
+      textarea.setSelectionRange(caretPos, caretPos);
+      console.log("set caret here: " + caretPos);
     }, 100);
     bridge_stopComposingText = () => {
       textarea.parentNode.removeChild(textarea);
