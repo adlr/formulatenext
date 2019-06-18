@@ -78,6 +78,15 @@ class PDFDocEventHandler {
 
 class PDFDoc {
  public:
+  enum ObjType {
+    kUnknown,
+    kText,
+    kPath,
+    kImage,
+    kShading,
+    kForm
+  };
+
   PDFDoc() {}
   ~PDFDoc() {}
   void AddEventHandler(PDFDocEventHandler* handler) {
@@ -98,6 +107,17 @@ class PDFDoc {
   // Test to make a change to a doc
   void ModifyPage(int pageno, SkPoint point);
   void DeleteObjUnderPoint(int pageno, SkPoint point);
+
+  // Returns the index of the object under |pt| or -1 if not found.
+  // If |native| is true, it will only find an object that's native
+  // to this software.
+  int ObjectUnderPoint(int pageno, SkPoint pt, bool native) const;
+ private:
+  SkRect BoundingBoxForObj(const ScopedFPDFPage& page, float pageheight,
+                           int index) const;
+ public:
+  SkRect BoundingBoxForObj(int pageno, int index) const;
+  ObjType ObjectType(int pageno, int index) const;
 
   void DeleteObject(int pageno, int index);
   void InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj);
