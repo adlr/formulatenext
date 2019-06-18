@@ -91,7 +91,7 @@ SkRect DocView::KnobRect(Knobmask knob, SkRect objbounds) {
   switch (knob) {
     default:
       fprintf(stderr, "Illegal knob passed 0x%08x\n", knob);
-      return SkRect();
+      return SkRect::MakeEmpty();
     case kTopLeftKnob:
     case kMiddleLeftKnob:
     case kBottomLeftKnob:
@@ -112,7 +112,7 @@ SkRect DocView::KnobRect(Knobmask knob, SkRect objbounds) {
   switch (knob) {
     default:
       fprintf(stderr, "Illegal knob passed 0x%08x\n", knob);
-      return SkRect();
+      return SkRect::MakeEmpty();
     case kTopLeftKnob:
     case kTopCenterKnob:
     case kTopRightKnob:
@@ -145,7 +145,7 @@ SkRect DocView::KnobBounds(Knobmask knobs, SkRect objbounds) {
                           KnobBorderWidth() / 2);
   }
   fprintf(stderr, "Please implement better case in KnobBounds()\n");
-  SkRect ret;
+  SkRect ret = SkRect::MakeEmpty();
   for (int i = 0; i < 8; i++) {
     char knob = 1 << i;
     if (knob & knobs) {

@@ -19,4 +19,10 @@ TEST(DocViewTest, KnobsTest) {
                 kTopLeftKnob | kTopRightKnob | kBottomCenterKnob, obj));
 }
 
+TEST(DocViewTest, KnobTypeMaskTest) {
+  EXPECT_EQ(kNoKnobs, KnobsForType(PDFDoc::kUnknown));
+  EXPECT_EQ(kMiddleLeftKnob, KnobsForType(PDFDoc::kText));
+  EXPECT_EQ(kAllKnobs, KnobsForType(PDFDoc::kPath));
+}
+
 }  // namespace formulate
