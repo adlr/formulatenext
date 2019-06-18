@@ -24,10 +24,12 @@ INC=\
 	-Iskia/skia \
 	-Ipdfium/pdfium
 
-LIBS=\
+LDFLAGS=\
 	-lfontconfig \
 	-lfreetype \
-	-lpthread \
+	-lpthread
+
+LIBS=\
 	pdfium/pdfium/out/DebugNative/obj/libpdfium.a \
 	skia/skia/out/Debug/libskia.a \
 	libgtest.a
@@ -38,8 +40,8 @@ $(TESTDIR)/%.o : %.cc
 	clang++-4.0 -c -fprofile-arcs -ftest-coverage $(CFLAGS) \
 		-MMD -std=c++14 $(INC) -o $@ $<
 
-$(TESTDIR)/test: $(OBJS)
+$(TESTDIR)/test: $(OBJS) $(LIBS)
 	clang++-4.0 -fprofile-arcs -ftest-coverage \
-		-std=c++14 -o $@ $(OBJS) $(LIBS)
+		-std=c++14 -o $@ $(OBJS) $(LDFLAGS) $(LIBS)
 
 -include $(TESTDIR)/*.d
