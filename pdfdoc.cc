@@ -347,6 +347,15 @@ void PDFDoc::InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj) {
   }
 }
 
+int PDFDoc::ObjectsOnPage(int pageno) const {
+  ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return 0;
+  }
+  return FPDFPage_CountObjects(page.get());
+}
+
 void PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
   ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
   if (!page) {
@@ -440,37 +449,56 @@ void PDFDoc::InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& bezie
   }
 }
 
-void PDFDoc::MovePages(const std::vector<std::pair<int, int>>& from, int to) {
-  fprintf(stderr, "Called MovePages: %zu -> %d\n", from.size(), to);
-  for (auto range : from) {
-    fprintf(stderr, "  %d %d\n", range.first, range.second);
-  }
-  if (from.empty())
-    return;
-  int ranges[from.size() * 2 + 2];
-  for (size_t i = 0; i < from.size(); i++) {
-    ranges[i * 2] = from[i].first;
-    ranges[i * 2 + 1] = from[i].second;
-  }
-  ranges[from.size() * 2] = 0;
-  ranges[from.size() * 2 + 1] = 0;
+void PDFDoc::MovePages(int start, int end, int to) {
+  fprintf(stderr, "(MP(%d, %d, %d))\n", start, end, to);
+  if (to > start && to <= end)
+    to = start;
+  int ranges[4] = {start, end, 0, 0};
   FPDFPage_Move(doc_.get(), ranges, to);
-  for (PDFDocEventHandler* handler : event_handlers_)
-    handler->PagesChanged();
 
-  // Split into multiple ranges for undo
-  ScopedUndoManagerGroup group(&undo_manager_);
-  int undo_to = to;
-  for (auto range : from) {
-    int start = range.first;
-    int len = range.second - range.first;
-    undo_manager_.PushUndoOp(
-        [this, start, len, undo_to] () {
-          std::vector<std::pair<int, int>> undo_range;
-          undo_range.emplace_back(undo_to, undo_to + len);
-          MovePages(undo_range, start);
-        });
-    undo_to += len;
+  // Generate undo operation
+  int len = end - start;
+  if (to > start)
+    to -= len;
+  undo_manager_.PushUndoOp(
+      [this, start, len, to] () {
+        fprintf(stderr, "undo: MovePages(%d, %d + %d, %d)\n",
+                to, to, len, start);
+        MovePages(to, to + len, start);
+      });
+}
+
+void PDFDoc::MovePages(const std::vector<std::pair<int, int>>& from, int to) {
+  // Split ranges into separate operations
+  {
+    // First, rewind 'to' to the start of a range if it falls in the middle
+    // of one.
+    auto it = std::lower_bound(from.begin(), from.end(), std::make_pair(0, to),
+                               [] (const std::pair<int, int>& a,
+                                   const std::pair<int, int>& b) -> bool {
+                                 return a.second < b.second;
+                               });
+    if (it != from.end() && to > it->first) {
+      to = it->first;
+      fprintf(stderr, "rewinding to to %d\n", to);
+    }
+  }
+  ScopedUndoManagerGroup undo_group(&undo_manager_);
+  // Next, start doing each operation
+  int delta = 0;
+  for (auto it = from.rbegin(); it != from.rend(); ++it) {
+    if (to > it->first) {
+      fprintf(stderr, "MovePages(%d, %d, %d)\n", it->first, it->second, to);
+      MovePages(it->first, it->second, to);
+      continue;
+    }
+    if (to == it->first)
+      continue;
+    int len = it->second - it->first;
+    fprintf(stderr, "MovePages(%d + %d, %d + %d, %d)\n",
+            it->first, delta, it->second, delta, to);
+    MovePages(it->first + delta, it->second + delta, to);
+    delta += len;
   }
 }
 

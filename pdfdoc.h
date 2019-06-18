@@ -101,10 +101,16 @@ class PDFDoc {
 
   void DeleteObject(int pageno, int index);
   void InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj);
+  int ObjectsOnPage(int pageno) const;
 
   void PlaceText(int pageno, SkPoint pagept, const std::string& ascii);
   void InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& pts);
 
+  // Move the pages in the range [start, end) to index |to|.
+  void MovePages(int start, int end, int to);
+
+  // Move many in-order ranges of pages to |to|. Each range in |from| is
+  // of the form [start, end).
   void MovePages(const std::vector<std::pair<int, int>>& from, int to);
 
   // Calls into JS to do the save
