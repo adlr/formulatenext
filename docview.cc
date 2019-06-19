@@ -77,25 +77,43 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
                          pagePaint.width() / zoom_,
                          pagePaint.height() / zoom_);
       doc_.DrawPage(canvas, pageDrawClip, static_cast<int>(i));
-      if (selected_page_ == i)
-        DrawKnobs(canvas, pageDrawClip);
 
       canvas->restore();
     }
     pagetop += pgsize.height() * zoom_ + kBorderPixels;
   }
+  DrawKnobs(canvas, rect);
 }
 
 void DocView::DrawKnobs(SkCanvas* canvas, SkRect rect) {
+  if (selected_page_ < 0)
+    return;
+  SkRect pagerect =
+      SkRect::MakeXYWH(0, 0, page_sizes_[selected_page_].width(),
+                                     page_sizes_[selected_page_].height());
+  if (!rect.intersects(ConvertRectFromPage(selected_page_, pagerect)))
+    return;
   SkPaint paint;
   paint.setAntiAlias(true);
   for (int index : selected_objs_) {
-    SkRect bbox = doc_.BoundingBoxForObj(selected_page_, index);
+    fprintf(stderr, "drawing knobs for %d\n", index);
+    SkRect bbox =
+        ConvertRectFromPage(selected_page_,
+                            doc_.BoundingBoxForObj(selected_page_, index));
+    // Draw grey border around object
+    paint.setStyle(SkPaint::kStroke_Style);
+    paint.setColor(0xffdddddd);  // opaque light grey
+    paint.setStrokeWidth(1);
+    canvas->drawRect(bbox.makeOutset(0.5, 0.5), paint);
+
     Knobmask knobs = KnobsForType(doc_.ObjectType(selected_page_, index));
     for (int i = 0; i < 8; i++) {
       Knobmask knob = 1 << i;
       if (knob & knobs) {
         SkRect knobrect = KnobRect(knob, bbox);
+        fprintf(stderr, "drawing rect %f %f %f %f\n",
+                knobrect.left(), knobrect.top(), knobrect.right(),
+                knobrect.bottom());
         // Draw white part
         paint.setStyle(SkPaint::kFill_Style);
         paint.setColor(0xffffffff);  // opaque white
@@ -103,7 +121,7 @@ void DocView::DrawKnobs(SkCanvas* canvas, SkRect rect) {
         canvas->drawRect(knobrect, paint);
         // Draw border
         paint.setStyle(SkPaint::kStroke_Style);
-        paint.setColor(0xff000000);  // opaque white
+        paint.setColor(0xff000000);  // opaque black
         paint.setStrokeWidth(1);
         canvas->drawRect(knobrect, paint);
       }
@@ -153,32 +171,39 @@ SkRect DocView::KnobRect(Knobmask knob, SkRect objbounds) {
       ycenter = objbounds.bottom();
       break;
   }
-  return SkRect::MakeXYWH(xcenter - KnobWidth() / 2,
-                          ycenter - KnobWidth() / 2,
-                          KnobWidth(),
-                          KnobWidth());
+  float knobwidth = KnobWidth();
+  return SkRect::MakeXYWH(xcenter - knobwidth / 2,
+                          ycenter - knobwidth / 2,
+                          knobwidth,
+                          knobwidth);
 }
 
 SkRect DocView::KnobBounds(Knobmask knobs, SkRect objbounds) {
-  if (knobs == kMiddleLeftKnob)
-    return KnobRect(knobs, objbounds).makeOutset(KnobBorderWidth() / 2,
-                                                 KnobBorderWidth() / 2);
-  if (knobs == kAllKnobs) {
+  float knob_border_width = KnobBorderWidth();
+  SkRect outline_bounds = objbounds.makeOutset(1, 1);
+  if (knobs == kMiddleLeftKnob) {
+    outline_bounds.join(
+        KnobRect(knobs, objbounds).makeOutset(knob_border_width / 2,
+                                              knob_border_width / 2));
+  } else if (knobs == kAllKnobs) {
     SkRect ret = KnobRect(kTopLeftKnob, objbounds);
     ret.join(KnobRect(kBottomRightKnob, objbounds));
-    return ret.makeOutset(KnobBorderWidth() / 2,
-                          KnobBorderWidth() / 2);
-  }
-  fprintf(stderr, "Please implement better case in KnobBounds()\n");
-  SkRect ret = SkRect::MakeEmpty();
-  for (int i = 0; i < 8; i++) {
-    char knob = 1 << i;
-    if (knob & knobs) {
-      ret.join(KnobRect(knob, objbounds));
+    outline_bounds.join(
+        ret.makeOutset(knob_border_width / 2,
+                       knob_border_width / 2));
+  } else {
+    fprintf(stderr, "Please implement better case in KnobBounds()\n");
+    SkRect ret = SkRect::MakeEmpty();
+    for (int i = 0; i < 8; i++) {
+      char knob = 1 << i;
+      if (knob & knobs) {
+        ret.join(KnobRect(knob, objbounds));
+      }
     }
+    outline_bounds.join(ret.makeOutset(knob_border_width / 2,
+                                       knob_border_width / 2));
   }
-  return ret.makeOutset(KnobBorderWidth() / 2,
-                        KnobBorderWidth() / 2);
+  return outline_bounds;
 }
 
 void DocView::SetZoom(float zoom) {
@@ -281,9 +306,13 @@ View* DocView::MouseDown(MouseInputEvent ev) {
     SkPoint pagept = SkPoint::Make(0, 0);
     ViewPointToPageAndPoint(ev.position(), &pageno, &pagept);
     int obj = doc_.ObjectUnderPoint(pageno, pagept, true);
-    if (obj < 0)
-      return this;
-    SelectOneObject(pageno, obj);
+    fprintf(stderr, "Object under pt: (%d, %f %f) %d\n", pageno,
+            pagept.x(), pagept.y(), obj);
+    if (obj < 0) {
+      ClearSelection();
+    } else {
+      SelectOneObject(pageno, obj);
+    }
   }
   return this;
 }
@@ -432,10 +461,11 @@ void DocView::SetNeedsDisplayInSelection() {
 void DocView::SetNeedsDisplayInObj(int pageno, int index) {
   if (pageno < 0)
     return;
-  SkRect bbox = doc_.BoundingBoxForObj(pageno, index);
+  SkRect bbox = ConvertRectFromPage(pageno,
+                                    doc_.BoundingBoxForObj(pageno, index));
   SkRect full_bounds = KnobBounds(KnobsForType(doc_.ObjectType(pageno, index)),
                                   bbox);
-  NeedsDisplayInRect(pageno, full_bounds);
+  SetNeedsDisplayInRect(full_bounds);
 }
 
 }  // namespace formulate

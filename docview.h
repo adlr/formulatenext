@@ -35,16 +35,18 @@ class DocView : public View, public PDFDocEventHandler {
   virtual const char* Name() const { return "DocView"; }
   void Draw(SkCanvas* canvas, SkRect rect);
  private:
-  static float KnobWidth() { return 6.0f; }
+  static float KnobWidth() { return 9.0f; }
   static float KnobBorderWidth() { return 1.0f; }
   // Assums we're drawing only the one page, with the subrect |rect|
   void DrawKnobs(SkCanvas* canvas, SkRect rect);
   // Returns the rect (not including border) for the given |knob|
-  // of the given |objbounds|.
-  static SkRect KnobRect(Knobmask knob, SkRect objbounds);
+  // of the given |objbounds|. Returned rect and |objbounds| are in
+  // view coordinates.
+  SkRect KnobRect(Knobmask knob, SkRect objbounds);
   // Returns the bounding box of the knobs (including border) for the
-  // given |knobs| around the given |objbounds|.
-  static SkRect KnobBounds(Knobmask knobs, SkRect objbounds);
+  // given |knobs| around the given |objbounds|. Returned rect and
+  // |objbounds| are in view coordinates.
+  SkRect KnobBounds(Knobmask knobs, SkRect objbounds);
  public:
   void SetZoom(float zoom);
 

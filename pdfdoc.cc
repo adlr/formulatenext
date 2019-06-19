@@ -265,6 +265,9 @@ int PDFDoc::ObjectUnderPoint(int pageno, SkPoint pt, bool native) const {
   int objcount = FPDFPage_CountObjects(page.get());
   for (int i = objcount - 1; i >= 0; i--) {
     SkRect bbox = BoundingBoxForObj(page, pageheight, i);
+    fprintf(stderr, "BBox: %f %f %f %f vs %f %f\n",
+            bbox.fLeft, bbox.fTop, bbox.fRight, bbox.fBottom,
+            pt.x(), pt.y());
     if (bbox.contains(pt.x(), pt.y()))
       return i;
   }
@@ -283,9 +286,9 @@ SkRect PDFDoc::BoundingBoxForObj(const ScopedFPDFPage& page, float pageheight,
     fprintf(stderr, "GetBounds failed\n");
     return SkRect();
   }
-  top = pageheight - top;
-  bottom = pageheight - bottom;
-  return SkRect::MakeLTRB(left, top, right, bottom);
+  // top = pageheight - top;
+  // bottom = pageheight - bottom;
+  return SkRect::MakeLTRB(left, bottom, right, top);
 }
 
 SkRect PDFDoc::BoundingBoxForObj(int pageno, int index) const {
