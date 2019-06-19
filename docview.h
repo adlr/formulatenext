@@ -3,6 +3,7 @@
 #ifndef FORMULATE_DOCVIEW_H__
 #define FORMULATE_DOCVIEW_H__
 
+#include <set>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -36,7 +37,8 @@ class DocView : public View, public PDFDocEventHandler {
  private:
   static float KnobWidth() { return 6.0f; }
   static float KnobBorderWidth() { return 1.0f; }
-  void DrawKnobs(SkRect rect);
+  // Assums we're drawing only the one page, with the subrect |rect|
+  void DrawKnobs(SkCanvas* canvas, SkRect rect);
   // Returns the rect (not including border) for the given |knob|
   // of the given |objbounds|.
   static SkRect KnobRect(Knobmask knob, SkRect objbounds);

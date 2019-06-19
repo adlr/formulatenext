@@ -77,6 +77,8 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
                          pagePaint.width() / zoom_,
                          pagePaint.height() / zoom_);
       doc_.DrawPage(canvas, pageDrawClip, static_cast<int>(i));
+      if (selected_page_ == i)
+        DrawKnobs(canvas, pageDrawClip);
 
       canvas->restore();
     }
@@ -84,7 +86,30 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
   }
 }
 
-void DrawKnobs(SkRect rect) {}
+void DocView::DrawKnobs(SkCanvas* canvas, SkRect rect) {
+  SkPaint paint;
+  paint.setAntiAlias(true);
+  for (int index : selected_objs_) {
+    SkRect bbox = doc_.BoundingBoxForObj(selected_page_, index);
+    Knobmask knobs = KnobsForType(doc_.ObjectType(selected_page_, index));
+    for (int i = 0; i < 8; i++) {
+      Knobmask knob = 1 << i;
+      if (knob & knobs) {
+        SkRect knobrect = KnobRect(knob, bbox);
+        // Draw white part
+        paint.setStyle(SkPaint::kFill_Style);
+        paint.setColor(0xffffffff);  // opaque white
+        paint.setStrokeWidth(0);
+        canvas->drawRect(knobrect, paint);
+        // Draw border
+        paint.setStyle(SkPaint::kStroke_Style);
+        paint.setColor(0xff000000);  // opaque white
+        paint.setStrokeWidth(1);
+        canvas->drawRect(knobrect, paint);
+      }
+    }
+  }
+}
 
 SkRect DocView::KnobRect(Knobmask knob, SkRect objbounds) {
   float xcenter;
@@ -251,6 +276,15 @@ View* DocView::MouseDown(MouseInputEvent ev) {
     freehand_page_ = page;
     freehand_points_.push_back(pt);
   }
+  if (toolbox_.current_tool() == Toolbox::kArrow_Tool) {
+    int pageno = -1;
+    SkPoint pagept = SkPoint::Make(0, 0);
+    ViewPointToPageAndPoint(ev.position(), &pageno, &pagept);
+    int obj = doc_.ObjectUnderPoint(pageno, pagept, true);
+    if (obj < 0)
+      return this;
+    SelectOneObject(pageno, obj);
+  }
   return this;
 }
 
@@ -349,7 +383,7 @@ void DocView::SelectOneObject(int pageno, int index) {
   SetNeedsDisplayInSelection();  // previously selected object(s)
   selected_page_ = pageno;
   selected_objs_.clear();
-  selected_objs_.push_back(index);
+  selected_objs_.insert(index);
   SetNeedsDisplayInSelection();  // new object
 }
 
@@ -395,10 +429,13 @@ void DocView::SetNeedsDisplayInSelection() {
   }
 }
 
-void SetNeedsDisplayInObj(int pageno, int index) {
-  if (pageno < 0) {
-    
-  }
+void DocView::SetNeedsDisplayInObj(int pageno, int index) {
+  if (pageno < 0)
+    return;
+  SkRect bbox = doc_.BoundingBoxForObj(pageno, index);
+  SkRect full_bounds = KnobBounds(KnobsForType(doc_.ObjectType(pageno, index)),
+                                  bbox);
+  NeedsDisplayInRect(pageno, full_bounds);
 }
 
 }  // namespace formulate
