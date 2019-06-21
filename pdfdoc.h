@@ -126,6 +126,10 @@ class PDFDoc {
   void PlaceText(int pageno, SkPoint pagept, const std::string& ascii);
   void InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& pts);
 
+  void MoveObjects(int pageno, const std::set<int>& objs,
+                   float dx, float dy);
+  void SetObjectBounds(int pageno, int objindex, SkRect bounds);
+
   // Move the pages in the range [start, end) to index |to|.
   void MovePages(int start, int end, int to);
 

@@ -81,6 +81,16 @@ class DocView : public View, public PDFDocEventHandler {
   void ClearSelection();
   void SetNeedsDisplayInSelection();
 
+  // Returns true if a knob was hit. If a knob was hit, sets member variables.
+  // Otherwise, members are left unchanged.
+  bool SetKnobUnderPoint(SkPoint pagept);
+
+  // Returns the new bounding box given a drag of |dx|, |dy| on the given knob.
+  // If freeform is false and a corner is dragged, the new bounds will be
+  // proportional to the old bounds.
+  SkRect GetNewBounds(SkRect old_bounds, Knobmask knob, float dx, float dy,
+                      bool freeform);
+
   PDFDoc doc_;
   Toolbox toolbox_;
 
@@ -112,9 +122,17 @@ class DocView : public View, public PDFDocEventHandler {
   std::vector<SkPoint> freehand_points_;
   int freehand_merge_obj_index_{-1};
 
+  SkPoint mouse_down_point_;
+  bool mouse_moved_{false};
+  bool prev_drag_point_valid_{false};
+  SkPoint prev_drag_point_;
+
   // Selected objects
   int selected_page_{-1};
   std::set<int> selected_objs_;
+
+  int mouse_down_obj_{-1};  // one of the selected objects, above
+  Knobmask mouse_down_knob_{kNoKnobs};
 
   FRIEND_TEST(DocViewTest, KnobsTest);
 };

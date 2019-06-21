@@ -53,4 +53,11 @@ TEST(DocViewTest, KnobTypeMaskTest) {
   EXPECT_EQ(kAllKnobs, KnobsForType(PDFDoc::kPath));
 }
 
+TEST(DocViewTest, GetNewBoundsTest) {
+  DocView doc;
+  SkRect bbox = SkRect::MakeLTRB(10, 10, 30, 20);
+  EXPECT_EQ(SkRect::MakeLTRB(10, 5, 30, 20),
+            doc.GetNewBounds(bbox, kTopCenterKnob, -2, -5, false));
+}
+
 }  // namespace formulate

@@ -294,6 +294,11 @@ SkRect DocView::ConvertRectFromPage(int page, const SkRect& rect) const {
 }
 
 View* DocView::MouseDown(MouseInputEvent ev) {
+  mouse_down_point_ = ev.position();
+  mouse_moved_ = false;
+  mouse_down_obj_ = -1;
+  mouse_down_knob_ = kNoKnobs;
+  prev_drag_point_valid_ = false;
   if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
     int page = -1;
     SkPoint pt;
@@ -334,6 +339,8 @@ std::pair<SkPoint, SkPoint> ControlPoints(const SkPoint* pts) {
 }  // namespace {}
 
 void DocView::MouseDrag(MouseInputEvent ev) {
+  mouse_moved_ = true;
+  
   if (freehand_page_ >= 0) {
     // continue line drawing
     SkPoint pt = ViewPointToPagePoint(ev.position(), freehand_page_);
@@ -362,6 +369,34 @@ void DocView::MouseDrag(MouseInputEvent ev) {
       bridge_drawBezier(this, bezier, zoom_);
     }
   }
+
+  if (mouse_down_knob_ == kNoKnobs &&
+      selected_objs_.find(mouse_down_obj_) != selected_objs_.end()) {
+    // move the object
+    SkPoint prev = mouse_down_point_;
+    if (prev_drag_point_valid_)
+      prev = prev_drag_point_;
+    float dx = (ev.position().x() - prev.x()) / zoom_;
+    float dy = (ev.position().y() - prev.y()) / zoom_;
+    SetNeedsDisplayInSelection();
+    doc_.MoveObjects(selected_page_, selected_objs_, dx, dy);
+    SetNeedsDisplayInSelection();
+  } else if (mouse_down_knob_) {
+    // Move the knob
+    SkPoint prev = mouse_down_point_;
+    if (prev_drag_point_valid_)
+      prev = prev_drag_point_;
+    float dx = (ev.position().x() - prev.x()) / zoom_;
+    float dy = (ev.position().y() - prev.y()) / zoom_;
+    SkRect old_bbox = doc_.BoundingBoxForObj(selected_page_, mouse_down_obj_);
+    SkRect new_bbox = GetNewBounds(old_bbox, mouse_down_knob_, dx, dy, true);
+    SetNeedsDisplayInObj(selected_page_, mouse_down_obj_);
+    doc_.SetObjectBounds(selected_page_, mouse_down_obj_, new_bbox);
+    SetNeedsDisplayInObj(selected_page_, mouse_down_obj_);
+  }
+
+  prev_drag_point_valid_ = true;
+  prev_drag_point_ = ev.position();
 }
 
 void DocView::MouseUp(MouseInputEvent ev) {
@@ -466,6 +501,58 @@ void DocView::SetNeedsDisplayInObj(int pageno, int index) {
   SkRect full_bounds = KnobBounds(KnobsForType(doc_.ObjectType(pageno, index)),
                                   bbox);
   SetNeedsDisplayInRect(full_bounds);
+}
+
+bool DocView::SetKnobUnderPoint(SkPoint viewpt) {
+  for (auto it = selected_objs_.rbegin(); it != selected_objs_.rend(); ++it) {
+    fprintf(stderr, "set reverse %d\n", *it);
+    SkRect bbox = doc_.BoundingBoxForObj(selected_page_, *it);
+    for (int i = 0; i < 8; i++) {
+      Knobmask knob = 1 << i;
+      SkRect knobrect = KnobRect(knob, bbox);
+      if (knobrect.contains(viewpt.x(), viewpt.y())) {
+        mouse_down_obj_ = *it;
+        mouse_down_knob_ = knob;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+SkRect DocView::GetNewBounds(SkRect old_bounds, Knobmask knob,
+                             float dx, float dy, bool freeform) {
+  if (knob & (kTopCenterKnob | kMiddleLeftKnob |
+              kMiddleRightKnob | kBottomCenterKnob)) {
+    if (knob == kTopCenterKnob)
+      old_bounds.fTop += dy;
+    if (knob == kMiddleLeftKnob)
+      old_bounds.fLeft += dx;
+    if (knob == kMiddleRightKnob)
+      old_bounds.fRight += dx;
+    if (knob == kBottomCenterKnob)
+      old_bounds.fBottom += dy;
+    return old_bounds;
+  }
+
+  // Really narrow objects are automatically freeform
+  if (!freeform && (old_bounds.width() > 0.1) && (old_bounds.height() > 0.1)) {
+    // For now, we use dx to decide how to transform
+    dy = dx * old_bounds.height() / old_bounds.width();
+    if (knob & (kTopRightKnob | kBottomLeftKnob)) {
+      dy *= -1;
+    }
+  }
+
+  if (knob & (kTopLeftKnob | kTopRightKnob))
+    old_bounds.fTop += dy;
+  if (knob & (kBottomLeftKnob | kBottomRightKnob))
+    old_bounds.fBottom += dy;
+  if (knob & (kTopLeftKnob | kBottomLeftKnob))
+    old_bounds.fLeft += dx;
+  if (knob & (kTopRightKnob | kBottomRightKnob))
+    old_bounds.fRight += dx;
+  return old_bounds;
 }
 
 }  // namespace formulate

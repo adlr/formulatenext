@@ -15,3 +15,4 @@ emsdk/*
 favicon.*
 testobjs/*
 libgtest.a
+.git.*

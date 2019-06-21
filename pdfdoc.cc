@@ -513,6 +513,15 @@ void PDFDoc::InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& bezie
   }
 }
 
+void PDFDoc::MoveObjects(int pageno, const std::set<int>& objs,
+                         float dx, float dy) {
+  
+}
+
+void PDFDoc::SetObjectBounds(int pageno, int objindex, SkRect bounds) {
+  
+}
+
 void PDFDoc::MovePages(int start, int end, int to) {
   if (to > start && to <= end)
     to = start;
