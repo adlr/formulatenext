@@ -12,7 +12,8 @@ void bridge_setSize(ScrollView* view, float width, float height,
                     float xpos, float ypos);
 void bridge_UpdateUndoRedoUI(bool undo_enabled, bool redo_unabled);
 void bridge_setToolboxState(bool enabled, int tool);
-void bridge_startComposingText(SkPoint docpoint, View* view, float zoom);
+void bridge_startComposingText(SkPoint docpoint, View* view, float zoom,
+                               const char* str, SkPoint cursorpt);
 void bridge_stopComposingText();
 
 // Draw a bezier right on the doc canvas using points in child's view space.

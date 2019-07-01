@@ -185,6 +185,21 @@ std::string StrToUTF16LE(const std::string& ascii) {
   return ret;
 }
 
+std::string UTF16LEToStr(const unsigned char* chars) {
+  // Only handles low-order ascii for now
+  std::string ret;
+  for (int i = 0; chars[i] || chars[i + 1]; i += 2) {
+    if (chars[i] > 127 || chars[i + 1]) {
+      fprintf(stderr, "Can't handle high-order string value\n");
+      return std::string();
+    }
+    ret.push_back(chars[i]);
+    fprintf(stderr, "ret push back %d\n", chars[i]);
+  }
+  fprintf(stderr, "got string: [%s]\n", ret.c_str());
+  return ret;
+}
+
 void PDFDoc::DeleteObjUnderPoint(int pageno, SkPoint point) {
   int i = -1;
   {
@@ -265,9 +280,9 @@ int PDFDoc::ObjectUnderPoint(int pageno, SkPoint pt, bool native) const {
   int objcount = FPDFPage_CountObjects(page.get());
   for (int i = objcount - 1; i >= 0; i--) {
     SkRect bbox = BoundingBoxForObj(page, pageheight, i);
-    fprintf(stderr, "BBox: %f %f %f %f vs %f %f\n",
-            bbox.fLeft, bbox.fTop, bbox.fRight, bbox.fBottom,
-            pt.x(), pt.y());
+    // fprintf(stderr, "BBox: %f %f %f %f vs %f %f\n",
+    //         bbox.fLeft, bbox.fTop, bbox.fRight, bbox.fBottom,
+    //         pt.x(), pt.y());
     if (bbox.contains(pt.x(), pt.y()))
       return i;
   }
@@ -317,6 +332,66 @@ PDFDoc::ObjType PDFDoc::ObjectType(int pageno, int index) const {
     return kUnknown;
   }
   return static_cast<ObjType>(FPDFPageObj_GetType(obj));
+}
+
+std::string PDFDoc::TextObjValue(int pageno, int index) const {
+  ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return std::string();
+  }
+  FPDF_PAGEOBJECT obj = FPDFPage_GetObject(page.get(), index);
+  if (!obj) {
+    fprintf(stderr, "Page has no object at index %d\n", index);
+    return std::string();
+  }
+  if (FPDFPageObj_GetType(obj) != FPDF_PAGEOBJ_TEXT) {
+    fprintf(stderr, "Object is not text object\n");
+    return std::string();
+  }
+  ScopedFPDFTextPage textpage(FPDFText_LoadPage(page.get()));
+  if (!textpage) {
+    fprintf(stderr, "failed to load textPage\n");
+    return std::string();
+  }
+  // Get length
+  unsigned long len = FPDFTextObj_GetText(obj, textpage.get(), nullptr, 0);
+  if (len == 0 || len & 1) {
+    fprintf(stderr, "GetText failed\n");
+    return std::string();
+  }
+  unsigned char chars[len];
+  if (!FPDFTextObj_GetText(obj, textpage.get(), chars, len)) {
+    fprintf(stderr, "GetText failed when reading string\n");
+    return std::string();
+  }
+  chars[len - 1] = chars[len - 2] = '\0';
+  fprintf(stderr, "gettext has a length of %d\n", static_cast<int>(len));
+  return UTF16LEToStr(chars);
+}
+
+SkPoint PDFDoc::TextObjOrigin(int pageno, int index) const {
+  ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return SkPoint::Make(0, 0);
+  }
+  FPDF_PAGEOBJECT obj = FPDFPage_GetObject(page.get(), index);
+  if (!obj) {
+    fprintf(stderr, "Page has no object at index %d\n", index);
+    return SkPoint::Make(0, 0);
+  }
+  if (FPDFPageObj_GetType(obj) != FPDF_PAGEOBJ_TEXT) {
+    fprintf(stderr, "Object is not text object\n");
+    return SkPoint::Make(0, 0);
+  }
+  double a, b, c, d, e, f;
+  if (!FPDFText_GetMatrix(obj, &a, &b, &c, &d, &e, &f)) {
+    fprintf(stderr, "FPDFText_GetMatrix failed\n");
+    return SkPoint::Make(0, 0);
+  }
+  fprintf(stderr, "Text has matrix: %f %f %f %f %f %f\n", a, b, c, d, e, f);
+  return SkPoint::Make(e, f);
 }
 
 void PDFDoc::DeleteObject(int pageno, int index) {
@@ -464,6 +539,40 @@ void PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
   }
 }
 
+void PDFDoc::UpdateText(int pageno, int index, const std::string& ascii,
+                        const std::string& orig_value, bool undo) {
+  ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return;
+  }
+  for (PDFDocEventHandler* handler : event_handlers_)
+    handler->NeedsDisplayForObj(pageno, index);
+  FPDF_PAGEOBJECT obj = FPDFPage_GetObject(page.get(), index);
+  if (!obj) {
+    fprintf(stderr, "Page has no object at index %d\n", index);
+    return;
+  }
+  std::string message = StrToUTF16LE(ascii);
+  FPDF_WIDESTRING pdf_str = reinterpret_cast<FPDF_WIDESTRING>(message.c_str());
+  if (!FPDFText_SetText(obj, pdf_str)) {
+    fprintf(stderr, "failed to set text\n");
+    return;
+  }
+  
+  if (!FPDFPage_GenerateContent(page.get())) {
+    fprintf(stderr, "PDFPage_GenerateContent failed\n");
+  }
+  for (PDFDocEventHandler* handler : event_handlers_)
+    handler->NeedsDisplayForObj(pageno, index);
+  if (undo) {
+    undo_manager_.PushUndoOp(
+        [this, pageno, index, ascii, orig_value] () {
+          UpdateText(pageno, index, orig_value, ascii, true);
+        });
+  }
+}
+
 void PDFDoc::InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& bezier) {
   ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
   if (!page) {
@@ -514,8 +623,38 @@ void PDFDoc::InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& bezie
 }
 
 void PDFDoc::MoveObjects(int pageno, const std::set<int>& objs,
-                         float dx, float dy) {
-  
+                         float dx, float dy, bool do_move, bool do_undo) {
+  if (do_move) {
+    ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+    if (!page) {
+      fprintf(stderr, "failed to load PDFPage\n");
+      return;
+    }
+    for (int index : objs) {
+      // Redraw the old location
+      for (PDFDocEventHandler* handler : event_handlers_)
+        handler->NeedsDisplayForObj(pageno, index);
+      FPDF_PAGEOBJECT obj = FPDFPage_GetObject(page.get(), index);
+      if (!obj) {
+        fprintf(stderr, "Page has no object at index %d\n", index);
+        return;
+      }
+      FPDFPageObj_Transform(obj, 1, 0, 0, 1, dx, -dy);
+    }
+    if (!FPDFPage_GenerateContent(page.get())) {
+      fprintf(stderr, "PDFPage_GenerateContent failed\n");
+    }
+    // Redraw new location, too
+    for (int index : objs)
+      for (PDFDocEventHandler* handler : event_handlers_)
+        handler->NeedsDisplayForObj(pageno, index);
+  }
+  if (do_undo) {
+    undo_manager_.PushUndoOp(
+        [this, pageno, objs, dx, dy] () {
+          MoveObjects(pageno, objs, -dx, -dy, true, true);
+        });
+  }
 }
 
 void PDFDoc::SetObjectBounds(int pageno, int objindex, SkRect bounds) {

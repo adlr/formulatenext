@@ -9,13 +9,13 @@
 namespace formulate {
 
 char KnobsForType(PDFDoc::ObjType type) {
+  return kNoKnobs;  // temporary
   switch (type) {
     case PDFDoc::kUnknown:
     case PDFDoc::kShading:
     case PDFDoc::kForm:
-      return kNoKnobs;
     case PDFDoc::kText:
-      return kMiddleLeftKnob;
+      return kNoKnobs;
     case PDFDoc::kPath:
     case PDFDoc::kImage:
       return kAllKnobs;
@@ -96,7 +96,6 @@ void DocView::DrawKnobs(SkCanvas* canvas, SkRect rect) {
   SkPaint paint;
   paint.setAntiAlias(true);
   for (int index : selected_objs_) {
-    fprintf(stderr, "drawing knobs for %d\n", index);
     SkRect bbox =
         ConvertRectFromPage(selected_page_,
                             doc_.BoundingBoxForObj(selected_page_, index));
@@ -111,9 +110,6 @@ void DocView::DrawKnobs(SkCanvas* canvas, SkRect rect) {
       Knobmask knob = 1 << i;
       if (knob & knobs) {
         SkRect knobrect = KnobRect(knob, bbox);
-        fprintf(stderr, "drawing rect %f %f %f %f\n",
-                knobrect.left(), knobrect.top(), knobrect.right(),
-                knobrect.bottom());
         // Draw white part
         paint.setStyle(SkPaint::kFill_Style);
         paint.setColor(0xffffffff);  // opaque white
@@ -191,7 +187,7 @@ SkRect DocView::KnobBounds(Knobmask knobs, SkRect objbounds) {
     outline_bounds.join(
         ret.makeOutset(knob_border_width / 2,
                        knob_border_width / 2));
-  } else {
+  } else if (knobs != kNoKnobs) {
     fprintf(stderr, "Please implement better case in KnobBounds()\n");
     SkRect ret = SkRect::MakeEmpty();
     for (int i = 0; i < 8; i++) {
@@ -311,12 +307,13 @@ View* DocView::MouseDown(MouseInputEvent ev) {
     SkPoint pagept = SkPoint::Make(0, 0);
     ViewPointToPageAndPoint(ev.position(), &pageno, &pagept);
     int obj = doc_.ObjectUnderPoint(pageno, pagept, true);
-    fprintf(stderr, "Object under pt: (%d, %f %f) %d\n", pageno,
-            pagept.x(), pagept.y(), obj);
+    fprintf(stderr, "Object under pt: (%d, %f %f) %d (type %d)\n", pageno,
+            pagept.x(), pagept.y(), obj, doc_.ObjectType(pageno, obj));
     if (obj < 0) {
       ClearSelection();
     } else {
       SelectOneObject(pageno, obj);
+      mouse_down_obj_ = obj;
     }
   }
   return this;
@@ -379,7 +376,7 @@ void DocView::MouseDrag(MouseInputEvent ev) {
     float dx = (ev.position().x() - prev.x()) / zoom_;
     float dy = (ev.position().y() - prev.y()) / zoom_;
     SetNeedsDisplayInSelection();
-    doc_.MoveObjects(selected_page_, selected_objs_, dx, dy);
+    doc_.MoveObjects(selected_page_, selected_objs_, dx, dy, true, false);
     SetNeedsDisplayInSelection();
   } else if (mouse_down_knob_) {
     // Move the knob
@@ -403,21 +400,56 @@ void DocView::MouseUp(MouseInputEvent ev) {
   int page = 0;
   SkPoint pagept;
   ViewPointToPageAndPoint(ev.position(), &page, &pagept);
+  if (mouse_down_knob_ == kNoKnobs &&
+      selected_objs_.find(mouse_down_obj_) != selected_objs_.end()) {
+    if (!mouse_moved_)
+      return;
+    // Generate undo info for the moved objects
+    float dx = (prev_drag_point_.x() - mouse_down_point_.x()) / zoom_;
+    float dy = (prev_drag_point_.y() - mouse_down_point_.y()) / zoom_;
+    doc_.MoveObjects(selected_page_, selected_objs_, dx, dy, false, true);
+  }
   if (editing_text_page_ >= 0) {
-    if (!editing_text_str_.empty()) {
+    if (!editing_text_str_.empty() || editing_text_obj_ >= 0) {
       fprintf(stderr, "Commit: %s\n", editing_text_str_.c_str());
       bridge_stopComposingText();
-      doc_.PlaceText(editing_text_page_, editing_text_point_,
-                     editing_text_str_);
+      if (editing_text_obj_ < 0) {
+        doc_.PlaceText(editing_text_page_, editing_text_point_,
+                       editing_text_str_);
+      } else {
+        doc_.UpdateText(editing_text_page_, editing_text_obj_,
+                        editing_text_str_, editing_text_orig_value_, true);
+      }
     }
     editing_text_str_.clear();
     editing_text_page_ = -1;
   } else if (toolbox_.current_tool() == Toolbox::kText_Tool) {
-    editing_text_page_ = page;
-    editing_text_point_ = pagept;
-    fprintf(stderr, "edit at %f %f\n", ev.position().x(),
-            ev.position().y());
-    bridge_startComposingText(ev.position(), this, zoom_);
+    int obj = doc_.ObjectUnderPoint(page, pagept, true);
+    if (obj < 0 || doc_.ObjectType(page, obj) != PDFDoc::kText) {
+      // New object should be created.
+      editing_text_page_ = page;
+      editing_text_point_ = pagept;
+      editing_text_obj_ = -1;
+      fprintf(stderr, "edit at %f %f\n", ev.position().x(),
+              ev.position().y());
+      bridge_startComposingText(ev.position(), this, zoom_,
+                                "", SkPoint::Make(-1, -1));
+    } else {  // Edit existing
+      fprintf(stderr, "edit existing\n");
+      SkRect bounds = doc_.BoundingBoxForObj(page, obj);
+      editing_text_page_ = page;
+      editing_text_point_ = doc_.TextObjOrigin(page, obj);
+      editing_text_str_ = doc_.TextObjValue(page, obj);
+      editing_text_obj_ = obj;
+      editing_text_orig_value_ = editing_text_str_;
+      // change the string value to empty string for now
+      doc_.UpdateText(editing_text_page_, editing_text_obj_,
+                      std::string(), std::string(), false);
+      bridge_startComposingText(PagePointToViewPoint(editing_text_page_,
+                                                     editing_text_point_),
+                                this, zoom_,
+                                editing_text_str_.c_str(), ev.position());
+    }
   } else if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
     if (!freehand_points_.empty()) {
       std::vector<SkPoint> bezier_path;

@@ -3,6 +3,7 @@
 #ifndef FORMULATE_PDFDOC_H__
 #define FORMULATE_PDFDOC_H__
 
+#include <set>
 #include <vector>
 
 #include "public/cpp/fpdf_scopers.h"
@@ -66,6 +67,9 @@ void PrintLastError();
 
 std::string StrToUTF16LE(const std::wstring& wstr);
 std::string StrToUTF16LE(const std::string& ascii);
+// chars must be an array with even number of bytes. The last two must be
+// null, which indicates end of the array.
+std::string UTF16LEToStr(const unsigned char* chars);
 
 void InitPDFium();
 
@@ -74,6 +78,7 @@ class PDFDocEventHandler {
   // Number of pages and/or page sizes changed
   virtual void PagesChanged() {}
   virtual void NeedsDisplayInRect(int page, SkRect rect) {}
+  virtual void NeedsDisplayForObj(int page, int index) {}
 };
 
 class PDFDoc {
@@ -118,16 +123,23 @@ class PDFDoc {
  public:
   SkRect BoundingBoxForObj(int pageno, int index) const;
   ObjType ObjectType(int pageno, int index) const;
+  // Returns the body string of a text object as UTF-8. Return empty string
+  // on error.
+  std::string TextObjValue(int pageno, int index) const;
+  // Returns the origin point of the text object (the left baseline point)
+  SkPoint TextObjOrigin(int pageno, int index) const;
 
   void DeleteObject(int pageno, int index);
   void InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj);
   int ObjectsOnPage(int pageno) const;
 
   void PlaceText(int pageno, SkPoint pagept, const std::string& ascii);
+  void UpdateText(int pageno, int index, const std::string& ascii,
+                  const std::string& orig_value, bool undo);
   void InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& pts);
 
   void MoveObjects(int pageno, const std::set<int>& objs,
-                   float dx, float dy);
+                   float dx, float dy, bool do_move, bool do_undo);
   void SetObjectBounds(int pageno, int objindex, SkRect bounds);
 
   // Move the pages in the range [start, end) to index |to|.

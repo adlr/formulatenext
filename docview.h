@@ -105,6 +105,9 @@ class DocView : public View, public PDFDocEventHandler {
   void NeedsDisplayInRect(int page, SkRect rect) {
     SetNeedsDisplayInRect(ConvertRectFromPage(page, rect));
   }
+  void NeedsDisplayForObj(int pageno, int index) {
+    SetNeedsDisplayInObj(pageno, index);
+  }
 
   // if |index| is -1, redraw whole page. Includes knobs.
   void SetNeedsDisplayInObj(int pageno, int index);
@@ -117,6 +120,8 @@ class DocView : public View, public PDFDocEventHandler {
   int editing_text_page_{-1};
   SkPoint editing_text_point_;  // in PDF points
   std::string editing_text_str_;
+  int editing_text_obj_{-1};
+  std::string editing_text_orig_value_;  // when editing existing
 
   int freehand_page_{-1};
   std::vector<SkPoint> freehand_points_;

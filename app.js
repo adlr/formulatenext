@@ -269,11 +269,13 @@ document.addEventListener('DOMContentLoaded', function() {
     return ret;
   };
 
-  let launchEditor = (xpos, ypos, zoom) => {
+  let launchEditor = (xpos, ypos, zoom, text, xCaret, yCaret) => {
     const dpr = window.devicePixelRatio || 1;
     xpos /= dpr;
     ypos /= dpr;
-    console.log(`Edit at ${xpos} ${ypos}`);
+    xCaret /= dpr;
+    yCaret /= dpr;
+    console.log(`Edit at ${xpos} ${ypos}, ${zoom}, ${text}, ${xCaret}, ${yCaret}`);
     let vertOffset = calcFontMetrics((zoom * 12) | 0);
     let padding = 5;
     xpos -= padding;
@@ -298,12 +300,24 @@ document.addEventListener('DOMContentLoaded', function() {
     textarea.addEventListener('blur', (ev) => {
       //textarea.parentNode.removeChild(textarea);
     });
-    textarea.value = '';
+    textarea.value = text;
     update();
     document.getElementById('main-view').appendChild(textarea);
     setTimeout(() => {
       textarea.focus();
       update();
+      if (xCaret >= 0 && yCaret >= 0) {
+        setTimeout(() => {
+          // Generate a click
+          let genEvent = document.createEvent('MouseEvents');
+          genEvent.initMouseEvent('click', true, true,
+                                  document.defaultView,
+                                  0, xCaret, yCaret, xCaret, yCaret,
+                                  0, 0, 0, 0,
+                                  0, textarea);
+          textarea.dispatchEvent(genEvent);
+        }, 50);
+      }
     }, 100);
     bridge_stopComposingText = () => {
       textarea.parentNode.removeChild(textarea);
