@@ -128,6 +128,7 @@ class PDFDoc {
   std::string TextObjValue(int pageno, int index) const;
   // Returns the origin point of the text object (the left baseline point)
   SkPoint TextObjOrigin(int pageno, int index) const;
+  int TextObjCaretPosition(int pageno, int objindex, float xpos) const;
 
   void DeleteObject(int pageno, int index);
   void InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj);

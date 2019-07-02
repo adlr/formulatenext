@@ -433,7 +433,7 @@ void DocView::MouseUp(MouseInputEvent ev) {
       fprintf(stderr, "edit at %f %f\n", ev.position().x(),
               ev.position().y());
       bridge_startComposingText(ev.position(), this, zoom_,
-                                "", SkPoint::Make(-1, -1));
+                                "", 0);
     } else {  // Edit existing
       fprintf(stderr, "edit existing\n");
       SkRect bounds = doc_.BoundingBoxForObj(page, obj);
@@ -443,12 +443,13 @@ void DocView::MouseUp(MouseInputEvent ev) {
       editing_text_obj_ = obj;
       editing_text_orig_value_ = editing_text_str_;
       // change the string value to empty string for now
+      int caret_pos = doc_.TextObjCaretPosition(page, obj, pagept.x());
       doc_.UpdateText(editing_text_page_, editing_text_obj_,
                       std::string(), std::string(), false);
       bridge_startComposingText(PagePointToViewPoint(editing_text_page_,
                                                      editing_text_point_),
                                 this, zoom_,
-                                editing_text_str_.c_str(), ev.position());
+                                editing_text_str_.c_str(), caret_pos);
     }
   } else if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
     if (!freehand_points_.empty()) {

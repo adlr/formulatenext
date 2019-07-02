@@ -194,9 +194,7 @@ std::string UTF16LEToStr(const unsigned char* chars) {
       return std::string();
     }
     ret.push_back(chars[i]);
-    fprintf(stderr, "ret push back %d\n", chars[i]);
   }
-  fprintf(stderr, "got string: [%s]\n", ret.c_str());
   return ret;
 }
 
@@ -392,6 +390,24 @@ SkPoint PDFDoc::TextObjOrigin(int pageno, int index) const {
   }
   fprintf(stderr, "Text has matrix: %f %f %f %f %f %f\n", a, b, c, d, e, f);
   return SkPoint::Make(e, f);
+}
+
+int PDFDoc::TextObjCaretPosition(int pageno, int objindex, float xpos) const {
+  ScopedFPDFPage page(FPDF_LoadPage(doc_.get(), pageno));
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return -1;
+  }
+  FPDF_PAGEOBJECT obj = FPDFPage_GetObject(page.get(), objindex);
+  if (!obj) {
+    fprintf(stderr, "Page has no object at index %d\n", objindex);
+    return -1;
+  }
+  if (FPDFPageObj_GetType(obj) != FPDF_PAGEOBJ_TEXT) {
+    fprintf(stderr, "Object is not text object\n");
+    return -1;
+  }
+  return FPDFText_GetIndexForOffset(obj, xpos);
 }
 
 void PDFDoc::DeleteObject(int pageno, int index) {
