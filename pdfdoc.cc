@@ -553,7 +553,7 @@ void PDFDoc::UpdateText(int pageno, int index, const std::string& ascii,
     fprintf(stderr, "Page has no object at index %d\n", index);
     return;
   }
-  std::string message = StrToUTF16LE(ascii);
+  std::string message = StrToUTF16LE(ascii.empty() ? " " : ascii);
   FPDF_WIDESTRING pdf_str = reinterpret_cast<FPDF_WIDESTRING>(message.c_str());
   if (!FPDFText_SetText(obj, pdf_str)) {
     fprintf(stderr, "failed to set text\n");
