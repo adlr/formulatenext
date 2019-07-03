@@ -120,6 +120,26 @@ document.addEventListener('DOMContentLoaded', function() {
   let fixupContentSize = null;
   let fixupThumbnailSize = null;
   Module['onRuntimeInitialized'] = function() {
+    // TestDraw = Module.cwrap('TestDraw', 'number',
+    //                         ['number',  // width
+    //                          'number']);  // height
+    SetZoom = Module.cwrap('SetZoom', null, ['number']);
+    SetScaleAndSize = Module.cwrap('SetScaleAndSize', null,
+                                   ['number', 'number', 'number', 'number']);
+    SetScrollOrigin = Module.cwrap('SetScrollOrigin', null,
+                                   ['number', 'number', 'number']);
+    Init = Module.cwrap('Init', null, []);
+    SetFileSize = Module.cwrap('SetFileSize', null, ['number']);
+    AppendFileBytes = Module.cwrap('AppendFileBytes', null, ['number', 'number']);
+    FinishFileLoad = Module.cwrap('FinishFileLoad', null, []);
+    AppendPDF = Module.cwrap('AppendPDF', null, ['number', 'number']);
+    MouseEvent = Module.cwrap('MouseEvent', 'number',
+                              ['number', 'number', 'number', 'number']);
+    DownloadFile = Module.cwrap('DownloadFile', null, []);
+    UndoRedoClicked = Module.cwrap('UndoRedoClicked', null, ['number']);
+    ToolbarClicked = Module.cwrap('ToolbarClicked', null, ['number']);
+    UpdateEditText = Module.cwrap('UpdateEditText', null, ['string']);
+
     runtime_ready = true;
     console.log("runtime is ready");
     Init();
@@ -166,25 +186,6 @@ document.addEventListener('DOMContentLoaded', function() {
       toolbox.setEnabled(enabled);
     }
   };
-  // TestDraw = Module.cwrap('TestDraw', 'number',
-  //                         ['number',  // width
-  //                          'number']);  // height
-  SetZoom = Module.cwrap('SetZoom', null, ['number']);
-  SetScaleAndSize = Module.cwrap('SetScaleAndSize', null,
-                                 ['number', 'number', 'number', 'number']);
-  SetScrollOrigin = Module.cwrap('SetScrollOrigin', null,
-                                 ['number', 'number', 'number']);
-  Init = Module.cwrap('Init', null, []);
-  SetFileSize = Module.cwrap('SetFileSize', null, ['number']);
-  AppendFileBytes = Module.cwrap('AppendFileBytes', null, ['number', 'number']);
-  FinishFileLoad = Module.cwrap('FinishFileLoad', null, []);
-  AppendPDF = Module.cwrap('AppendPDF', null, ['number', 'number']);
-  MouseEvent = Module.cwrap('MouseEvent', 'number',
-                            ['number', 'number', 'number', 'number']);
-  DownloadFile = Module.cwrap('DownloadFile', null, []);
-  UndoRedoClicked = Module.cwrap('UndoRedoClicked', null, ['number']);
-  ToolbarClicked = Module.cwrap('ToolbarClicked', null, ['number']);
-  UpdateEditText = Module.cwrap('UpdateEditText', null, ['string']);
 
   var outer = document.getElementById('main-scroll-outer');
   var canvas = document.getElementById('main-canvas');
