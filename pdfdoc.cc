@@ -347,19 +347,14 @@ std::string PDFDoc::TextObjValue(int pageno, int index) const {
     fprintf(stderr, "Object is not text object\n");
     return std::string();
   }
-  ScopedFPDFTextPage textpage(FPDFText_LoadPage(page.get()));
-  if (!textpage) {
-    fprintf(stderr, "failed to load textPage\n");
-    return std::string();
-  }
   // Get length
-  unsigned long len = FPDFTextObj_GetText(obj, textpage.get(), nullptr, 0);
+  unsigned long len = FPDFTextObj_GetText(obj, nullptr, nullptr, 0);
   if (len == 0 || len & 1) {
     fprintf(stderr, "GetText failed\n");
     return std::string();
   }
   unsigned char chars[len];
-  if (!FPDFTextObj_GetText(obj, textpage.get(), chars, len)) {
+  if (!FPDFTextObj_GetText(obj, nullptr, chars, len)) {
     fprintf(stderr, "GetText failed when reading string\n");
     return std::string();
   }
