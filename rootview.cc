@@ -48,7 +48,17 @@ void RootView::DoDraw(SkRect rect) {
   }
   SkCanvas offscreen(bitmap);
   offscreen.translate(-irect.left(), -irect.top());
-  Draw(&offscreen, SkRect::Make(irect));
+  SkRect draw_rect = SkRect::Make(irect);
+  {
+    // set background color
+    SkPaint paint;
+    paint.setAntiAlias(false);
+    paint.setStyle(SkPaint::kFill_Style);
+    paint.setColor(bg_color_);  // opaque grey
+    paint.setStrokeWidth(0);
+    offscreen.drawRect(draw_rect, paint);
+  }
+  Draw(&offscreen, draw_rect);
   // Push to HTML canvas now
   bridge_drawPixels(id_, bitmap.getPixels(), irect.left(), irect.top(),
                     bitmap.width(), bitmap.height());

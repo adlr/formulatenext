@@ -99,6 +99,17 @@ bool Init() {
 }
 
 EMSCRIPTEN_KEEPALIVE
+void SetBackgroundColors(uint32_t thumb_bg, uint32_t main_bg) {
+  root_views_[kIDThumb]->SetBgColor(thumb_bg);
+  root_views_[kIDMain]->SetBgColor(main_bg);
+  ScopedRedraw redraw(root_views_[kIDMain]);
+  ScopedRedraw redraw_thumb(root_views_[kIDThumb]);
+  for (int i = 0; i < 2; i++) {
+    root_views_[i]->SetNeedsDisplay();
+  }
+}
+
+EMSCRIPTEN_KEEPALIVE
 void SetFileSize(size_t length) {
   doc_view_->doc_.SetLength(length);
 }

@@ -20,6 +20,7 @@ let SetZoom = null;
 let SetScaleAndSize = null;
 let SetScrollOrigin = null;
 let Init = null;
+let SetBackgroundColors = null;
 let SetFileSize = null;
 let AppendFileBytes = null;
 let FinishFileLoad = null;
@@ -129,6 +130,8 @@ document.addEventListener('DOMContentLoaded', function() {
     SetScrollOrigin = Module.cwrap('SetScrollOrigin', null,
                                    ['number', 'number', 'number']);
     Init = Module.cwrap('Init', null, []);
+    SetBackgroundColors = Module.cwrap('SetBackgroundColors', null,
+                                       ['number', 'number']);
     SetFileSize = Module.cwrap('SetFileSize', null, ['number']);
     AppendFileBytes = Module.cwrap('AppendFileBytes', null, ['number', 'number']);
     FinishFileLoad = Module.cwrap('FinishFileLoad', null, []);
@@ -145,6 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
     Init();
     fixupContentSize();
     fixupThumbnailSize();
+    SetBackgroundColors(0xffeaf8ff, 0xffb0b0b0);
 
     let zoom_level = 1.0;
     let zoomInButtonMenuHelper =

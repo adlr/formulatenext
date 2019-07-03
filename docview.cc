@@ -29,13 +29,6 @@ namespace {
 void DocView::Draw(SkCanvas* canvas, SkRect rect) {
   SkPaint paint;
 
-  // Fill view by default with grey
-  paint.setAntiAlias(true);
-  paint.setStyle(SkPaint::kFill_Style);
-  paint.setColor(0xff808080);  // opaque grey
-  paint.setStrokeWidth(0);
-  canvas->drawRect(rect, paint);
-
   // Draw a rectangle for each page and paint each page
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setColor(0xff000000);  // opaque black

@@ -16,6 +16,7 @@ class RootView : public View {
   void SetNeedsDisplayInRect(const SkRect& rect);
   void SetRedraw(ScopedRedraw* redraw);
   void DoDraw(SkRect rect);
+  void SetBgColor(uint32_t color) { bg_color_ = color; }
 
   View* MouseDown(MouseInputEvent ev);
   void MouseDrag(MouseInputEvent ev);
@@ -24,6 +25,7 @@ class RootView : public View {
  private:
   ScopedRedraw* redraw_{nullptr};
   int id_{-1};
+  uint32_t bg_color_{0x000000};  // transparent black
 };
 
 class ScopedRedraw {

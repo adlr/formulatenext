@@ -13,7 +13,7 @@ body {
   flex-grow: 1;
   position: relative;
   --thumb-width: 100px;
-  --thumb-resize-width: 2px;
+  --thumb-resize-width: 6px;
 }
 
 #thumb-view {
@@ -22,7 +22,6 @@ body {
   top: 0;
   bottom: 0;
   width: var(--thumb-width);
-  background-color: rgb(234, 248, 255);
 }
 
 #thumb-canvas {
@@ -59,7 +58,8 @@ body {
   top: 0;
   bottom: 0;
   width: var(--thumb-resize-width);
-  background-color: rgb(218, 220, 224);
+  background: rgb(126,126,126);
+  background: linear-gradient(90deg, rgba(126,126,126,1) 0%, rgba(255,255,255,1) 23%, rgba(94,94,94,1) 100%);
   cursor: ew-resize;
 }
 
