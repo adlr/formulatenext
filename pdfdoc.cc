@@ -150,7 +150,7 @@ void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const {
   }
   FPDF_RenderPageBitmapWithMatrix(bitmap.get(), page.get(), &pdfmatrix,
 				  reinterpret_cast<FS_RECTF*>(&clip),
-				  FPDF_REVERSE_BYTE_ORDER);
+				  FPDF_ANNOT | FPDF_REVERSE_BYTE_ORDER);
   // Render doesn't return anything? I guess it always 'works' heh
 
   double page_width, page_height;
