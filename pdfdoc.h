@@ -15,6 +15,7 @@
 #include "SkSize.h"
 #include "third_party/base/span.h"
 
+#include "rendercache.h"
 #include "undo_manager.h"
 
 namespace {
@@ -81,7 +82,7 @@ class PDFDocEventHandler {
   virtual void NeedsDisplayForObj(int page, int index) {}
 };
 
-class PDFDoc {
+class PDFDoc : PDFRenderer {
  public:
   enum ObjType {
     kUnknown,
@@ -92,7 +93,9 @@ class PDFDoc {
     kForm
   };
 
-  PDFDoc() {}
+  PDFDoc() {
+    render_cache.SetRenderer(this);
+  }
   ~PDFDoc() {}
   void AddEventHandler(PDFDocEventHandler* handler) {
     event_handlers_.push_back(handler);
@@ -107,7 +110,12 @@ class PDFDoc {
 
   int Pages() const;
   SkSize PageSize(int page) const;
-  void DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const;
+
+  // Attemps to render w/ the cache
+  void DrawPage(SkCanvas* canvas, SkRect rect, int pageno);
+
+  // Does the actual render
+  void RenderPage(SkCanvas* canvas, SkRect rect, int pageno) const;
 
   // Test to make a change to a doc
   void ModifyPage(int pageno, SkPoint point);
@@ -155,8 +163,12 @@ class PDFDoc {
 
   void AppendPDF(const char* bytes, size_t length);
 
+  void SetCacheMaxSize(size_t bytes) { render_cache.SetMaxSize(bytes); }
+
   UndoManager undo_manager_;
  private:
+  RenderCache render_cache;
+
   bool valid_{false};
   std::vector<char> bytes_;
   std::unique_ptr<TestLoader> loader_;

@@ -20,6 +20,7 @@ OBJS=\
 	scrollview.o \
 	pdfdoc.o \
 	view.o \
+	rendercache.o \
 	rootview.o \
 	thumbnailview.o \
 	undo_manager.o \
