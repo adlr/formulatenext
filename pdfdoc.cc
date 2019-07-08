@@ -100,7 +100,11 @@ void DbgRect(const char* str, const SkRect& rect) {
           rect.width(), rect.height());
 }
 
-void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) const {
+void PDFDoc::DrawPage(SkCanvas* canvas, SkRect rect, int pageno) {
+  render_cache.DrawPage(canvas, rect, pageno, false);
+}
+
+void PDFDoc::RenderPage(SkCanvas* canvas, SkRect rect, int pageno) const {
   // In this method we try to find the backing pixels in 'canvas'
   // and feed them directly to the PDF renderer. We assume there
   // are only scale and translate operations applied to the

@@ -64,6 +64,11 @@ void SetScaleAndSize(int id, float scale, float width, float height) {
   if (id == kIDThumb) {
     thumb_view_->SetWidth(width);
   }
+  if (id == kIDMain) {
+    // heuristic: render cache size is three screenfulls of the main view
+    // with 4 bytes per pixel
+    doc_view_->doc_.SetCacheMaxSize(3 * width * height * scale * 4);
+  }
   scroll_views_[id]->SetScale(scale);
   scroll_views_[id]->SetSize(SkSize::Make(width, height));
   root_views_[id]->SetNeedsDisplay();
