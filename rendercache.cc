@@ -41,10 +41,23 @@ RenderCacheEntry::~RenderCacheEntry() {
 }
 
 void RenderCacheEntry::Draw(SkCanvas* canvas, SkRect rect) {
+  // fprintf(stderr, " render input rect: %f %f %f %f\n",
+  //         rect.fLeft,
+  //         rect.fTop,
+  //         rect.fRight,
+  //         rect.fBottom);
   SkIRect src = PageToBitmapRect(rect, scale_);
   SkRect dst(SkRect::Make(src));
   ScaleRect(&dst, 1 / scale_);
   src.offset(-Round(origin_.x() * scale_), -Round(origin_.y() * scale_));
+  // fprintf(stderr, "Draw src %d %d %d %d (%f), dst %f %f %f %f (%f)\n",
+  //         src.fLeft,
+  //         src.fTop,
+  //         src.fRight,
+  //         src.fBottom,
+  //         static_cast<float>(src.width()) / src.height(),
+  //         dst.fLeft, dst.fTop, dst.fRight, dst.fBottom,
+  //         dst.width() / dst.height());
   canvas->drawBitmapRect(bitmap_, src, dst, nullptr);
 }
 
@@ -86,7 +99,7 @@ void RenderCache::DrawPage(SkCanvas* canvas, SkRect rect,
       
     }
     scale = mat.getScaleX();
-    fprintf(stderr, "Render page %d with scale %f\n", pageno, scale);
+    // fprintf(stderr, "Render page %d with scale %f\n", pageno, scale);
   }
   RenderCacheEntry* prev = nullptr;
   RenderCacheEntry* it;
@@ -100,22 +113,22 @@ void RenderCache::DrawPage(SkCanvas* canvas, SkRect rect,
   }
   if (!it) {
     // not found. allocate a new one.
-    fprintf(stderr, "miss\n");
+    // fprintf(stderr, "miss\n");
     it = new RenderCacheEntry(pageno, scale);
   }
   if (!it->Contains(rect)) {
-    fprintf(stderr, "need to rerender\n");
+    // fprintf(stderr, "need to rerender\n");
     SkRect render_rect = EnlargeRect(it->Rect(), rect,
                                      renderer_->PageSize(pageno),
                                      scale);
-    fprintf(stderr, "Rect enlarged %f %f %f %f -> %f %f %f %f\n",
-            rect.left(), rect.top(), rect.right(), rect.bottom(),
-            render_rect.left(), render_rect.top(),
-            render_rect.right(), render_rect.bottom());
+    // fprintf(stderr, "Rect enlarged %f %f %f %f -> %f %f %f %f\n",
+    //         rect.left(), rect.top(), rect.right(), rect.bottom(),
+    //         render_rect.left(), render_rect.top(),
+    //         render_rect.right(), render_rect.bottom());
     // Render
     SkBitmap bitmap;
-    fprintf(stderr, "render width %f, %d\n", render_rect.width() * scale,
-            Round(render_rect.width() * scale));
+    // fprintf(stderr, "render width %f, %d\n", render_rect.width() * scale,
+    //         Round(render_rect.width() * scale));
     bitmap.setInfo(SkImageInfo::Make(Round(render_rect.width() * scale),
                                      Round(render_rect.height() * scale),
                                      kRGBA_8888_SkColorType,
@@ -126,8 +139,8 @@ void RenderCache::DrawPage(SkCanvas* canvas, SkRect rect,
     }
     {
       SkCanvas canvas(bitmap);
-      canvas.translate(render_rect.left(), render_rect.top());
       canvas.scale(scale, scale);
+      canvas.translate(-render_rect.left(), -render_rect.top());
       // Fill with opaque white
       SkPaint paint;
       paint.setAntiAlias(false);
@@ -139,11 +152,11 @@ void RenderCache::DrawPage(SkCanvas* canvas, SkRect rect,
     }
     it->PageIn(&bitmap, SkPoint::Make(render_rect.left(),
                                       render_rect.top()));
-    {
-      SkRect temp = it->Rect();
-      fprintf(stderr, "it now has %f %f %f %f\n",
-              temp.left(), temp.top(), temp.right(), temp.bottom());
-    }            
+    // {
+    //   SkRect temp = it->Rect();
+    //   fprintf(stderr, "it now has %f %f %f %f\n",
+    //           temp.left(), temp.top(), temp.right(), temp.bottom());
+    // }            
     if (!it->Contains(rect)) {
       fprintf(stderr, "Rendering to cache failed!\n");
       return;
@@ -195,8 +208,8 @@ void RenderCache::FreeUpSpace() {
     if (bytes_found > max_bytes_) {
       // Delete all future entries
       while (it->next_) {
-        fprintf(stderr, "Cache: Removing page %d (%f) to free space\n",
-                it->next_->page(), it->next_->scale());
+        // fprintf(stderr, "Cache: Removing page %d (%f) to free space\n",
+        //         it->next_->page(), it->next_->scale());
         Remove(it->next_, it);
       }
       return;
