@@ -50,6 +50,7 @@ class RenderCache {
   ~RenderCache();
   void DrawPage(SkCanvas* canvas, SkRect rect, int pageno, bool fast);
   void Invalidate(int pageno, SkRect rect);
+  void InvalidateAll();
   void SetRenderer(PDFRenderer* renderer) { renderer_ = renderer; }
   void SetMaxSize(size_t bytes) { max_bytes_ = bytes; }
 

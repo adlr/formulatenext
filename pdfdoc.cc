@@ -446,6 +446,7 @@ void PDFDoc::DeleteObject(int pageno, int index) {
     // Generate undo op.
     // TODO(adlr): This is leaking pageojb if the UndoManager removes
     // this undo op without performing it
+    render_cache.Invalidate(pageno, dirty);
     for (PDFDocEventHandler* handler : event_handlers_)
       handler->NeedsDisplayInRect(pageno, dirty);
     undo_manager_.PushUndoOp(
@@ -494,6 +495,7 @@ void PDFDoc::InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj) {
   SkRect dirty;
   if (FPDFPageObj_GetBounds(pageobj, &dirty.fLeft, &dirty.fTop,
                             &dirty.fRight, &dirty.fBottom)) {
+    render_cache.Invalidate(pageno, dirty);
     for (PDFDocEventHandler* handler : event_handlers_)
       handler->NeedsDisplayInRect(pageno, dirty);
   } else {
@@ -547,6 +549,7 @@ void PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
   SkRect dirty;
   if (FPDFPageObj_GetBounds(textobj, &dirty.fLeft, &dirty.fTop,
                             &dirty.fRight, &dirty.fBottom)) {
+    render_cache.Invalidate(pageno, dirty);
     for (PDFDocEventHandler* handler : event_handlers_)
       handler->NeedsDisplayInRect(pageno, dirty);
   } else {
@@ -578,6 +581,7 @@ void PDFDoc::UpdateText(int pageno, int index, const std::string& ascii,
   if (!FPDFPage_GenerateContent(page.get())) {
     fprintf(stderr, "PDFPage_GenerateContent failed\n");
   }
+  render_cache.Invalidate(pageno, BoundingBoxForObj(pageno, index));
   for (PDFDocEventHandler* handler : event_handlers_)
     handler->NeedsDisplayForObj(pageno, index);
   if (undo) {
@@ -630,6 +634,7 @@ void PDFDoc::InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& bezie
   SkRect dirty;
   if (FPDFPageObj_GetBounds(unowned_path, &dirty.fLeft, &dirty.fTop,
                             &dirty.fRight, &dirty.fBottom)) {
+    render_cache.Invalidate(pageno, dirty);
     for (PDFDocEventHandler* handler : event_handlers_)
       handler->NeedsDisplayInRect(pageno, dirty);
   } else {
@@ -647,6 +652,7 @@ void PDFDoc::MoveObjects(int pageno, const std::set<int>& objs,
     }
     for (int index : objs) {
       // Redraw the old location
+      render_cache.Invalidate(pageno, BoundingBoxForObj(pageno, index));
       for (PDFDocEventHandler* handler : event_handlers_)
         handler->NeedsDisplayForObj(pageno, index);
       FPDF_PAGEOBJECT obj = FPDFPage_GetObject(page.get(), index);
@@ -660,9 +666,11 @@ void PDFDoc::MoveObjects(int pageno, const std::set<int>& objs,
       fprintf(stderr, "PDFPage_GenerateContent failed\n");
     }
     // Redraw new location, too
-    for (int index : objs)
+    for (int index : objs) {
+      render_cache.Invalidate(pageno, BoundingBoxForObj(pageno, index));
       for (PDFDocEventHandler* handler : event_handlers_)
         handler->NeedsDisplayForObj(pageno, index);
+    }
   }
   if (do_undo) {
     undo_manager_.PushUndoOp(
@@ -688,6 +696,7 @@ void PDFDoc::MovePages(int start, int end, int to) {
     to -= len;
   else
     start += len;
+  render_cache.InvalidateAll();
   undo_manager_.PushUndoOp(
       [this, start, len, to] () {
         MovePages(to, to + len, start);
@@ -749,6 +758,7 @@ void PDFDoc::AppendPDF(const char* bytes, size_t length) {
     fprintf(stderr, "FPDF_ImportPages failed!\n");
     return;
   }
+  render_cache.InvalidateAll();
   for (PDFDocEventHandler* handler : event_handlers_)
     handler->PagesChanged();
 }

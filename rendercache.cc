@@ -353,6 +353,11 @@ void RenderCache::Invalidate(int pageno, SkRect rect) {
   }
 }
 
+void RenderCache::InvalidateAll() {
+  while (head_)
+    Remove(head_, nullptr);
+}
+
 void RenderCache::InsertAtHead(RenderCacheEntry* entry) {
   entry->next_ = head_;
   head_ = entry;
