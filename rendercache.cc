@@ -40,9 +40,13 @@ RenderCacheEntry::~RenderCacheEntry() {
     fprintf(stderr, "Deleting RenderCacheEntry with valid next_!\n");
 }
 
+// This function is a bit of a hack in that it needs the destination
+// scale to match the cached image's scale. This function computes
+// which bytes need to be copied over and just memcopies them over.
+// The cached images pixels, while the same scale, may not align w/
+// the destination pixels, but we ignore that and just memcpy them.
+// The goal is to be FAST.
 void RenderCacheEntry::Draw(SkCanvas* canvas, SkRect rect) {
-  // fprintf(stderr, "Draw(%f %f %f %f)\n",
-  //         rect.left(), rect.top(), rect.right(), rect.bottom());
   if (bitmap_.width() == 0 || bitmap_.height() == 0) {
     fprintf(stderr, "Bitmap is empty\n");
     return;
@@ -52,7 +56,6 @@ void RenderCacheEntry::Draw(SkCanvas* canvas, SkRect rect) {
     return;
   }
   SkRect dst_rect = canvas->getTotalMatrix().mapRect(rect);
-  // fprintf(stderr, "maps to start at %f %f\n", dst_rect.left(), dst_rect.top());
   SkIRect dst_irect = SkIRect::MakeLTRB(Round(dst_rect.left()),
                                         Round(dst_rect.top()),
                                         Round(dst_rect.right()),
@@ -64,9 +67,6 @@ void RenderCacheEntry::Draw(SkCanvas* canvas, SkRect rect) {
                                         Round(src_rect.top()),
                                         Round(src_rect.right()),
                                         Round(src_rect.bottom()));
-  // fprintf(stderr, "draw(1): %d %d %d %d onto %d %d %d %d\n",
-  //         src_irect.left(), src_irect.top(), src_irect.right(), src_irect.bottom(),
-  //         dst_irect.left(), dst_irect.top(), dst_irect.right(), dst_irect.bottom());
   int min_width = std::min(src_irect.width(), dst_irect.width());
   src_irect.fRight = src_irect.fLeft + min_width;
   dst_irect.fRight = dst_irect.fLeft + min_width;
@@ -108,17 +108,8 @@ void RenderCacheEntry::Draw(SkCanvas* canvas, SkRect rect) {
     fprintf(stderr, "nothing to draw\n");
     return;
   }
-  // fprintf(stderr, "draw(2): %d %d %d %d onto %d %d %d %d\n",
-  //         src_irect.left(), src_irect.top(), src_irect.right(), src_irect.bottom(),
-  //         dst_irect.left(), dst_irect.top(), dst_irect.right(), dst_irect.bottom());
-  // fprintf(stderr, "src %d %d %d %d origin %f %f wh %d %d\n",
-  //         src_irect.left(), src_irect.top(), src_irect.right(), src_irect.bottom(),
-  //         origin_.x() * scale_, origin_.y() * scale_, 
-  //         bitmap_.width(), bitmap_.height());
   char* orig_dst_pixels = dst_pixels;
   dst_pixels += dst_irect.left() * 4 + dst_irect.top() * dst_rowbytes;
-  // fprintf(stderr, "first pixel of 0x%08x lands on 0x%08x\n",
-  //         (int)(orig_dst_pixels), (int)(dst_pixels));
   char* src_pixels = reinterpret_cast<char*>(
       bitmap_.getAddr32(src_irect.left(), src_irect.top()));
   size_t src_rowbytes = bitmap_.rowBytes();
@@ -131,100 +122,12 @@ void RenderCacheEntry::Draw(SkCanvas* canvas, SkRect rect) {
       return;
     }
     memcpy(dst_pixels, src_pixels, width_bytes);
-    // for (int j = 0; j < width_bytes; j += 4) {
-    //   dst_pixels[j] = 0xff;
-    //   dst_pixels[j+1] = 0;
-    //   dst_pixels[j+2] = 0;
-    //   dst_pixels[j+3] = 0xff;
-    // }
     dst_pixels += dst_rowbytes;
     src_pixels += src_rowbytes;
   }
   if (next != next_) {
     fprintf(stderr, "NEXT CORRUPTED!\n");
   }
-
-  return;
-
-
-
-  // // SkPoint dst_origin = SkPoint::Make(rect.left(), rect.top());
-  // // canvas->getTotalMatrix().mapPoints(&dst_origin, 1);
-  // // SkIPoint dst_iorigin = SkIPoint::Make(Round(dst_origin.x()),
-  // //                                       Round(dst_origin.y()));
-  // SkRect dst_rect = canvas->getTotalMatrix().mapRect(rect);
-  // SkIRect dst_irect = SkIRect::MakeLTRB(Round(dst_rect.left()),
-  //                                       Round(dst_rect.top()),
-  //                                       Round(dst_rect.right()),
-  //                                       Round(dst_rect.bottom()));
-  // fprintf(stderr, "dst_irect: %d %d %d %d\n", dst_irect.left(), dst_irect.top(),
-  //         dst_irect.right(), dst_irect.bottom());
-  // dst_pixels += dst_irect.left() * 4 + dst_rowbytes * dst_irect.top();
-
-  // size_t src_rowbytes = bitmap_.rowBytes();
-  // // SkIRect src = PageToBitmapRect(rect, scale_);
-  // // if (src.isEmpty()) {
-  // //   fprintf(stderr, "src is empty\n");
-  // //   return;
-  // // }
-  // char* src_pixels = reinterpret_cast<char*>(bitmap_.getAddr32(0, 0));
-  // int width_bytes = bitmap_.width() * 4;
-
-  // if (dst_irect.left() < 0) {
-  //   int offset = -dst_irect.left();
-  //   width_bytes -= offset * 4;
-  //   src_pixels += offset * 4;
-  //   dst_irect.fLeft = 0;
-  // }
-  // if (dst_irect.top() < 0) {
-  //   int offset = -dst_irect.top();
-  //   src_pixels += offset * src_rowbytes;
-  //   dst_pixels += offset * dst_rowbytes;
-  //   dst_irect.fTop = 0;
-  // }
-
-  // fprintf(stderr, "dst_irect (after cleanup): %d %d %d %d\n", dst_irect.left(), dst_irect.top(),
-  //         dst_irect.right(), dst_irect.bottom());
-
-  // if (dst_irect.isEmpty()) {
-  //   fprintf(stderr, "no drawable rect. skipping\n");
-  //   return;
-  // }
-  // src_pixels += dst_irect.left() * 4 + src_rowbytes * dst_irect.top();
-
-  // RenderCacheEntry* next = next_;
-  // for (int i = dst_irect.top(); i < dst_irect.bottom(); i++) {
-  //   if (dst_pixels + width_bytes > dst_end) {
-  //     fprintf(stderr, "about to overrun dst_bytes! i = %d\n", i);
-  //     return;
-  //   }
-  //   memcpy(dst_pixels, src_pixels, width_bytes);
-  //   dst_pixels += dst_rowbytes;
-  //   src_pixels += src_rowbytes;
-  // }
-  // if (next != next_) {
-  //   fprintf(stderr, "NEXT CORRUPTED!\n");
-  // }
-  // return;
-
-  // fprintf(stderr, " render input rect: %f %f %f %f\n",
-  //         rect.fLeft,
-  //         rect.fTop,
-  //         rect.fRight,
-  //         rect.fBottom);
-  // SkIRect src = PageToBitmapRect(rect, scale_);
-  // SkRect dst(SkRect::Make(src));
-  // ScaleRect(&dst, 1 / scale_);
-  // src.offset(-Round(origin_.x() * scale_), -Round(origin_.y() * scale_));
-  // fprintf(stderr, "Draw src %d %d %d %d (%f), dst %f %f %f %f (%f)\n",
-  //         src.fLeft,
-  //         src.fTop,
-  //         src.fRight,
-  //         src.fBottom,
-  //         static_cast<float>(src.width()) / src.height(),
-  //         dst.fLeft, dst.fTop, dst.fRight, dst.fBottom,
-  //         dst.width() / dst.height());
-  // canvas->drawBitmapRect(bitmap_, src, dst, nullptr);
 }
 
 size_t RenderCacheEntry::Size() const {
@@ -265,7 +168,6 @@ void RenderCache::DrawPage(SkCanvas* canvas, SkRect rect,
       
     }
     scale = mat.getScaleX();
-    // fprintf(stderr, "Render page %d with scale %f\n", pageno, scale);
   }
   RenderCacheEntry* prev = nullptr;
   RenderCacheEntry* it;
@@ -279,22 +181,14 @@ void RenderCache::DrawPage(SkCanvas* canvas, SkRect rect,
   }
   if (!it) {
     // not found. allocate a new one.
-    // fprintf(stderr, "miss\n");
     it = new RenderCacheEntry(pageno, scale);
   }
   if (!it->Contains(rect)) {
-    // fprintf(stderr, "need to rerender\n");
     SkRect render_rect = EnlargeRect(it->Rect(), rect,
                                      renderer_->PageSize(pageno),
                                      scale);
-    // fprintf(stderr, "Rect enlarged %f %f %f %f -> %f %f %f %f\n",
-    //         rect.left(), rect.top(), rect.right(), rect.bottom(),
-    //         render_rect.left(), render_rect.top(),
-    //         render_rect.right(), render_rect.bottom());
     // Render
     SkBitmap bitmap;
-    // fprintf(stderr, "render width %f, %d\n", render_rect.width() * scale,
-    //         Round(render_rect.width() * scale));
     bitmap.setInfo(SkImageInfo::Make(Round(render_rect.width() * scale),
                                      Round(render_rect.height() * scale),
                                      kRGBA_8888_SkColorType,
@@ -318,11 +212,6 @@ void RenderCache::DrawPage(SkCanvas* canvas, SkRect rect,
     }
     it->PageIn(&bitmap, SkPoint::Make(render_rect.left(),
                                       render_rect.top()));
-    // {
-    //   SkRect temp = it->Rect();
-    //   fprintf(stderr, "it now has %f %f %f %f\n",
-    //           temp.left(), temp.top(), temp.right(), temp.bottom());
-    // }            
     if (!it->Contains(rect)) {
       fprintf(stderr, "Rendering to cache failed!\n");
       return;
@@ -375,19 +264,15 @@ void RenderCache::Remove(RenderCacheEntry* entry, RenderCacheEntry* prev) {
 void RenderCache::FreeUpSpace() {
   size_t bytes_found = 0;
   for (RenderCacheEntry* it = head_; it; it = it->next_) {
-    // fprintf(stderr, "considering %d %f\n", it->page(), it->scale());
     bytes_found += it->Size();
     if (bytes_found > max_bytes_) {
       // Delete all future entries
       while (it->next_) {
-        // fprintf(stderr, "Cache: Removing page %d (%f) to free space\n",
-        //         it->next_->page(), it->next_->scale());
         Remove(it->next_, it);
       }
       break;
     }
   }
-  // fprintf(stderr, "done freeing up space\n");
 }
 
 }  // namespace formulate
