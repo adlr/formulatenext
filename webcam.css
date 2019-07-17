@@ -1,0 +1,8 @@
+video {
+    display: none;
+}
+
+canvas {
+    width: 480px;
+    height: 270px;
+}
