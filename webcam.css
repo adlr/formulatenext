@@ -6,3 +6,9 @@ canvas {
     width: 480px;
     height: 270px;
 }
+
+#hist {
+    width: calc(3 * 256px);
+    height: calc(3 * 100px);
+    border: 1px solid #808080;
+}
