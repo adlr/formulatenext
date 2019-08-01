@@ -27,7 +27,7 @@ let loadImage = (cb) => {
     let imgdata = ctx.getImageData(0, 0, canvas.width, canvas.height);
     cb(imgdata);
   };
-  img.src = 'webcam2.png';
+  img.src = 'full_bilateral_3x3.png';
 }
 
 // Input [0,255], output [0,1]
@@ -184,6 +184,26 @@ let threshold = (grey, level) => {
   return ret;
 };
 
+let imgDataToSVG = (imgdata, cb) => {
+  let pot = Potrace;
+  pot.imgCanvas.width = imgdata.width;
+  pot.imgCanvas.height = imgdata.height;
+  let ctx = pot.imgCanvas.getContext('2d');
+  ctx.putImageData(imgdata, 0, 0);
+  pot.loadBm();
+  pot.setParameter({turdsize: 0});
+  pot.process(() => {
+    let svg = pot.getSVG(1);
+    cb(svg);
+  });
+};
+
+let drawSVG = (str) => {
+  let div = document.createElement('div');
+  div.innerHTML = str;
+  document.body.appendChild(div);
+};
+
 let onload = () => {
   loadImage((imgdata) => {
     drawImageData(imgdata);
@@ -193,7 +213,9 @@ let onload = () => {
     let sub = magicsubrect(grey);
     let med = median(sub, subSobel);
     let threshimg = threshold(grey, med);
-    drawImageData(linearGreyToImgData(threshimg));
+    let threshImgData = linearGreyToImgData(threshimg)
+    drawImageData(threshImgData);
+    imgDataToSVG(threshImgData, drawSVG);
   });
   return;
 
