@@ -98,10 +98,19 @@ let linearGreyToImgData = (grey) => {
   return ret;
 };
 
-let magicsubrect = (grey) => {
+// return [left, top, width, height];
+let magicRect = () => {
   let histsize = [(1920/3) | 0, (1080/6) | 0];
   let histcorner = [((1920 - histsize[0]) / 2) | 0,
                     ((1080 * 2 / 3) - histsize[1]) | 0];
+  return [histcorner[0], histcorner[1],
+          histsize[0], histsize[1]];
+}
+
+let magicsubrect = (grey) => {
+  let rect = magicRect();
+  let histsize = [rect[2], rect[3]];
+  let histcorner = [rect[0], rect[1]];
   let ret = [];
   for (let y = 0; y < histsize[1]; y++) {
     let row = [];
@@ -204,6 +213,396 @@ let drawSVG = (str) => {
   document.body.appendChild(div);
 };
 
+let showCapture = () => {
+  // console.log(navigator.mediaDevices.getSupportedConstraints());
+  let video = document.createElement('video');
+  video.width = 1920;
+  video.height = 1080;
+  document.body.appendChild(video);
+  navigator.mediaDevices.getUserMedia({ video: {
+    width: { ideal: 4096 },
+    height: { ideal: 2160 }
+  }}).then(function(stream) {
+    setTimeout(() => {
+      const track = stream.getVideoTracks()[0];
+      const capabilities = track.getCapabilities();
+      console.log(capabilities);
+      if (capabilities.focusDistance) {
+        console.log("has focus distance");
+      } else {
+        console.log("no foc dist");
+      }
+    }, 2000);
+
+    console.log(stream);
+    //video.src = window.URL.createObjectURL(stream);
+    video.srcObject = stream;
+    video.play();
+  });
+  
+};
+
+// cropping
+// copy all elements in |right| into |left| if they aren't in |left|.
+let mergeArray = (left, right) => {
+  for (let i = 0; i < right.length; i++) {
+    if (left.indexOf(right[i]) < 0)
+      left.push(right[i]);
+  }
+}
+
+class ComponentAnalizer {
+  constructor(img) {
+    this.img = img;
+    this.height = img.length;
+    this.width = this.height ? img[0].length : 0;
+    this.nextID = 1;
+
+    // 0 = unset, 1+ = ID
+    this.idImg = [];
+    for (let y = 0; y < this.height; y++) {
+      let row = [];
+      for (let x = 0; x < this.width; x++) {
+        row.push(0);
+      }
+      this.idImg.push(row);
+    }
+  }
+  componentAtPixel(xpos, ypos) {
+    if (!this.idImg[ypos])
+      console.log(`missing idImg[${ypos}]`);
+    if (this.idImg[ypos][xpos] > 0)
+      return this.idImg[ypos][xpos];
+    if (this.img[ypos][xpos] != 0) {
+      // pixel isn't black. invalid
+      return -1;
+    }
+    // We have an unset black pixel. Use the next ID and mark every pixel
+    // in this component.
+    const id = this.nextID++;
+    this.flood(xpos, ypos, id);
+    return id;
+  }
+  // this is a contorted version of floodbad (below) that doesn't use recursion
+  // because it was exceeding the maximum call stack length
+  flood(xpos, ypos, id) {
+    const kStart = 0;
+    const kUp = 1;
+    const kRight = 2;
+    const kDown = 3;
+
+    let stack = [[xpos, ypos, kStart]];
+    while (stack.length > 0) {
+      let elt = stack.pop();
+      xpos = elt[0];
+      ypos = elt[1];
+      switch (elt[2]) {
+      case kStart:
+        if (!this.img) {
+          console.log('missing img');
+        }
+        if (!this.img[ypos]) {
+          console.log(`missing img[${ypos}]`);
+        }
+        if (!this.img[ypos].length) {
+          console.log(`missing img[${ypos}].length`);
+        }
+        if (this.img[ypos][xpos] != 0)
+          continue;
+        if (this.idImg[ypos][xpos] > 0)
+          continue;  // already has an ID
+        this.idImg[ypos][xpos] = id;
+        if (xpos > 0) {
+          stack.push([xpos, ypos, kUp]);
+          stack.push([xpos - 1, ypos, kStart]);
+          continue;
+        }
+      case kUp:
+        if (ypos > 0) {
+          stack.push([xpos, ypos, kRight]);
+          stack.push([xpos, ypos - 1, kStart]);
+          continue;
+        }
+      case kRight:
+        if (xpos < (this.width - 1)) {
+          stack.push([xpos, ypos, kDown]);
+          stack.push([xpos + 1, ypos, kStart]);
+          continue;
+        }
+      case kDown:
+        if (ypos < (this.height - 1)) {
+          stack.push([xpos, ypos + 1, kStart]);
+          continue;
+        }
+      }
+    }
+  }
+
+  floodbad(xpos, ypos, id) {
+    if (this.img[ypos][xpos] != 0)
+      return;
+    this.idImg[ypos][xpos] = id;
+    if (xpos > 0)
+      this.flood(xpos - 1, ypos, id);
+    if (ypos > 0)
+      this.flood(xpos, ypos - 1, id);
+    if (xpos < this.width)
+      this.flood(xpos + 1, ypos, id);
+    if (ypos < this.height)
+      this.flood(xpos, ypos + 1, id);
+  }
+  componentIsValid(id) {
+    // A component is valid if it's not too thick/big at any given point
+    const kInvalidSize = 20;
+    for (let y = 0; y < this.height - kInvalidSize; y++) {
+      for (let x = 0; x < this.width - kInvalidSize; x++) {
+        // Sanity-check two corners before doing exhaustive search
+        if (this.idImg[y][x] != id ||
+            this.idImg[y + kInvalidSize - 1][x + kInvalidSize - 1] != id)
+          continue;
+        // Do exhaustive search
+        let valid = false;
+        for (let i = y; i < y + kInvalidSize; i++) {
+          for (let j = x; j < x + kInvalidSize; j++) {
+            if (this.idImg[i][j] != id) {
+              i = y + kInvalidSize;  // break out of two loops
+              valid = true;
+              break;
+            }
+          }
+        }
+        if (!valid)
+          return false;
+      }
+    }
+    return true;
+  }
+  findNearbyQuick(id) {
+    let leftTest = [];
+    let upTest = [];
+    let rightTest = [];
+    let downTest = [];
+    let generateLists = () => {
+      const kMaxDist = 20;
+      const kMinThreshSq = (kMaxDist - 0.5) * (kMaxDist - 0.5);
+      const kMaxThreshSq = (kMaxDist + 0.5) * (kMaxDist + 0.5);
+      for (let ypos = -kMaxDist; ypos <= kMaxDist; ypos++) {
+        for (let xpos = -kMaxDist; xpos <= kMaxDist; xpos++) {
+          let distSq = xpos * xpos + ypos * ypos;
+          if (distSq > kMinThreshSq && distSq < kMaxThreshSq) {
+            if (ypos < 0 && Math.abs(xpos) <= Math.abs(ypos))
+              upTest.push([xpos, ypos]);
+            if (xpos < 0 && Math.abs(ypos) <= Math.abs(xpos))
+              leftTest.push([xpos, ypos]);
+            if (ypos > 0 && Math.abs(xpos) <= Math.abs(ypos))
+              downTest.push([xpos, ypos]);
+            if (xpos > 0 && Math.abs(ypos) <= Math.abs(xpos))
+              rightTest.push([xpos, ypos]);
+          }
+        }
+      }
+    };
+    generateLists();
+    let hitComponents = (hitList, xpos, ypos) => {
+      let ret = [];
+      for (let i = 0; i < hitList.length; i++) {
+        let x = xpos + hitList[i][0];
+        let y = ypos + hitList[i][1];
+        if (x >= 0 && y >= 0 && x < this.width && y < this.height) {
+          let hitComponent = this.componentAtPixel(x, y);
+          if (hitComponent != id && hitComponent > 0)
+            ret.push(hitComponent);
+        }
+      }
+      return ret;
+    };
+    let ret = [];
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        if (this.componentAtPixel(x, y) != id)
+          continue;
+        if (x > 0 && this.componentAtPixel(x - 1, y) < 0)
+          mergeArray(ret, hitComponents(leftTest, x, y));
+        if (y > 0 && this.componentAtPixel(x, y - 1) < 0)
+          mergeArray(ret, hitComponents(upTest, x, y));
+        if (x < (this.width - 1) && this.componentAtPixel(x + 1, y) < 0)
+          mergeArray(ret, hitComponents(rightTest, x, y));
+        if (y < (this.height - 1) && this.componentAtPixel(x, y + 1) < 0)
+          mergeArray(ret, hitComponents(downTest, x, y));
+      }
+    }
+    return ret;
+  }
+  findNearby(id, visited, xpos, ypos, iteration) {
+    const kMaxDistance = 3;  // todo: raise higher
+    if (iteration > kMaxDistance)
+      return [];
+    if (xpos < 0 || ypos < 0) {
+      console.log(`err: ${id} ${xpos} ${ypos} ${iteration}`);
+    }
+    let component = this.componentAtPixel(xpos, ypos);
+    if (component > 0 && component != id)
+      return [component];
+    if (component == id)
+      return [];
+    let ret = [];
+    if (visited[ypos][xpos] == 0 || visited[ypos][xpos] > iteration) {
+      // visit this cell
+      visited[ypos][xpos] = iteration;
+      if (xpos > 0)
+        mergeArray(ret, this.findNearby(id, visited, xpos - 1, ypos,
+                                        iteration + 1));
+      if (ypos > 0)
+        mergeArray(ret, this.findNearby(id, visited, xpos, ypos - 1,
+                                        iteration + 1));
+      if (xpos < this.width - 1)
+        mergeArray(ret, this.findNearby(id, visited, xpos + 1, ypos,
+                                        iteration + 1));
+      if (ypos < this.height - 1)
+        mergeArray(ret, this.findNearby(id, visited, xpos, ypos + 1,
+                                        iteration + 1));
+    }
+    return ret;
+  }
+  nearbyComponents(id) {
+    // create a new matrix to store progress
+    let visited = [];
+    for (let i = 0; i < this.height; i++) {
+      let row = [];
+      row.length = this.width;
+      row.fill(0);
+      visited.push(row);
+    }
+    let ret = [];
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        mergeArray(ret, this.findNearby(id, visited, x, y, 1));
+      }
+    }
+    return ret;
+  }
+  // Get all components reachable from the given subrectangle
+  getReachableComponents(left, top, right, bottom) {
+    let ret = [];
+    for (let y = top; y < bottom; y++) {
+      for (let x = left; x < right; x++) {
+        const component = this.componentAtPixel(x, y);
+        if (component < 0)
+          continue;
+        if (ret.indexOf(component) >= 0)
+          continue;
+        if (!this.componentIsValid(component)) {
+          console.log('found invalid component in subrect');
+          return [];
+        }
+        mergeArray(ret, [component]);
+      }
+    }
+    if (ret.length == 0) {
+      console.log('no components found');
+      return ret;
+    }
+    console.log('found ' + ret.length + ' components in box');
+    // expand with reachable valid components
+    let todo = Array.from(ret);  // copy array
+    let invalid = []; // adlr do this part
+    while (todo.length > 0) {
+      console.log(todo);
+      let found = [];  // IDs found this iteration
+      for (let i = 0; i < todo.length; i++) {
+        let reachable = this.findNearbyQuick(todo[i]);
+        for (let j = 0; j < reachable.length; j++) {
+          const nearcomp = reachable[j];
+          if (invalid.indexOf(nearcomp) >= 0)
+            continue;
+          if (ret.indexOf(nearcomp) < 0 &&
+              found.indexOf(nearcomp) < 0) {
+            if (!this.componentIsValid(nearcomp)) {
+              invalid.push(nearcomp);
+              continue;
+            }
+            found.push(nearcomp);
+          }
+        }
+      }
+      ret = ret.concat(found);
+      todo = found;
+    }
+    return ret;
+  }
+  // Get an image with just certain components
+  imageWithComponents(ids) {
+    let ret = [];
+    for (let y = 0; y < this.height; y++) {
+      let row = [];
+      for (let x = 0; x < this.width; x++) {
+        if (ids.indexOf(this.idImg[y][x]) >= 0)
+          row.push(0);
+        else
+          row.push(1);
+      }
+      ret.push(row);
+    }
+    return ret;
+  }
+}
+
+// crop all white (1) pixels in |grey| to a new matrix and return it.
+// Keep |border| pixels around the crop.
+let crop = (grey, border) => {
+  const height = grey.length;
+  const width = height == 0 ? 0 : grey[0].length;
+  let left = 0;
+  let top = 0;
+  let right = width;
+  let bottom = height;
+  topLoop:
+  for ( ; top < bottom; top++) {
+    for (let x = 0; x < width; x++) {
+      if (grey[top][x] != 1)
+        break topLoop;
+    }
+  }
+  bottomLoop:
+  for ( ; bottom > top; bottom--) {
+    for (let x = 0; x < width; x++) {
+      if (grey[bottom - 1][x] != 1)
+        break bottomLoop;
+    }
+  }
+  leftLoop:
+  for ( ; left < right; left++) {
+    for (let y = top; y < bottom; y++) {
+      if (grey[y][left] != 1)
+        break leftLoop;
+    }
+  }
+  rightLoop:
+  for ( ; right > left; right--) {
+    for (let y = top; y < bottom; y++) {
+      if (grey[y][right - 1] != 1)
+        break rightLoop;
+    }
+  }
+  console.log(`crop ${width} x ${height} -> ${left} ${top} ${right} ${bottom}`);
+  if (left == right || top == bottom)
+    return [];
+  left = Math.max(0, left - border);
+  top = Math.max(0, top - border);
+  right = Math.min(width, right + border);
+  bottom = Math.min(height, bottom + border);
+  // Copy to new matrix
+  let ret = [];
+  for (let y = top; y < bottom; y++) {
+    let row = [];
+    for (let x = left; x < right; x++) {
+      row.push(grey[y][x])
+    }
+    ret.push(row);
+  }
+  return ret;
+};
+
 let onload = () => {
   loadImage((imgdata) => {
     drawImageData(imgdata);
@@ -215,7 +614,22 @@ let onload = () => {
     let threshimg = threshold(grey, med);
     let threshImgData = linearGreyToImgData(threshimg)
     drawImageData(threshImgData);
-    imgDataToSVG(threshImgData, drawSVG);
+
+    let ca = new ComponentAnalizer(threshimg);
+    const rect = magicRect();
+    console.log("getting reachable components");
+    let ids = ca.getReachableComponents(rect[0], rect[1],
+                                        rect[0] + rect[2],
+                                        rect[1] + rect[3]);
+    console.log("drawing components: " + ids);
+    let sigGrey = ca.imageWithComponents(ids);
+    console.log("cropping");
+    let croppedSigGrey = crop(sigGrey, 5);
+    console.log('converting to imgdata');
+    let sigImgData = linearGreyToImgData(croppedSigGrey);
+    drawImageData(sigImgData);
+
+    imgDataToSVG(sigImgData, drawSVG);
   });
   return;
 
@@ -309,7 +723,7 @@ let onload = () => {
       rawctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       process();
     };
-    img.src = 'webcam1.png';
+    img.src = 'webcam2.png';
   };
 
   //loadvideo();
