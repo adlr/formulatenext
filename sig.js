@@ -64,16 +64,17 @@ let loadImage = (cb) => {
 
 let ProcessImage = null;
 
-let bridge_showGrey = (ptr, width, height) => {
-  const arr = new Float32Array(Module.HEAPF32.buffer, ptr, width * height);
+let bridge_showGrey = (ptr, width, height, rowbytes) => {
+  const arr = new Float32Array(Module.HEAPF32.buffer, ptr,
+			       (rowbytes / 4) * height);
   let img = [];
   for (let y = 0; y < height; y++) {
     let row = [];
     for (let x = 0; x < width; x++) {
-      row.push(arr[width * y + x]);
-      if (x == 1000 && y == 500) {
-	console.log('jsval: ' + arr[width * y + x]);
-      }
+      row.push(arr[(rowbytes / 4) * y + x]);
+      // if (x == 1000 && y == 500) {
+      // 	console.log('jsval: ' + arr[width * y + x]);
+      // }
     }
     img.push(row);
   }

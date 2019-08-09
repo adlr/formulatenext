@@ -5,8 +5,8 @@ let drawImageData = (imgdata) => {
   canvas.width = imgdata.width;
   canvas.height = imgdata.height;
   if (canvas.width == 1920) {
-    canvas.style.width = (canvas.width / 1) + 'px';
-    canvas.style.height = (canvas.height / 1) + 'px';
+    canvas.style.width = (canvas.width / 4) + 'px';
+    canvas.style.height = (canvas.height / 4) + 'px';
   } else {
     canvas.style.width = canvas.width + 'px';
     canvas.style.height = canvas.height + 'px';
@@ -27,7 +27,8 @@ let loadImage = (cb) => {
     let imgdata = ctx.getImageData(0, 0, canvas.width, canvas.height);
     cb(imgdata);
   };
-  img.src = 'full_bilateral_3x3.png';
+  //img.src = 'full_bilateral_3x3.png';
+  img.src = 'webcam1.png';
 }
 
 // Input [0,255], output [0,1]
@@ -176,6 +177,7 @@ let median = (grey, sobelGrey) => {
       rightsum += pairs[rightidx--][1];
     }
   }
+  console.log('using idx ' + leftidx);
   return pairs[leftidx][0];
 };
 
@@ -200,7 +202,7 @@ let imgDataToSVG = (imgdata, cb) => {
   let ctx = pot.imgCanvas.getContext('2d');
   ctx.putImageData(imgdata, 0, 0);
   pot.loadBm();
-  pot.setParameter({turdsize: 0});
+  pot.setParameter({turdsize: 0, alphamax: 1.334});
   pot.process(() => {
     let svg = pot.getSVG(1);
     cb(svg);
@@ -505,7 +507,7 @@ class ComponentAnalizer {
     console.log('found ' + ret.length + ' components in box');
     // expand with reachable valid components
     let todo = Array.from(ret);  // copy array
-    let invalid = []; // adlr do this part
+    let invalid = [];
     while (todo.length > 0) {
       console.log(todo);
       let found = [];  // IDs found this iteration
@@ -604,13 +606,15 @@ let crop = (grey, border) => {
 };
 
 let onload = () => {
+  
+
   loadImage((imgdata) => {
-    drawImageData(imgdata);
     let grey = imgDataToLinearGrey(imgdata);
     let sobel = sobel2d(grey);
     let subSobel = magicsubrect(sobel);
     let sub = magicsubrect(grey);
     let med = median(sub, subSobel);
+    console.log('median: ' + med);
     let threshimg = threshold(grey, med);
     let threshImgData = linearGreyToImgData(threshimg)
     drawImageData(threshImgData);

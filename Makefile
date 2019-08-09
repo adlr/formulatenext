@@ -64,4 +64,14 @@ favicon.png: favicon.svg
 	optipng -clobber -o7 -strip all -out $@ favicon-temp.png
 	rm favicon-temp.png
 
+signature.html: signature.o
+	emcc $(CFLAGS) -o $@ signature.o \
+		opencv/opencv/build_wasm/lib/libopencv_core.a \
+		opencv/opencv/build_wasm/lib/libopencv_imgproc.a \
+		-s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" \
+		-s ALLOW_MEMORY_GROWTH=1 \
+		-s USE_LIBPNG=1 \
+		-s USE_FREETYPE=1 \
+		-s DEMANGLE_SUPPORT=1
+
 -include *.d
