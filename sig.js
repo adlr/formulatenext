@@ -59,7 +59,7 @@ let loadImage = (cb) => {
     cb(imgdata);
   };
   //img.src = 'full_bilateral_3x3.png';
-  img.src = 'webcam1.png';
+  img.src = 'webcam2.png';
 }
 
 let ProcessImage = null;

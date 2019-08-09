@@ -393,11 +393,17 @@ void ProcessImage(char* bytes, int width, int height) {
     cv::Mat mat(height, width, CV_8UC4, bytes);
     cv::Mat grey(height, width, CV_32FC1);
     sRGBtoGrey(mat, &grey);
-    cv::Mat smallGrey(grey, MagicSubrect());
+
+    // unsharp mask
+    
+
+    cv::Mat filtered;
+    cv::bilateralFilter(grey, filtered, 3, 10, 10);
+    cv::Mat smallGrey(filtered, MagicSubrect());
     cv::Mat sob;
     Sobel(smallGrey, &sob);
     float med = Median(smallGrey, sob);
-    cv::threshold(grey, thresh, med, 1, cv::THRESH_BINARY);
+    cv::threshold(filtered, thresh, med, 1, cv::THRESH_BINARY);
     fprintf(stderr, "t type: %d (vs %d)\n", thresh.type(), grey.type());
   }
   Show(thresh);
