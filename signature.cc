@@ -26,15 +26,12 @@ void sRGBtoGrey(const cv::Mat& in, cv::Mat* out) {
       };
       float* fptr = reinterpret_cast<float*>(out->ptr(r, c));
       *fptr = RGBtoY(vals);
-      if (r == 500 && c == 1000) {
-        fprintf(stderr, "val: %f\n", *fptr);
-      }
     }
   }
 }
 
 cv::Rect MagicSubrect() {
-  int rectWidth = 1920 / 3;
+  int rectWidth = 1920 / 6;
   int rectHeight = 1080 / 6;
   int rectLeft = (1920 - rectWidth) / 2;
   int rectTop = (1080 * 2 / 3) - rectHeight;
@@ -85,7 +82,6 @@ float Median(const cv::Mat& grey, const cv::Mat& sob) {
     else
       rightsum += vals[right--].second;
   }
-  fprintf(stderr, "using idx %d\n", left);
   return vals[left].first;
 }
 
@@ -167,8 +163,6 @@ class ComponentAnalizer {
           continue;
         if (ret.find(comp) != ret.end())
           continue;
-        fprintf(stderr, "got comp %d at (%d, %d) (%d %d)\n", comp, x, y,
-                ids_.cols, ids_.rows);
         if (!ComponentIsValid(comp)) {
           fprintf(stderr, "found invalid component in subrect %d\n", comp);
           ret.clear();
@@ -181,7 +175,6 @@ class ComponentAnalizer {
       fprintf(stderr, "no components found\n");
       return ret;
     }
-    fprintf(stderr, "found %zu components in box\n", ret.size());
     // expand w/ reachable valid componets
     std::set<int> todo = ret;
     std::set<int> invalid;
@@ -371,15 +364,20 @@ final:
   top = std::max(0, top - border);
   right = std::min(in.cols, right + border);
   bottom = std::min(in.rows, bottom + border);
-  fprintf(stderr, "cropping to %d %d %d %d\n", left, top, right, bottom);
   *out = cv::Mat(in, cv::Rect(left, top, right - left, bottom - top));
 }
 
 void Show(const cv::Mat& mat) {
   int step = mat.step;
-  fprintf(stderr, "rowbytes: %d\n", step);
   EM_ASM_({
       bridge_showGrey($0, $1, $2, $3);
+    }, mat.ptr(0, 0), mat.cols, mat.rows, step);
+}
+
+void ShowFinal(const cv::Mat& mat) {
+  int step = mat.step;
+  EM_ASM_({
+      bridge_renderBitmap($0, $1, $2, $3);
     }, mat.ptr(0, 0), mat.cols, mat.rows, step);
 }
 
@@ -389,32 +387,57 @@ EMSCRIPTEN_KEEPALIVE
 void ProcessImage(char* bytes, int width, int height) {
   cv::Mat thresh(height, width, CV_8UC1);
   {
-    fprintf(stderr, "got an image\n");
     cv::Mat mat(height, width, CV_8UC4, bytes);
     cv::Mat grey(height, width, CV_32FC1);
     sRGBtoGrey(mat, &grey);
 
-    // unsharp mask
-    
+    // {
+    //   // blur beginning
+    //   cv::Mat gb;
+    //   cv::GaussianBlur(grey, gb, cv::Size(3, 3), 1);
+    //   grey = gb;
+    // }
 
-    cv::Mat filtered;
-    cv::bilateralFilter(grey, filtered, 3, 10, 10);
-    cv::Mat smallGrey(filtered, MagicSubrect());
-    cv::Mat sob;
-    Sobel(smallGrey, &sob);
-    float med = Median(smallGrey, sob);
-    cv::threshold(filtered, thresh, med, 1, cv::THRESH_BINARY);
-    fprintf(stderr, "t type: %d (vs %d)\n", thresh.type(), grey.type());
+    // unsharp mask
+    float amt = 1.5f;
+    cv::Mat gb;
+    cv::GaussianBlur(grey, gb, cv::Size(3, 3), 1);
+    try {
+      grey *= 1 + amt;
+      gb *= amt;
+      cv::Mat sharp = grey - gb;
+      // Show(sharp);
+
+      cv::Mat filtered;
+      cv::bilateralFilter(sharp, filtered, 3, 10, 10);
+      // cv::Mat filtered = grey;
+      cv::Mat smallGrey(filtered, MagicSubrect());
+      // Show(smallGrey);
+      cv::Mat sob;
+      Sobel(smallGrey, &sob);
+      float med = Median(smallGrey, sob);
+      cv::threshold(filtered, thresh, med, 1, cv::THRESH_BINARY);
+    } catch( cv::Exception& e ) {
+      const char* err_msg = e.what();
+      fprintf(stderr, "ex: %s\n", err_msg);
+      return;
+    }
   }
-  Show(thresh);
+  // Show(thresh);
   ComponentAnalizer ca(thresh);
   std::set<int> ids = ca.ReachableComponents(MagicSubrect());
   fprintf(stderr, "found %zu comps\n", ids.size());
+  if (ids.empty()) {
+    cv::Mat debug(thresh, MagicSubrect());
+    Show(debug);
+    return;
+  }
   cv::Mat sig;
   ca.ImageWithComponents(ids, &sig);
   cv::Mat cropped;
   Crop(sig, &cropped, 10);
-  Show(cropped);
+  // Show(cropped);
+  ShowFinal(cropped);
 }
 
 }  // extern "C
