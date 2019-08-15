@@ -1276,9 +1276,12 @@ var Potrace = (function() {
     var svg = '<svg id="svg" version="1.1" width="' + w + '" height="' + h +
         '" xmlns="http://www.w3.org/2000/svg">';
     svg += '<path d="';
+    let pathParts = [];
     for (i = 0; i < len; i++) {
       c = pathlist[i].curve;
-      svg += path(c);
+      let part = path(c);
+      pathParts.push(part);
+      svg += part;
     }
     if (opt_type === "curve") {
       strokec = "black";
@@ -1290,7 +1293,7 @@ var Potrace = (function() {
       fillrule = ' fill-rule="evenodd"';
     }
     svg += '" stroke="' + strokec + '" fill="' + fillc + '"' + fillrule + '/></svg>';
-    return svg;
+    return [svg, pathParts.join(''), w, h];
   }
   
   return{
