@@ -22,6 +22,7 @@ OBJS=\
 	view.o \
 	rendercache.o \
 	rootview.o \
+	svgpath.o \
 	thumbnailview.o \
 	undo_manager.o \
 	NotoMono-Regular.ttf.o \

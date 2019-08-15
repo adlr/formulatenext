@@ -5,6 +5,7 @@
 #include "SkPaint.h"
 
 #include "formulate_bridge.h"
+#include "svgpath.h"
 
 namespace formulate {
 
@@ -210,8 +211,18 @@ void DocView::RecomputePageSizes() {
     height += page_sizes_[i].height() * zoom_ + kBorderPixels;
   }
   SetSize(SkSize::Make(max_page_width_ * zoom_ + kBorderPixels * 2,
-                       height));
+                      height));
   SetNeedsDisplay();
+}
+
+SkPoint DocView::ClampToPage(int page, SkPoint pt) const {
+  if (page < 0 || page >= page_sizes_.size()) {
+    fprintf(stderr, "requested page size for invalid page\n");
+    return pt;
+  }
+  pt.fX = Clamp(pt.fX, 0.0f, page_sizes_[page].width());
+  pt.fY = Clamp(pt.fY, 0.0f, page_sizes_[page].height());
+  return pt;
 }
 
 void DocView::ViewPointToPageAndPoint(const SkPoint& viewpt,
@@ -520,6 +531,7 @@ void DocView::SetNeedsDisplayInSelection() {
 }
 
 void DocView::SetNeedsDisplayInObj(int pageno, int index) {
+  fprintf(stderr, "called SetNeedsDisplayInObj(%d %d)\n", pageno, index);
   if (pageno < 0)
     return;
   SkRect bbox = ConvertRectFromPage(pageno,
@@ -527,6 +539,55 @@ void DocView::SetNeedsDisplayInObj(int pageno, int index) {
   SkRect full_bounds = KnobBounds(KnobsForType(doc_.ObjectType(pageno, index)),
                                   bbox);
   SetNeedsDisplayInRect(full_bounds);
+}
+
+void DocView::InsertSignature(const char* svgpath) {
+  SVGPathIterator it(svgpath);
+  SVGPathIterator::Token tok;
+  float nums[6];
+  int numcnt = 0;
+  int numneeded = 0;
+
+  SkPath path;
+
+  for (SVGPathIterator::Token tok = it.Next();
+       tok.type != SVGPathIterator::Token::END;
+       tok = it.Next()) {
+    numcnt = 0;
+    if (tok.type == SVGPathIterator::Token::MOVETO ||
+        tok.type == SVGPathIterator::Token::LINETO) {
+      numneeded = 2;
+    } else if (tok.type == SVGPathIterator::Token::CURVETO) {
+      numneeded = 6;
+    } else if (tok.type != SVGPathIterator::Token::END) {
+      fprintf(stderr, "unexpected svg path token\n");
+      return;
+    }
+    while (numcnt < numneeded) {
+      SVGPathIterator::Token numtok = it.Next();
+      if (numtok.type != SVGPathIterator::Token::NUMBER) {
+        fprintf(stderr, "expected number svg token: %d (%d %d)\n", numtok.type,
+                numcnt, numneeded);
+        return;
+      }
+      nums[numcnt++] = numtok.number;
+    }
+    if (tok.type == SVGPathIterator::Token::MOVETO) {
+      path.moveTo(nums[0], nums[1]);
+    } else if (tok.type == SVGPathIterator::Token::LINETO) {
+      path.lineTo(nums[0], nums[1]);
+    } else if (tok.type == SVGPathIterator::Token::CURVETO) {
+      path.cubicTo(nums[0], nums[1], nums[2], nums[3], nums[4], nums[5]);
+    }
+  }
+  path.setFillType(SkPath::kEvenOdd_FillType);
+  // move object to center of current view.
+
+  int page = 0;
+  SkPoint point;
+  VisibleCenterPagePoint(&page, &point);
+  point = ClampToPage(page, point);
+  doc_.InsertPath(page, point, path);
 }
 
 bool DocView::SetKnobUnderPoint(SkPoint viewpt) {

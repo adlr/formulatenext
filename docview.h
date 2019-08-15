@@ -55,6 +55,18 @@ class DocView : public View, public PDFDocEventHandler {
   float PageHeight(size_t page) const { return page_sizes_[page].height(); }
   float MaxPageWidth() const { return max_page_width_; }
 
+  void VisibleCenterPagePoint(int* out_pg, SkPoint* out_pt) const {
+    SkRect rect = VisibleSubrect();
+    return ViewPointToPageAndPoint(SkPoint::Make(rect.centerX(),
+                                                 rect.centerY()),
+                                   out_pg, out_pt);
+  }
+
+  // if |pt|, which is in page coordinates, it outside |page|, it is
+  // modified to be within page boundaries. The new value (which may be
+  // the same as the old value) is returned.
+  SkPoint ClampToPage(int page, SkPoint pt) const;
+
   // Convert point in view coords (within Width() and Height()) to a
   // page and point within that page. The point within that page is in PDF
   // coordinates, so it doesn't take zoom into acct.
@@ -80,6 +92,8 @@ class DocView : public View, public PDFDocEventHandler {
   void UnselectObject(int pageno, int index);
   void ClearSelection();
   void SetNeedsDisplayInSelection();
+
+  void InsertSignature(const char* svgpath);
 
   // Returns true if a knob was hit. If a knob was hit, sets member variables.
   // Otherwise, members are left unchanged.

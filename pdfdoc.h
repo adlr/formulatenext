@@ -12,6 +12,7 @@
 #include "public/fpdf_save.h"
 #include "public/fpdfview.h"
 #include "SkCanvas.h"
+#include "SkPath.h"
 #include "SkSize.h"
 #include "third_party/base/span.h"
 
@@ -141,6 +142,8 @@ class PDFDoc : PDFRenderer {
   void DeleteObject(int pageno, int index);
   void InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj);
   int ObjectsOnPage(int pageno) const;
+
+  void InsertPath(int pageno, SkPoint center, const SkPath& path);
 
   void PlaceText(int pageno, SkPoint pagept, const std::string& ascii);
   void UpdateText(int pageno, int index, const std::string& ascii,

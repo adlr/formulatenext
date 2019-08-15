@@ -72,7 +72,13 @@ let imgDataToSVG = (imgdata, cb) => {
   pot.setParameter({turdsize: 0, alphamax: 1.334});
   pot.process(() => {
     let svg = pot.getSVG(1);
-    cb(svg);
+    cb(svg[0]);
+    if (window.hasOwnProperty('gAddSig')) {
+      console.log('doing magic callback');
+      window.gAddSig(svg[1], svg[2], svg[3]);
+    } else {
+      console.log('missing magic callback');
+    }
   });
 };
 

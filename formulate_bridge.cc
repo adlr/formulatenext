@@ -204,6 +204,13 @@ void UpdateEditText(const char* str) {
   doc_view_->SetEditingString(str);
 }
 
+EMSCRIPTEN_KEEPALIVE
+void InsertSignature(const char* svgpath) {
+  ScopedRedraw redraw_main(root_views_[kIDMain]);
+  ScopedRedraw redraw_thumb(root_views_[kIDThumb]);
+  doc_view_->InsertSignature(svgpath);
+}
+
 }  // extern "C"
 
 namespace formulate {

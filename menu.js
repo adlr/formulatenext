@@ -24,9 +24,14 @@ let menus = [
     {name: "Rotate Selected Pages", children: [
       {name: "90&deg; Clockwise"},
       {name: "180&deg;"},
-      {name: "90&deg; Counterclockwise"},
+      {name: "90&deg; Counterclockwise"}
     ]},
     {name: "Delete Selected Pages"}
+  ]},
+  {name: "Signature", children: [
+    {name: "Import Signature..."},
+    {name: "Insert Signature"},
+    {name: "Delete Signature"},
   ]},
   {name: "Zoom", children: [
     {name: "Out", key: "-"},
@@ -61,7 +66,7 @@ class ShortCutListener {
 let shortCutListener = null;
 
 class MenuItem {
-  constructor(str, parent, shortcut, callback) {
+  constructor(str, parent, shortcut, callback, svg) {
     this.str = str;
     this.parent = parent;
     this.shortcut = shortcut;
@@ -71,6 +76,7 @@ class MenuItem {
     this.div = document.createElement('div');
     this.timerToShowHide = null;
     this.childVisible = false;
+    this.svg = svg;
     if (!this.isSpacer()) {
       this.div.classList.add('menuitem');
       this.leftDiv = document.createElement('div');
@@ -166,7 +172,7 @@ class MenuItem {
       this.div.classList.add('menuspacer');
       return;
     }
-    this.leftDiv.innerHTML = this.str;
+    this.leftDiv.innerHTML = this.svg ? this.svg : this.str;
     if (this.shortcut)
       this.rightDiv.innerHTML = shortcutKeyToStr(this.shortcut);
     else if (this.child)
@@ -203,6 +209,14 @@ class MenuContainer {
   addMenuItem(item) {
     this.items.push(item);
     this.div.appendChild(item.div);
+  }
+  delMenuItem(item) {
+    let index = this.items.indexOf(item);
+    console.log('del ' + index);
+    if (index < 0)
+      return;
+    this.items.splice(index, 1);
+    this.div.removeChild(item.div);
   }
   hide(child) {
     if (this.parent)
@@ -363,7 +377,8 @@ const populate2 = function(items, container) {
       item = new MenuItem(initem.name,
                           container,
                           initem.hasOwnProperty('key') ? initem.key : null,
-                          initem.action);
+                          initem.action,
+                          initem.hasOwnProperty('svg') ? initem.svg : null);
       if (initem.hasOwnProperty('enabled') && !initem.enabled) {
         item.setEnabled(false);
       }

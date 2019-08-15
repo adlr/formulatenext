@@ -30,6 +30,7 @@ let DownloadFile = null;
 let UndoRedoClicked = null;
 let ToolbarClicked = null;
 let UpdateEditText = null;
+let InsertSignature = null;
 
 const ID_MAIN = 0;
 const ID_THUMB = 1;
@@ -110,6 +111,52 @@ class SelectButtonGroup {
   }
 }
 
+class SignatureManager {
+  constructor(insertMenuPath, deleteMenuPath, importMenuPath) {
+    let insertMenuItem = globalMenuBar.findMenu(insertMenuPath);
+    this.insertMenu = new MenuContainer(insertMenuItem);
+    insertMenuItem.setContainer(this.insertMenu);
+    let deleteMenuItem = globalMenuBar.findMenu(deleteMenuPath);
+    this.deleteMenu = new MenuContainer(deleteMenuItem);
+    deleteMenuItem.setContainer(this.deleteMenu);
+    this.ss = new SignatureStore();
+    // build up menus
+    for (let i = 0; i < this.ss.length(); i++) {
+      this.insertMenuItems(i);
+    }
+    globalMenuBar.findMenu(importMenuPath).setCallback(() => {
+      let subWindow = window.open('sig.html');
+      subWindow.gAddSig = (path, width, height) => {
+        this.addSig(path, width, height);
+        subWindow.close();
+      };
+    });
+  }
+  insertMenuItems(index) {
+    let svg = this.ss.getAsSVG(index);
+    let sig = this.ss.getSignature(index);
+    let inItem = new MenuItem(null, this.insertMenu, null, null, svg);
+    inItem.setCallback(() => {
+      InsertSignature(sig[0]);
+    });
+    this.insertMenu.addMenuItem(inItem);
+    let delCallback = () => {
+    };
+    let delItem = new MenuItem(null, this.deleteMenu, null, delCallback, svg);
+    delItem.setCallback(() => {
+      this.insertMenu.delMenuItem(inItem);
+      this.deleteMenu.delMenuItem(delItem);
+      this.ss.deleteSignature(sig[0], sig[1], sig[2]);
+    });
+    this.deleteMenu.addMenuItem(delItem);
+  }
+  // Called when user has created a new signature:
+  addSig(path, width, height) {
+    this.ss.addSignature(path, width, height);
+    this.insertMenuItems(this.ss.length() - 1);
+  }
+}
+
 let bridge_undoRedoEnable = null;
 let bridge_setToolboxState = null;
 let bridge_startComposingText = null;
@@ -142,6 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
     UndoRedoClicked = Module.cwrap('UndoRedoClicked', null, ['number']);
     ToolbarClicked = Module.cwrap('ToolbarClicked', null, ['number']);
     UpdateEditText = Module.cwrap('UpdateEditText', null, ['string']);
+    InsertSignature = Module.cwrap('InsertSignature', null, ['string']);
 
     runtime_ready = true;
     console.log("runtime is ready");
@@ -189,6 +237,11 @@ document.addEventListener('DOMContentLoaded', function() {
       toolbox.setSelected(tool);
       toolbox.setEnabled(enabled);
     }
+
+    let signatureManager =
+        new SignatureManager(['Signature', 'Insert Signature'],
+                             ['Signature', 'Delete Signature'],
+                             ['Signature', 'Import Signature...']);
   };
 
   var outer = document.getElementById('main-scroll-outer');

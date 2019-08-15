@@ -476,10 +476,10 @@ void PDFDoc::InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj) {
   FPDFPage_InsertObject(page.get(), pageobj);
   fprintf(stderr, "after we have %d objs\n", FPDFPage_CountObjects(page.get()));
 
-  double a, b, c, d, e, f;
-  int rc = FPDFText_GetMatrix(pageobj, &a, &b, &c, &d, &e, &f);
-  fprintf(stderr, "get matrix(%d) = [%f %f %f %f %f %f]\n", rc,
-          a, b, c, d, e, f);
+  // double a, b, c, d, e, f;
+  // int rc = FPDFText_GetMatrix(pageobj, &a, &b, &c, &d, &e, &f);
+  // fprintf(stderr, "get matrix(%d) = [%f %f %f %f %f %f]\n", rc,
+  //         a, b, c, d, e, f);
 
   fprintf(stderr, "Going to count objects\n");
   index = FPDFPage_CountObjects(page.get()) - 1;
@@ -496,10 +496,11 @@ void PDFDoc::InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj) {
   if (FPDFPageObj_GetBounds(pageobj, &dirty.fLeft, &dirty.fTop,
                             &dirty.fRight, &dirty.fBottom)) {
     render_cache.Invalidate(pageno, dirty);
+
     for (PDFDocEventHandler* handler : event_handlers_)
       handler->NeedsDisplayInRect(pageno, dirty);
   } else {
-    fprintf(stderr, "Failed to get bounds for new text obj\n");
+    fprintf(stderr, "Failed to get bounds for new obj\n");
   }
 }
 
@@ -510,6 +511,77 @@ int PDFDoc::ObjectsOnPage(int pageno) const {
     return 0;
   }
   return FPDFPage_CountObjects(page.get());
+}
+
+void PDFDoc::InsertPath(int pageno, SkPoint center, const SkPath& path) {
+  ScopedFPDFPageObject obj(FPDFPageObj_CreateNewPath(0, 0));
+  SkPath::RawIter it(path);
+  float pgheight = PageSize(pageno).height();
+  while (true) {
+    SkPoint pts[4];
+    SkPath::Verb verb = it.next(pts);
+    if (verb == SkPath::kDone_Verb)
+      break;
+    if (verb == SkPath::kMove_Verb) {
+      if (!FPDFPath_MoveTo(obj.get(), pts[0].x(), pgheight - pts[0].y())) {
+        fprintf(stderr, "moveto failed\n");
+        return;
+      }
+    } else if (verb == SkPath::kLine_Verb) {
+      if (!FPDFPath_LineTo(obj.get(), pts[1].x(), pgheight - pts[1].y())) {
+        fprintf(stderr, "lineto failed\n");
+        return;
+      }
+    } else if (verb == SkPath::kCubic_Verb) {
+      if (!FPDFPath_BezierTo(obj.get(),
+                             pts[1].x(), pgheight - pts[1].y(),
+                             pts[2].x(), pgheight - pts[2].y(),
+                             pts[3].x(), pgheight - pts[3].y())) {
+        fprintf(stderr, "bezierto failed\n");
+        return;
+      }
+    }
+  }
+
+  if (path.getFillType() != SkPath::kEvenOdd_FillType) {
+    fprintf(stderr, "Unknown fill type\n");
+    return;
+  } else {
+    if (!FPDFPath_SetDrawMode(obj.get(), FPDF_FILLMODE_ALTERNATE, false)) {
+      fprintf(stderr, "setdrawmode failed\n");
+      return;
+    }
+  }
+
+  SkRect bounds = path.computeTightBounds();
+  if ((bounds.right() - bounds.left()) < 0.001) {
+    fprintf(stderr, "path is too thin %f %f\n", bounds.right(), bounds.left());
+    return;
+  }
+  // conver to PDF coordinates
+  bounds.fTop = pgheight - bounds.fTop;
+  bounds.fBottom = pgheight - bounds.fBottom;
+
+  // Set width to 3 inches.
+  const float swidth = 72 * 3;
+  float scale = swidth / (bounds.right() - bounds.left());
+  float sheight = (bounds.top() - bounds.bottom()) * scale;
+
+  bounds.fLeft *= scale;
+  bounds.fTop *= scale;
+  bounds.fRight *= scale;
+  bounds.fBottom *= scale;
+
+  float dx = center.x() - (bounds.left() + swidth / 2);
+  float dy = center.y() - (bounds.bottom() + sheight / 2);
+
+  fprintf(stderr, "center: %f %f, ltrb: %f %f %f %f (%f %f %f)\n",
+          center.x(), center.y(),
+          bounds.left(), bounds.top(), bounds.right(), bounds.bottom(),
+          dx, dy, scale);
+
+  FPDFPageObj_Transform(obj.get(), scale, 0, 0, scale, dx, dy);
+  InsertObject(pageno, 0, obj.release());
 }
 
 void PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
