@@ -531,7 +531,6 @@ void DocView::SetNeedsDisplayInSelection() {
 }
 
 void DocView::SetNeedsDisplayInObj(int pageno, int index) {
-  fprintf(stderr, "called SetNeedsDisplayInObj(%d %d)\n", pageno, index);
   if (pageno < 0)
     return;
   SkRect bbox = ConvertRectFromPage(pageno,
