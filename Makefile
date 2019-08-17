@@ -1,7 +1,7 @@
 all: formulate.html
 
 CFLAGS=\
-	-g -O0 --profiling
+	-g -Os --profiling
 
 INC=\
 	-Ipdfium/pdfium \
@@ -20,6 +20,7 @@ OBJS=\
 	scrollview.o \
 	pdfdoc.o \
 	view.o \
+	page_cache.o \
 	rendercache.o \
 	rootview.o \
 	svgpath.o \
