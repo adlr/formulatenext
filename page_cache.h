@@ -11,55 +11,28 @@
 namespace formulate {
 
 class PageCache;
-class ScopedObject;
 class ScopedPage;
 
-struct Entry {
-  explicit Entry(PageCache* cache) : cache_(cache) {}
-  virtual ~Entry() = 0;
-  void Increment() { count_++; }
-  void Decrement() { count_--; }
-  int count_{0};
-  PageCache* cache_;
-};
-
-struct ObjectEntry : public Entry {
-  ObjectEntry(PageCache* cache, FPDF_PAGEOBJECT obj)
-      : Entry(cache), obj_(obj) {}
-  ~ObjectEntry();
-  FPDF_PAGEOBJECT obj_;
-};
-
-struct PageEntry : public Entry {
-  PageEntry(PageCache* cache, FPDF_PAGE page)
-      : Entry(cache), page_(page) {}
+struct PageEntry {
+  explicit PageEntry(FPDF_PAGE page) : page_(page) {}
   ~PageEntry() { FPDF_ClosePage(page_); }
-  ScopedObject GetObject(int index);
+  FPDF_PAGEOBJECT GetObject(int index) {
+    return FPDFPage_GetObject(page_, index);
+  }
   void GenerateContentStreams();
-  FPDF_PAGE page_;
-  std::map<int, ObjectEntry*> objs_;
+  int count_{0};
+  FPDF_PAGE page_{nullptr};
   bool dirty_{false};
-};
-
-class ScopedObject {
- public:
-  ScopedObject(ObjectEntry* entry)
-      : entry_(entry) { entry->Increment(); }
-  ~ScopedObject() { entry_->Decrement(); }
-  FPDF_PAGEOBJECT get() const { return entry_->obj_; }
-  operator bool() const { return get() != nullptr; }
- private:
-  ObjectEntry* entry_;
 };
 
 class ScopedPage {
  public:
-  ScopedPage(PageEntry* entry)
-      : entry_(entry) { entry->Increment(); }
-  ~ScopedPage() { entry_->Decrement(); }
+  explicit ScopedPage(PageEntry* entry)
+      : entry_(entry) { entry_->count_++; }
+  ~ScopedPage() { entry_->count_--; }
   FPDF_PAGE get() const { return entry_->page_; }
   operator bool() const { return get() != nullptr; }
-  ScopedObject GetObject(int index) { return entry_->GetObject(index); }
+  FPDF_PAGEOBJECT GetObject(int index) { return entry_->GetObject(index); }
   void MarkDirty() { entry_->dirty_ = true; }
  private:
   PageEntry* entry_;

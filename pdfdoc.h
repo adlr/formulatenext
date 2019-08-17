@@ -16,6 +16,7 @@
 #include "SkSize.h"
 #include "third_party/base/span.h"
 
+#include "page_cache.h"
 #include "rendercache.h"
 #include "undo_manager.h"
 
@@ -126,9 +127,7 @@ class PDFDoc : PDFRenderer {
   // If |native| is true, it will only find an object that's native
   // to this software.
   int ObjectUnderPoint(int pageno, SkPoint pt, bool native) const;
- private:
-  SkRect BoundingBoxForObj(const ScopedFPDFPage& page, float pageheight,
-                           int index) const;
+
  public:
   SkRect BoundingBoxForObj(int pageno, int index) const;
   ObjType ObjectType(int pageno, int index) const;
@@ -177,6 +176,7 @@ class PDFDoc : PDFRenderer {
   std::unique_ptr<TestLoader> loader_;
   FPDF_FILEACCESS file_access_;
   ScopedFPDFDocument doc_;
+  mutable PageCache pagecache_;
   std::vector<PDFDocEventHandler*> event_handlers_;
 };
 

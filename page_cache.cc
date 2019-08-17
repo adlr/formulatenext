@@ -6,24 +6,6 @@
 
 namespace formulate {
 
-ObjectEntry::~ObjectEntry() {
-  // FPDFPageObj_Destroy(obj_);
-  if (count_) {
-    fprintf(stderr, "Destroying ObjectEntry with opened ScopedObjects. bad!\n");
-  }
-}
-
-ScopedObject PageEntry::GetObject(int index) {
-  auto it = objs_.find(index);
-  if (it != objs_.end()) {
-    // Cache hit!
-    return ScopedObject(it->second);
-  }
-  ObjectEntry* entry = new ObjectEntry(cache_, FPDFPage_GetObject(page_, index));
-  objs_[index] = entry;
-  return ScopedObject(entry);
-}
-
 void PageEntry::GenerateContentStreams() {
   if (!dirty_)
     return;
@@ -44,6 +26,7 @@ void PageCache::GenerateContentStreams() {
 
 void PageCache::RemoveAllObjects() {
   GenerateContentStreams();
+  pages_.clear();
 }
 
 ScopedPage PageCache::OpenPage(int pageno) {
@@ -52,7 +35,7 @@ ScopedPage PageCache::OpenPage(int pageno) {
     // cache hit
     return ScopedPage(it->second);
   }
-  PageEntry* entry = new PageEntry(this, FPDF_LoadPage(doc_, pageno));
+  PageEntry* entry = new PageEntry(FPDF_LoadPage(doc_, pageno));
   pages_[pageno] = entry;
   return ScopedPage(entry);
 }
