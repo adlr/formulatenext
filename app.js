@@ -329,8 +329,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   let launchEditor = (xpos, ypos, zoom, text, caretPos) => {
     const dpr = window.devicePixelRatio || 1;
-    xpos /= dpr;
-    ypos /= dpr;
     console.log(`Edit at ${xpos} ${ypos}, ${zoom}, ${text}, ${caretPos}`);
     let vertOffset = calcFontMetrics((zoom * 12) | 0);
     let padding = 5;
@@ -341,8 +339,8 @@ document.addEventListener('DOMContentLoaded', function() {
     textarea.cols = '1';
     textarea.classList.add('texteditor');
 
-    textarea.style.left = (outer.offsetLeft + xpos) + 'px';
-    textarea.style.top = (outer.offsetTop + ypos) + 'px';
+    textarea.style.marginLeft = xpos + 'px';
+    textarea.style.marginTop = ypos + 'px';
     textarea.style.transform = 'scale(' + zoom + ')';
     let update = () => {
       textarea.style.height = '';
@@ -358,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     textarea.value = text;
     update();
-    document.getElementById('main-view').appendChild(textarea);
+    document.getElementById('main-scroll-inner').appendChild(textarea);
     setTimeout(() => {
       textarea.focus();
       update();
@@ -384,8 +382,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const kShiftKey = 4;
 
     const dpr = window.devicePixelRatio || 1;
-    const xpos = (ev.offsetX - div.scrollLeft) * dpr;
-    const ypos = (ev.offsetY - div.scrollTop) * dpr;
+    const xpos = (ev.pageX - div.getBoundingClientRect().left) * dpr;
+    const ypos = (ev.pageY - div.getBoundingClientRect().top) * dpr;
     const keys = (ev.ctrlKey ? kControlKey : 0) |
           (ev.altKey ? kAltKey : 0) |
           (ev.shiftKey ? kShiftKey : 0);
@@ -422,7 +420,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
     div.addEventListener('click', ev => {
-      console.log('click');
       pushMouseEvent(ev, div, kEventKindClick, id);
     });
   };

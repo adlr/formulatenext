@@ -245,10 +245,9 @@ void bridge_setToolboxState(bool enabled, int tool) {
 
 void bridge_startComposingText(SkPoint docpoint, View* view, float zoom,
                                const char* str, int caretpos) {
-  SkPoint pt = root_views_[kIDMain]->ConvertPointFromChild(view, docpoint);
   EM_ASM_({
       bridge_startComposingText($0, $1, $2, UTF8ToString($3), $4);
-    }, pt.x(), pt.y(), zoom, str, caretpos);
+    }, docpoint.x(), docpoint.y(), zoom, str, caretpos);
 }
 
 void bridge_stopComposingText() {
