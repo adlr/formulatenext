@@ -8,32 +8,41 @@ code to the browser written in JavaScript.
 
 Software dependencies:
 
-* pdfium - rendering PDF for web-based GUI, editing
-* (later) harfbuzz/skia - rendering Unicode text to PDF
+* pdfium/skia - rendering PDF for web-based GUI, editing
+* opencv - signature import/image cleanup
+* (later) harfbuzz - rendering Unicode text to PDF
 
-Planned features:
+Current features:
 
 * Ability to open and view a PDF
 * Arbitrary zoom in/out
 * Thumbnail view
-
-At this point I expect a few key C++ classes:
-
-* PDFDocument - The Model, and the bridge to PDFium
-* DocController - processes input on the main doc view
-* DocView - view for a document
-* ThumbnailController - processes input on the thumbnail view
-* ThumbnailView - view for the thumbnails
-
-Then the following features can be added:
-
-* Rotate pages
 * Save document
 * Select (multiple) pages in thumbnail view and drag to reorder
-* Drag a PDF document in, or drag pages between document windows to copy pages
-* Drop text onto a page
-* Re-open doc and edit dropped text
 * Draw/freehand (and edit when reopened)
+* Add/edit text in PDF documents
+* Append PDF to document
+
+Immediately Planned Features (in order I plan to work on them):
+
+* Change added text to use FreeText Annotations rather than PDF text
+  objects. Goal is to support multi-line text boxes.
+* Move line drawing annotations to Ink(?) Annotations rather than
+  using PDF path objects.
+* Disallow editing anything except annotations
+
+Known issues:
+
+* Rotated pages don't seem to work well at all
+* It's hard to add text on top of existing text (you end up editing existing text)
+* Sometimes there's an error when appending a PDF
+* Off-by-one pixel errors in the render cache can lead to artifacts (saved doc not impacted, luckily)
+
+Other TODOs in no particular order:
+
+* Rotate pages
+* Delete pages
+* Drag a PDF document in, or drag pages between document windows to copy pages
 * Drop images into page (and edit when reopened)
 * Better text handling (with Harfbuzz)
 * Rich text
