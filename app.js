@@ -496,7 +496,7 @@ let bridge_setSize = function(id, width, height, xpos, ypos) {
   }
   let inner = document.getElementById(
     id == ID_MAIN ? 'main-scroll-inner' : 'thumb-scroll-inner');
-  inner.style.width = width + 'px';
+  inner.style.width = inner.style.minWidth = width + 'px';
   inner.style.height = height + 'px';
   let outer = document.getElementById(
     id == ID_MAIN ? 'main-scroll-outer' : 'thumb-scroll-outer');

@@ -40,7 +40,7 @@ body {
   top: 0px;
   position: absolute;
   left: 0px;
-  display: block;
+  display: flex;
 
   overflow: auto;
   z-index: 10;
@@ -88,7 +88,7 @@ body {
   top: 0px;
   position: absolute;
   left: 0px;
-  display: block;
+  display: flex;
 
   overflow: auto;
   z-index: 10;
@@ -99,6 +99,7 @@ body {
   height: 3000px;
   display: block;
   touch-action: none;
+  margin: auto;
 }
 
 #file-input {
