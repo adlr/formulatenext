@@ -446,8 +446,14 @@ document.addEventListener('DOMContentLoaded', function() {
           else
             AppendPDF(buf, data.length);
           Module._free(buf);
-          if (isOpen)
+          if (isOpen) {
             FinishFileLoad();
+            // Disable File->Open after a doc is openend
+            globalMenuBar.findMenu(['File', 'Open...']).setEnabled(false);
+            // Disable welcome message
+            let msg = document.getElementById('welcome-message');
+            msg.parentNode.removeChild(msg);
+          }
         };
         reader.readAsArrayBuffer(file);
       };

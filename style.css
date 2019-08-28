@@ -5,6 +5,13 @@ body {
   flex-direction: column;
 }
 
+#welcome-message {
+  left: 10px;
+  top: 10px;
+  position: absolute;
+  width: 200px;
+}
+
 #menubar {
   margin: 5px 0 0 5px;
 }
