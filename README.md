@@ -33,6 +33,7 @@ Immediately Planned Features (in order I plan to work on them):
 
 Known issues:
 
+* Added text must be single-line
 * Rotated pages don't seem to work well at all
 * It's hard to add text on top of existing text (you end up editing existing text)
 * Sometimes there's an error when appending a PDF
