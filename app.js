@@ -458,6 +458,9 @@ document.addEventListener('DOMContentLoaded', function() {
   };
   setupFileChooserMenu(['File', 'Open...'], true);
   setupFileChooserMenu(['File', 'Append PDF...'], false);
+  globalMenuBar.findMenu(['Help', 'Fork me on GitHub']).setCallback((ev) => {
+    window.open('https://github.com/adlr/formulatenext');
+  });
 }, false);
 
 let PushCanvasXYWH = (id, bufptr, xpos, ypos, width, height) => {

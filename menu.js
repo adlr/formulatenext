@@ -37,6 +37,9 @@ let menus = [
     {name: "Out", key: "-"},
     {name: "In", key: "="},
     {name: "Default", key: "0"}
+  ]},
+  {name: "Help", children: [
+    {name: "Fork me on GitHub"}
   ]}
 ];
 
