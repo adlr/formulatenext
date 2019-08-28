@@ -118,6 +118,8 @@ class MenuItem {
     }
   }
   clicked(ev) {
+    if (!this.enabled)
+      return;
     if (this.child)
       return;
     this.hide(null);
