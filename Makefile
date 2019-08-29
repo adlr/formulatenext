@@ -76,4 +76,28 @@ signature.html: signature.o
 		-s USE_FREETYPE=1 \
 		-s DEMANGLE_SUPPORT=1
 
+DISTFILES=\
+	formulate.js \
+	formulate.wasm \
+	Roboto \
+	app.html \
+	app.js \
+	favicon.png \
+	style.css \
+	menu.js \
+	menu.css \
+	toolbar.css \
+	material-icons.css \
+	MaterialIcons-Regular.* \
+	sig.html \
+	sig.js \
+	potrace.js \
+	sigstore.js \
+	signature.js \
+	signature.wasm \
+
+dist: signature.html formulate.html
+	mkdir -p dist
+	cp -Rp $(DISTFILES) dist/
+
 -include *.d
