@@ -310,6 +310,7 @@ View* DocView::MouseDown(MouseInputEvent ev) {
     int pageno = -1;
     SkPoint pagept = SkPoint::Make(0, 0);
     ViewPointToPageAndPoint(ev.position(), &pageno, &pagept);
+    doc_.DumpAPAtPagePt(pageno, pagept);
     int obj = doc_.ObjectUnderPoint(pageno, pagept, true);
     fprintf(stderr, "Object under pt: (%d, %f %f) %d (type %d)\n", pageno,
             pagept.x(), pagept.y(), obj, doc_.ObjectType(pageno, obj));

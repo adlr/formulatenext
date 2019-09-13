@@ -153,6 +153,8 @@ class PDFDoc : PDFRenderer {
                    float dx, float dy, bool do_move, bool do_undo);
   void SetObjectBounds(int pageno, int objindex, SkRect bounds);
 
+  void DumpAPAtPagePt(int pageno, SkPoint pt);
+
   // Move the pages in the range [start, end) to index |to|.
   void MovePages(int start, int end, int to);
 

@@ -5,8 +5,16 @@
 #include <stdio.h>
 #include <wchar.h>
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
+#include <hb.h>
+#include <hb-ft.h>
+
+#include "public/fpdf_annot.h"
 #include "public/fpdf_ppo.h"
 #include "public/fpdf_save.h"
+
 
 #include "formulate_bridge.h"
 
@@ -493,7 +501,77 @@ void PDFDoc::InsertPath(int pageno, SkPoint center, const SkPath& path) {
   InsertObject(pageno, 0, obj.release());
 }
 
+namespace {
+
+struct SkEmbeddedResource {const uint8_t* data; const size_t size;};
+struct SkEmbeddedHeader {const SkEmbeddedResource* entries; const int count;};
+extern "C" SkEmbeddedHeader const ARIMO_FONT;
+
+void TestShape() {
+  // init freetype
+  FT_Library ftlib;
+  FT_Error err = FT_Init_FreeType(&ftlib);
+  if (err) {
+    fprintf(stderr, "FT_Init_FreeType failed\n");
+    return;
+  }
+
+  // load Arimo
+  // hb_blob_t* arimo_blob =
+  //     hb_blob_create(reinterpret_cast<const char*>(ARIMO_FONT.entries[0].data),
+  //                    ARIMO_FONT.entries[0].size,
+  //                    HB_MEMORY_MODE_READONLY,
+  //                    nullptr, nullptr);
+  // hb_blob_make_immutable(arimo_blob);
+  // hb_face_t* face = hb_face_create(arimo_blob, 0);
+  // hb_blob_destroy(arimo_blob);
+  // hb_face_set_index(face, 0);
+  //hb_face_set_upem(face, ???);
+
+  FT_Face ft_face;
+  // err = FT_New_Memory_Face(ftlib, g_FoxitSansFontData,
+  //                          sizeof(g_FoxitSansFontData), 0, &ft_face);
+  err = FT_New_Memory_Face(ftlib, ARIMO_FONT.entries[0].data,
+                           ARIMO_FONT.entries[0].size, 0, &ft_face);
+  if (err) {
+    fprintf(stderr, "FT_New_Memory_Face failed\n");
+    return;
+  }
+
+  // const hb_tag_t KernTag = HB_TAG('k', 'e', 'r', 'n');
+  // hb_feature_t KerningOn   = { KernTag, 1, 0, std::numeric_limits<unsigned int>::max() };
+  
+  FT_Set_Char_Size(ft_face, 0, 1200, 0, 0);
+
+  hb_font_t* hb_font = hb_ft_font_create(ft_face, nullptr);
+  // hb_font_t* hb_font = hb_font_create(face);
+
+  hb_font_set_scale(hb_font, 1200, 1200);
+  const char* user_input = "LAVA TVTlM";
+  hb_buffer_t *hb_buffer = hb_buffer_create();
+  hb_buffer_add_utf8(hb_buffer, user_input, -1, 0, -1);
+  hb_buffer_guess_segment_properties(hb_buffer);
+
+  hb_buffer_set_direction(hb_buffer, HB_DIRECTION_LTR);
+  hb_buffer_set_script(hb_buffer, HB_SCRIPT_LATIN);
+  hb_buffer_set_language(hb_buffer, hb_language_from_string("en", -1));
+
+  hb_shape(hb_font, hb_buffer, nullptr, 0);
+  hb_glyph_info_t *info = hb_buffer_get_glyph_infos(hb_buffer, NULL);
+  hb_glyph_position_t *pos = hb_buffer_get_glyph_positions(hb_buffer, NULL);
+  unsigned int len = hb_buffer_get_length(hb_buffer);
+  for (unsigned int i = 0; i < len; i++) {
+    fprintf(stderr, "cp: %d, msk: %d, cl: %d, xa: %d ya: %d xo: %d yo: %d\n",
+            info[i].codepoint, info[i].mask, info[i].cluster,
+            pos[i].x_advance, pos[i].y_advance,
+            pos[i].x_offset, pos[i].y_offset);
+  }
+}
+
+}  // namespace {}
+
 void PDFDoc::PlaceText(int pageno, SkPoint pagept, const std::string& ascii) {
+  TestShape();
   ScopedPage page = pagecache_.OpenPage(pageno);
   if (!page) {
     fprintf(stderr, "failed to load PDFPage\n");
@@ -655,6 +733,34 @@ void PDFDoc::MoveObjects(int pageno, const std::set<int>& objs,
 
 void PDFDoc::SetObjectBounds(int pageno, int objindex, SkRect bounds) {
   
+}
+
+void PDFDoc::DumpAPAtPagePt(int pageno, SkPoint pt) {
+  ScopedPage page = pagecache_.OpenPage(pageno);
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return;
+  }
+  int cnt = FPDFPage_GetAnnotCount(page.get());
+  fprintf(stderr, "There are %d annots to consider\n", cnt);
+  for (int i = 0; i < cnt; i++) {
+    //FPDF_ANNOT_FREETEXT
+    FPDF_ANNOTATION annot = FPDFPage_GetAnnot(page.get(), i);
+    if (!annot)
+      continue;
+    FPDF_ANNOTATION_SUBTYPE type = FPDFAnnot_GetSubtype(annot);
+    fprintf(stderr, "annot %d has type %d\n", i, type);
+    unsigned long len =
+        FPDFAnnot_GetAP(annot, FPDF_ANNOT_APPEARANCEMODE_NORMAL, nullptr, 0);
+    if (len > 0) {
+      unsigned char buf[len + 2];
+      FPDFAnnot_GetAP(annot, FPDF_ANNOT_APPEARANCEMODE_NORMAL,
+                      reinterpret_cast<FPDF_WCHAR *>(buf), len);
+      buf[len] = buf[len + 1] = '\0';
+      fprintf(stderr, "AP: %s\n", UTF16LEToStr(buf).c_str());
+    }
+    FPDFPage_CloseAnnot(annot);
+  }
 }
 
 void PDFDoc::MovePages(int start, int end, int to) {

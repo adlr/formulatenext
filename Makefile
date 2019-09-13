@@ -12,7 +12,10 @@ INC=\
 	-Inon-test-include
 
 %.o : %.cc
-	emcc $(CFLAGS) -MMD -std=c++14 $(INC) -o $@ $<
+	emcc $(CFLAGS) -MMD -std=c++14 $(INC) -o $@ $< -s USE_FREETYPE=1 -s USE_HARFBUZZ=1
+
+%.o : %.cpp
+	emcc $(CFLAGS) -MMD -std=c++14 $(INC) -o $@ $< -s USE_FREETYPE=1 -s USE_HARFBUZZ=1
 
 OBJS=\
 	formulate_bridge.o \
@@ -26,6 +29,7 @@ OBJS=\
 	svgpath.o \
 	thumbnailview.o \
 	undo_manager.o \
+	Arimo-Regular.ttf.o \
 	NotoMono-Regular.ttf.o \
 	skia/skia/formulate_out/libskia.a \
 	pdfium/pdfium/out/Debug/obj/libpdfium.a
@@ -58,6 +62,7 @@ formulate.html: $(OBJS) $(MATERIAL_FONTS_FILES) Roboto/Roboto.css
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s USE_LIBPNG=1 \
 		-s USE_FREETYPE=1 \
+		-s USE_HARFBUZZ=1 \
 		-s DEMANGLE_SUPPORT=1
 
 favicon.png: favicon.svg
