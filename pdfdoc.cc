@@ -15,8 +15,8 @@
 #include "public/fpdf_ppo.h"
 #include "public/fpdf_save.h"
 
-
 #include "formulate_bridge.h"
+#include "rich_format.h"
 
 namespace formulate {
 
@@ -503,11 +503,18 @@ void PDFDoc::InsertPath(int pageno, SkPoint center, const SkPath& path) {
 
 namespace {
 
+extern "C" {
+  extern const unsigned char g_FoxitSansFontData[15025];
+}
+
 struct SkEmbeddedResource {const uint8_t* data; const size_t size;};
 struct SkEmbeddedHeader {const SkEmbeddedResource* entries; const int count;};
 extern "C" SkEmbeddedHeader const ARIMO_FONT;
 
 void TestShape() {
+  RichFormat formatter;
+  formatter.Format("Hi <b>there!</b><br/>Nice\nto <i>See<b>   you</b></i><br/>", 0);
+
   // init freetype
   FT_Library ftlib;
   FT_Error err = FT_Init_FreeType(&ftlib);
@@ -541,13 +548,32 @@ void TestShape() {
   // const hb_tag_t KernTag = HB_TAG('k', 'e', 'r', 'n');
   // hb_feature_t KerningOn   = { KernTag, 1, 0, std::numeric_limits<unsigned int>::max() };
   
+  fprintf(stderr, "line height: %d\n", (int)ft_face->height);
+  fprintf(stderr, "Font name: [%s] [%s]\n",
+          ft_face->family_name, ft_face->style_name);
   FT_Set_Char_Size(ft_face, 0, 1200, 0, 0);
+
+  {
+    // get first/last char info
+    FT_UInt first_gid = 0;
+    FT_ULong first_char = FT_Get_First_Char(ft_face, &first_gid);
+    fprintf(stderr, "first gid/char: %u/%lu\n", first_gid, first_char);
+    int limit = 300;
+    while (first_gid != 0) {
+      first_char = FT_Get_Next_Char(ft_face, first_char, &first_gid);
+      fprintf(stderr, "      git/char: %u/%lu\n", first_gid, first_char);
+      if (limit-- == 0) {
+        fprintf(stderr, "breakout!\n");
+        break;
+      }
+    }
+  }
 
   hb_font_t* hb_font = hb_ft_font_create(ft_face, nullptr);
   // hb_font_t* hb_font = hb_font_create(face);
 
   hb_font_set_scale(hb_font, 1200, 1200);
-  const char* user_input = "LAVA TVTlM";
+  const char* user_input = "LAVA TVTlMfiM";
   hb_buffer_t *hb_buffer = hb_buffer_create();
   hb_buffer_add_utf8(hb_buffer, user_input, -1, 0, -1);
   hb_buffer_guess_segment_properties(hb_buffer);
@@ -561,9 +587,11 @@ void TestShape() {
   hb_glyph_position_t *pos = hb_buffer_get_glyph_positions(hb_buffer, NULL);
   unsigned int len = hb_buffer_get_length(hb_buffer);
   for (unsigned int i = 0; i < len; i++) {
-    fprintf(stderr, "cp: %d, msk: %d, cl: %d, xa: %d ya: %d xo: %d yo: %d\n",
+    fprintf(stderr, "cp: %d, msk: %d, cl: %d, xa: %d (%d) ya: %d xo: %d yo: %d\n",
             info[i].codepoint, info[i].mask, info[i].cluster,
-            pos[i].x_advance, pos[i].y_advance,
+            pos[i].x_advance,
+            hb_font_get_glyph_h_advance(hb_font, info[i].codepoint),
+            pos[i].y_advance,
             pos[i].x_offset, pos[i].y_offset);
   }
 }

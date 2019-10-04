@@ -25,6 +25,7 @@ OBJS=\
 	view.o \
 	page_cache.o \
 	rendercache.o \
+	rich_format.o \
 	rootview.o \
 	svgpath.o \
 	thumbnailview.o \
