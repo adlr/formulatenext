@@ -1,7 +1,8 @@
 all: formulate.html
 
 CFLAGS=\
-	-g -Os --profiling
+	-g -O0
+#	-g -Os --profiling
 
 INC=\
 	-Ipdfium/pdfium \

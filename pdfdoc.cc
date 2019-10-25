@@ -513,7 +513,13 @@ extern "C" SkEmbeddedHeader const ARIMO_FONT;
 
 void TestShape() {
   RichFormat formatter;
-  formatter.Format("Hi <b>there!</b><br/>Nice\nto <i>See<b>   you</b></i><br/>", 0);
+  const std::vector<LayoutRow>& ret =
+      formatter.Format(
+          "AVHi <b>there!</b><br/>Nice\nto <i>See<b>   you</b></i><br/>", 0);
+  for (const LayoutRow& lr : ret) {
+    lr.Dump();
+  }
+  return;
 
   // init freetype
   FT_Library ftlib;
