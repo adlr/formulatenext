@@ -13,23 +13,27 @@ using formulate::HTMLNodeWalkerInterface;
 
 EMSCRIPTEN_KEEPALIVE
 void StaticHTMLText(HTMLNodeWalkerInterface* self, const char* text) {
+  fprintf(stderr, "StaticHTMLText\n");
   self->HTMLText(text);
 }
 
 EMSCRIPTEN_KEEPALIVE
 void StaticHTMLNodeStarted(HTMLNodeWalkerInterface* self,
                            const char* tag_name) {
+  fprintf(stderr, "StaticHTMLNodeStarted\n");
   self->HTMLNodeStarted(tag_name);
 }
 
 EMSCRIPTEN_KEEPALIVE
 void StaticHTMLNodeAttribute(HTMLNodeWalkerInterface* self,
                         const char* key, const char* value) {
+  fprintf(stderr, "StaticHTMLNodeAttribute\n");
   self->HTMLNodeAttribute(key, value);
 }
 
 EMSCRIPTEN_KEEPALIVE
 void StaticHTMLNodeEnded(HTMLNodeWalkerInterface* self) {
+  fprintf(stderr, "StaticHTMLNodeEnded\n");
   self->HTMLNodeEnded();
 }
 
@@ -66,6 +70,67 @@ RichFormat::RichFormat() {
     fprintf(stderr, "FT_New_Memory_Face failed\n");
     return;
   }
+}
+
+LayoutRow::CharIterator LayoutRow::CharBegin() {
+  CharIterator ret(this);
+  ret.str_it_ = elements_.begin();
+  while (ret.str_it_ != elements_.end()) {
+    if ((*ret.str_it_)->IsLayoutString() &&
+        !(*ret.str_it_)->AsLayoutString()->chars_.empty()) {
+      ret.char_it_ = (*ret.str_it_)->AsLayoutString()->chars_.begin();
+      return ret;
+    }
+    ++ret.str_it_;
+  }
+  return ret;
+}
+
+LayoutRow::CharIterator LayoutRow::CharEnd() {
+  CharIterator ret(this);
+  ret.str_it_ = elements_.end();
+  return ret;
+}
+
+void LayoutRow::CharIterator::Inc() {
+  if (str_it_ == row_->elements_.end()) {
+    fprintf(stderr, "Can't increment CharIterator. Already at end\n");
+    return;
+  }
+  ++char_it_;
+  if (char_it_ == (*str_it_)->AsLayoutString()->chars_.end()) {
+    // move to next string
+    int limit = 15;
+    while (str_it_ != row_->elements_.end()) {
+      if (--limit == 0) {
+        fprintf(stderr, "break out of Inc loop\n");
+        return;
+      }
+      ++str_it_;
+      if (str_it_ == row_->elements_.end())
+        return;
+      if ((*str_it_)->IsLayoutString()) {
+        char_it_ = (*str_it_)->AsLayoutString()->chars_.begin();
+        if (char_it_ != (*str_it_)->AsLayoutString()->chars_.end()) {
+          // Done!
+          return;
+        }
+        // Got an empty string apparently, so keep looping.
+      }
+    }
+  }
+}
+
+const Style& LayoutRow::CharIterator::Style() const {
+  for (std::vector<std::unique_ptr<LayoutElement>>::iterator it = str_it_;
+       ; --it) {
+    if ((*it)->IsLayoutStyle())
+      return (*it)->AsLayoutStyle()->style_;
+    if (it == row_->elements_.begin())
+      break;
+  }
+  fprintf(stderr, "Unable to find style for CharIterator\n");
+  return Style();
 }
 
 const std::vector<LayoutRow>& RichFormat::Format(const char* html, float width) {
@@ -114,6 +179,7 @@ void RichFormat::HandleNewline() {
 }
 
 void RichFormat::HandleStringWithoutNewline(const char* text) {
+  fprintf(stderr, "HandleStringWithoutNewline called: %s\n", text);
   if (rows_.empty())
     rows_.resize(1);
 
@@ -153,66 +219,122 @@ void RichFormat::HandleStringWithoutNewline(const char* text) {
             CharcodeFromGlyph(face, info[i].codepoint)});
     InsertCharOntoLastRow(layout_char);
   }
-  LineBreakLastRow();
+  bool need_break = true;
+  int limit = 80;
+  while (need_break) {
+    fprintf(stderr, "about to line break\n");
+    need_break = LineBreakLastRow();
+    fprintf(stderr, "did line break\n");
+    --limit;
+    if (limit == 0) {
+      fprintf(stderr, "hit limit outer\n");
+      break;
+    }
+  }
 }
 
 bool RichFormat::LineBreakLastRow() {
   LayoutRow& last_row = rows_.back();
   float width = 0.0;
   Style last_style;
-  bool row_has_char = false;
-  auto last_space_string = last_row.elements_.end();
-  std::vector<LayoutString::LayoutChar>::iterator last_space;
+  // Last space before it went over the width threshold
+  LayoutRow::CharIterator last_space = last_row.CharEnd();
+  // The char that crossed over the width threshold
+  LayoutRow::CharIterator overflow_char = last_row.CharEnd();
   bool need_break = false;
-  for (auto it = last_row.elements_.begin();
-       it != last_row.elements_.end(); ++it) {
-    LayoutElement* elt = (*it).get();
-    if (elt->IsLayoutStyle()) {
-      last_style = elt->AsLayoutStyle()->style_;
-    } else if (elt->IsLayoutString()) {
-      LayoutString* str = elt->AsLayoutString();
-      for (auto jt = str->chars_.begin(); jt != str->chars_.end(); ++jt) {
-        if (jt->char_code_ == ' ' ||
-            last_space_string == last_row.elements_.end()) {
-          last_space_string = it;
-          last_space = jt;
-        }
-        if (jt->char_code_ != ' ' && need_break)
-          goto do_break;  // break out of nested loops
-        width += jt->advance_;
-        if (width > width_)
-          need_break = true;
-      }
+
+  // First, find the character that crosses over the width boundary
+  int limit = 30;
+  for (LayoutRow::CharIterator it = last_row.CharBegin();
+       it != last_row.CharEnd(); it.Inc()) {
+    if (--limit == 0) {
+      fprintf(stderr, "break in first width check\n");
+      return false;
+    }
+    if (it.char_it_->char_code_ == ' ')
+      last_space = it;
+    width += it.char_it_->advance_;
+    if (width > width_ && it != last_row.CharBegin()) {
+      need_break = true;
+      overflow_char = it;
+      break;
     }
   }
 
-do_break:
-  if (need_break) {
-    // Do a break
-    if (last_space_string == last_row.elements_.end()) {
-      fprintf(stderr, "Don't have a place to break string!\n");
-      return false;
+  if (!need_break)
+    return false;
+
+  limit = 80;
+
+  // move last_space past any whitespace
+  while (last_space != last_row.CharEnd() &&
+         last_space.char_it_->char_code_ == ' ') {
+    last_space.Inc();
+    --limit;
+    if (limit == 0) {
+      fprintf(stderr, "hit limit 1\n");
+      break;
     }
-    LayoutRow new_row;
-    new_row.elements_.emplace_back(new LayoutStyle(last_style));
-    LayoutString back_half;
-    back_half.chars_.insert(
-        back_half.chars_.end(),
-        last_space + 1,
-        (*last_space_string)->AsLayoutString()->chars_.end());
-    (*last_space_string)->AsLayoutString()->chars_.erase(
-        last_space + 1, (*last_space_string)->AsLayoutString()->chars_.end());
-    if (!back_half.chars_.empty())
-      new_row.elements_.emplace_back(new LayoutString(back_half));
-    new_row.elements_.insert(
-        new_row.elements_.end(),
-        std::make_move_iterator(last_space_string + 1),
-        std::make_move_iterator(last_row.elements_.end()));
-    last_row.elements_.erase(last_space_string + 1, last_row.elements_.end());
-    return true;
-    rows_.push_back(std::move(new_row));
   }
-  return false;
+
+  limit = 80;
+
+  // move overflow_char past any whitespace
+  while (overflow_char != last_row.CharEnd() &&
+         overflow_char.char_it_->char_code_ == ' ') {
+    overflow_char.Inc();
+    --limit;
+    if (limit == 0) {
+      fprintf(stderr, "hit limit 2\n");
+      break;
+    }
+  }
+  
+  if (last_space != last_row.CharEnd())
+    overflow_char = last_space;
+
+  if (overflow_char == last_row.CharEnd()) {
+    fprintf(stderr, "no place to break line\n");
+    return false;
+  }
+  
+  fprintf(stderr, "before break:\n");
+  last_row.Dump();
+
+  // Do the break
+  LayoutRow new_row;
+  new_row.elements_.emplace_back(new LayoutStyle(overflow_char.Style()));
+  std::unique_ptr<LayoutString> back_half(new LayoutString());
+  back_half->chars_.insert(
+      back_half->chars_.end(),
+      overflow_char.char_it_,
+      (*overflow_char.str_it_)->AsLayoutString()->chars_.end());
+  fprintf(stderr, "back half: ");
+  back_half->Dump();
+  fprintf(stderr, "\n");
+  (*overflow_char.str_it_)->AsLayoutString()->chars_.erase(
+      overflow_char.char_it_,
+      (*overflow_char.str_it_)->AsLayoutString()->chars_.end());
+  if (!back_half->chars_.empty()) {
+    new_row.elements_.emplace_back(std::move(back_half));
+  }
+  std::vector<std::unique_ptr<LayoutElement>>::iterator keep =
+      overflow_char.str_it_;
+  ++keep;
+  fprintf(stderr, "doing insert %zu\n", last_row.elements_.size());
+  new_row.elements_.insert(
+      new_row.elements_.end(),
+      std::make_move_iterator(keep),
+      std::make_move_iterator(last_row.elements_.end()));
+  fprintf(stderr, "doing erase %zu\n", last_row.elements_.size());
+  last_row.elements_.erase(keep, last_row.elements_.end());
+  fprintf(stderr, "doing push back %zu\n", last_row.elements_.size());
+  rows_.push_back(std::move(new_row));  // invalidates last_row
+
+  fprintf(stderr, "new last row:\n");
+  rows_.back().Dump();
+
+  return true;
 }
 
 void RichFormat::InsertCharOntoLastRow(

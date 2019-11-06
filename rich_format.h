@@ -115,10 +115,48 @@ struct LayoutRow {
   void operator=(LayoutRow const &unused) = delete;
   void Dump() const {
     fprintf(stderr, "LayoutRow:");
-    for (auto it = elements_.begin(); it != elements_.end(); ++it)
-      (*it)->Dump();
+    for (auto it = elements_.begin(); it != elements_.end(); ++it) {
+      if (*it)
+        (*it)->Dump();
+      else
+        fprintf(stderr, "<null>");
+    }
     fprintf(stderr, "\n");
   }
+
+  // To iterate over chars, which is tricky b/c chars are stored in
+  // strings which are stored in elements_. This class helps simplify
+  // other code.
+  class CharIterator {
+   public:
+    explicit CharIterator(LayoutRow* row)
+        : row_(row) {}
+    void Inc();
+
+    // Search backwards for the last style
+    const Style& Style() const;
+    bool operator==(const CharIterator& that) const {
+      if (row_ != that.row_) {
+        fprintf(stderr, "row mismatch\n");
+        return false;
+      }
+      if (str_it_ == row_->elements_.end())
+        return str_it_ == that.str_it_;
+      return str_it_ == that.str_it_ && char_it_ == that.char_it_;
+    }
+    bool operator!=(const CharIterator& that) const {
+      return !((*this) == that);
+    }
+
+    // returns an iterator of elements_
+    std::vector<std::unique_ptr<LayoutElement>>::iterator str_it_;
+    // an iterator of str_it_'s string, if str_it_ is valid.
+    std::vector<LayoutString::LayoutChar>::iterator char_it_;
+   private:
+    LayoutRow* row_{nullptr};
+  };
+  CharIterator CharBegin();
+  CharIterator CharEnd();
 
   std::vector<std::unique_ptr<LayoutElement>> elements_;
 };

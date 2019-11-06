@@ -13,7 +13,7 @@ let HTMLWalk = (str, listener) => {
   // Parse the string
   let template = document.createElement('template');
   template.innerHTML = str;
-  let root = template.content.cloneNode(true); // Not sure we need to cloneNode
+  let root = template.content.cloneNode(true);  // Not sure we need to cloneNode
 
   let innerWalk = (list) => {
     for (let i = 0; i < list.length; i++) {
@@ -42,4 +42,5 @@ let HTMLWalk = (str, listener) => {
     }
   };
   innerWalk(root.childNodes);
+  console.log('done with inner walk.');
 }
