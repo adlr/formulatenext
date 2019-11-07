@@ -121,11 +121,10 @@ body {
   z-index: 15;
   margin: 0;
   padding: 5px;
-  font-kerning: none;
-  transform-origin: 5px 5px;
-  overflow: hidden;
+  /*transform-origin: 5px 5px;*/
+  /*overflow: hidden;*/
   outline: none;
   border: none;
   resize: none;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.8);
 }

@@ -1,5 +1,7 @@
 'use strict';
 
+var g_quill = null;
+
 var throttle = function(type, name, obj) {
   obj = obj || window;
   var running = false;
@@ -334,37 +336,55 @@ document.addEventListener('DOMContentLoaded', function() {
     let padding = 5;
     xpos -= padding;
     ypos -= padding + vertOffset;
-    let textarea = document.createElement('textarea');
-    textarea.rows = '1';
-    textarea.cols = '1';
+    let textarea = document.createElement('div');
     textarea.classList.add('texteditor');
+    textarea.style.width = textarea.style.height = '200px';
+    textarea.innerHTML = '<div id="quill-editor"><p><b>hi there</b></p></div>';
 
     textarea.style.marginLeft = xpos + 'px';
     textarea.style.marginTop = ypos + 'px';
     textarea.style.transform = 'scale(' + zoom + ')';
+    document.getElementById('main-scroll-inner').appendChild(textarea);
+
+    let quill = g_quill = new Quill('#quill-editor', {
+      modules: {
+        toolbar: [
+          ['bold', 'italic'],
+          [{ 'size': ['small', false, 'large', 'huge'] }],
+          [{ 'color': [] }, { 'font': [] }],
+          ['clean']
+        ],
+      },
+      placeholder: 'Text goes here...',
+      theme: 'snow'
+    });
+    quill.enable();
+
     let update = () => {
-      textarea.style.height = '';
-      textarea.style.height = Math.max(10, textarea.scrollHeight) + 'px';
-      textarea.style.width = '';
-      textarea.style.width = Math.max(10, textarea.scrollWidth + padding) + 'px';
-      UpdateEditText(textarea.value);
+      // textarea.style.height = '';
+      // textarea.style.height = Math.max(10, textarea.scrollHeight) + 'px';
+      // textarea.style.width = '';
+      // textarea.style.width = Math.max(10, textarea.scrollWidth + padding) + 'px';
+      UpdateEditText(quill.root.innerHTML);
     };
     textarea.addEventListener('keyup', update);
     textarea.addEventListener('input', update);
     textarea.addEventListener('blur', (ev) => {
-      //textarea.parentNode.removeChild(textarea);
+      textarea.parentNode.removeChild(textarea);
+      // quill.destroy(); // are we just leaking?
     });
-    textarea.value = text;
+    // textarea.value = text;
     update();
-    document.getElementById('main-scroll-inner').appendChild(textarea);
     setTimeout(() => {
-      textarea.focus();
+      quill.focus();
       update();
-      textarea.setSelectionRange(caretPos, caretPos);
+      // textarea.setSelectionRange(caretPos, caretPos);
       console.log("set caret here: " + caretPos);
     }, 100);
     bridge_stopComposingText = () => {
+      console.log('stop composing');
       textarea.parentNode.removeChild(textarea);
+      // quill.destroy() or leak?
     }
   };
   bridge_startComposingText = launchEditor;
@@ -393,6 +413,10 @@ document.addEventListener('DOMContentLoaded', function() {
   let setupMouseHandlers = (div, id) => {
     let dragInProgress = false;
     div.addEventListener('pointerdown', ev => {
+      if (ev.path.some((elt) => { return elt.id == 'quill-editor'; })) {
+        console.log('ignoring in quill editor');
+        return;
+      }
       dragInProgress = pushMouseEvent(ev, div, kEventKindDown, id);
       if (dragInProgress)
         ev.preventDefault();
