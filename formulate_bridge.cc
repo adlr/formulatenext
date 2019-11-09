@@ -243,11 +243,12 @@ void bridge_setToolboxState(bool enabled, int tool) {
     }, enabled, tool);
 }
 
-void bridge_startComposingText(SkPoint docpoint, View* view, float zoom,
-                               const char* str, int caretpos) {
+void bridge_startComposingText(
+    SkPoint docpoint, float width, float zoom,
+    const char* str, int caret_position) {
   EM_ASM_({
-      bridge_startComposingText($0, $1, $2, UTF8ToString($3), $4);
-    }, docpoint.x(), docpoint.y(), zoom, str, caretpos);
+      bridge_startComposingText($0, $1, $2, $3, UTF8ToString($4), $4);
+    }, docpoint.x(), docpoint.y(), width, zoom, str, caret_position);
 }
 
 void bridge_stopComposingText() {

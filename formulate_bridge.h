@@ -12,7 +12,7 @@ void bridge_setSize(ScrollView* view, float width, float height,
                     float xpos, float ypos);
 void bridge_UpdateUndoRedoUI(bool undo_enabled, bool redo_unabled);
 void bridge_setToolboxState(bool enabled, int tool);
-void bridge_startComposingText(SkPoint docpoint, View* view, float zoom,
+void bridge_startComposingText(SkPoint docpoint, float width, float zoom,
                                const char* str, int caret_position);
 void bridge_stopComposingText();
 

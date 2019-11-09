@@ -9,6 +9,40 @@
 
 namespace formulate {
 
+void TextAnnotation::CreateMouseDown(SkPoint pt) {
+  create_down_ = pt;
+}
+
+void TextAnnotation::CreateMouseDrag(SkPoint pt) {
+  create_up_ = pt;
+}
+
+void TextAnnotation::CreateMouseUp(SkPoint pt) {
+  create_up_ = pt;
+  if (fabsf(create_up_.x() - create_down_.x()) < 5) {
+    // create at a point
+    create_down_ = create_up_ = SkPoint::Make(std::min(create_up_.x(),
+                                                       create_down_.x()),
+                                              std::min(create_up_.y(),
+                                                       create_down_.y()));
+  } else {
+    // use the bounding rect of the two points
+    SkRect temp;
+    temp.set(create_down_, create_up_);
+    SkPoint quad[4];
+    temp.toQuad(quad);
+    create_down_ = quad[0];  // set to top-left corner
+    create_up_ = quad[2];  // set to bottom-right corner
+  }
+  delegate_->StartComposingText(create_down_, create_up_.x() - create_down_.x(),
+                                "<b>hi</b> there", 0);
+}
+
+void TextAnnotation::Flush() {
+  fprintf(stderr, "TODO: write text annot to pdfium\n");
+  dirty_ = false;
+}
+
 char KnobsForType(PDFDoc::ObjType type) {
   return kNoKnobs;  // temporary
   switch (type) {
@@ -299,6 +333,18 @@ View* DocView::MouseDown(MouseInputEvent ev) {
   mouse_down_obj_ = -1;
   mouse_down_knob_ = kNoKnobs;
   prev_drag_point_valid_ = false;
+  if (toolbox_.current_tool() == Toolbox::kText_Tool) {
+    if (!editing_annot_) {
+      // Start new text annotation
+      int pageno = -1;
+      SkPoint pagept = SkPoint::Make(0, 0);
+      ViewPointToPageAndPoint(ev.position(), &pageno, &pagept);
+      editing_annot_.reset(new TextAnnotation(this));
+      editing_annot_->CreateMouseDown(pagept);
+      editing_annot_page_ = pageno;
+      return this;
+    }
+  }
   if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
     int page = -1;
     SkPoint pt;
@@ -343,6 +389,12 @@ std::pair<SkPoint, SkPoint> ControlPoints(const SkPoint* pts) {
 void DocView::MouseDrag(MouseInputEvent ev) {
   mouse_moved_ = true;
   
+  if (editing_annot_) {
+    SkPoint pt = ViewPointToPagePoint(ev.position(), editing_annot_page_);
+    editing_annot_->CreateMouseDrag(pt);
+    return;
+  }
+
   if (freehand_page_ >= 0) {
     // continue line drawing
     SkPoint pt = ViewPointToPagePoint(ev.position(), freehand_page_);
@@ -402,6 +454,12 @@ void DocView::MouseDrag(MouseInputEvent ev) {
 }
 
 void DocView::MouseUp(MouseInputEvent ev) {
+  if (editing_annot_) {
+    SkPoint pt = ViewPointToPagePoint(ev.position(), editing_annot_page_);
+    editing_annot_->CreateMouseUp(pt);
+    return;
+  }
+
   int page = 0;
   SkPoint pagept;
   ViewPointToPageAndPoint(ev.position(), &page, &pagept);
@@ -437,8 +495,8 @@ void DocView::MouseUp(MouseInputEvent ev) {
       editing_text_obj_ = -1;
       fprintf(stderr, "edit at %f %f\n", ev.position().x(),
               ev.position().y());
-      bridge_startComposingText(ev.position(), this, zoom_,
-                                "", 0);
+      // bridge_startComposingText(ev.position(), this, zoom_,
+      //                           "", 0);
     } else {  // Edit existing
       fprintf(stderr, "edit existing\n");
       SkRect bounds = doc_.BoundingBoxForObj(page, obj);
@@ -451,10 +509,10 @@ void DocView::MouseUp(MouseInputEvent ev) {
       int caret_pos = doc_.TextObjCaretPosition(page, obj, pagept.x());
       doc_.UpdateText(editing_text_page_, editing_text_obj_,
                       std::string(), std::string(), false);
-      bridge_startComposingText(PagePointToViewPoint(editing_text_page_,
-                                                     editing_text_point_),
-                                this, zoom_,
-                                editing_text_str_.c_str(), caret_pos);
+      // bridge_startComposingText(PagePointToViewPoint(editing_text_page_,
+      //                                                editing_text_point_),
+      //                           this, zoom_,
+      //                           editing_text_str_.c_str(), caret_pos);
     }
   } else if (toolbox_.current_tool() == Toolbox::kFreehand_Tool) {
     if (!freehand_points_.empty()) {
@@ -640,6 +698,11 @@ SkRect DocView::GetNewBounds(SkRect old_bounds, Knobmask knob,
   if (knob & (kTopRightKnob | kBottomRightKnob))
     old_bounds.fRight += dx;
   return old_bounds;
+}
+
+void DocView::StartComposingText(SkPoint pt, float width, const char* html,
+                                int cursorpos) {
+  bridge_startComposingText(pt, width, zoom_, html, cursorpos);
 }
 
 }  // namespace formulate

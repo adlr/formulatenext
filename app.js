@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function() {
     return ret;
   };
 
-  let launchEditor = (xpos, ypos, zoom, text, caretPos) => {
+  let launchEditor = (xpos, ypos, width, zoom, text, caretPos) => {
     const dpr = window.devicePixelRatio || 1;
     console.log(`Edit at ${xpos} ${ypos}, ${zoom}, ${text}, ${caretPos}`);
     let vertOffset = calcFontMetrics((zoom * 12) | 0);
@@ -339,7 +339,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let textarea = document.createElement('div');
     textarea.classList.add('texteditor');
     textarea.style.width = textarea.style.height = '200px';
-    textarea.innerHTML = '<div id="quill-editor"><p><b>hi there</b></p></div>';
+    textarea.innerHTML = text;
+    textarea.id = 'quill-editor';
 
     textarea.style.marginLeft = xpos + 'px';
     textarea.style.marginTop = ypos + 'px';
@@ -367,8 +368,8 @@ document.addEventListener('DOMContentLoaded', function() {
       // textarea.style.width = Math.max(10, textarea.scrollWidth + padding) + 'px';
       UpdateEditText(quill.root.innerHTML);
     };
-    textarea.addEventListener('keyup', update);
-    textarea.addEventListener('input', update);
+    // textarea.addEventListener('keyup', update);
+    // textarea.addEventListener('input', update);
     textarea.addEventListener('blur', (ev) => {
       textarea.parentNode.removeChild(textarea);
       // quill.destroy(); // are we just leaking?
