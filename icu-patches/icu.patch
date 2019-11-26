@@ -1,0 +1,34 @@
+diff -ur icu/icu-release-62-1/icu4c/source/i18n/double-conversion-utils.h icu-orig/icu-release-62-1/icu4c/source/i18n/double-conversion-utils.h
+--- icu/icu-release-62-1/icu4c/source/i18n/double-conversion-utils.h	2019-11-26 13:07:00.726775344 -0800
++++ icu-orig/icu-release-62-1/icu4c/source/i18n/double-conversion-utils.h	2018-06-19 22:34:56.000000000 -0700
+@@ -86,7 +86,7 @@
+     defined(__SH4__) || defined(__alpha__) || \
+     defined(_MIPS_ARCH_MIPS32R2) || \
+     defined(__AARCH64EL__) || defined(__aarch64__) || \
+-    defined(__riscv) || defined(__EMSCRIPTEN__)
++    defined(__riscv)
+ #define DOUBLE_CONVERSION_CORRECT_DOUBLE_OPERATIONS 1
+ #elif defined(__mc68000__)
+ #undef DOUBLE_CONVERSION_CORRECT_DOUBLE_OPERATIONS
+diff -ur icu/icu-release-62-1/icu4c/source/tools/pkgdata/pkgdata.cpp icu-orig/icu-release-62-1/icu4c/source/tools/pkgdata/pkgdata.cpp
+--- icu/icu-release-62-1/icu4c/source/tools/pkgdata/pkgdata.cpp	2019-11-26 15:04:08.768775344 -0800
++++ icu-orig/icu-release-62-1/icu4c/source/tools/pkgdata/pkgdata.cpp	2018-06-19 22:34:56.000000000 -0700
+@@ -58,9 +58,6 @@
+ #include "pkgtypes.h"
+ U_CDECL_END
+ 
+-#define BUILD_DATA_WITHOUT_ASSEMBLY 1
+-#define U_PLATFORM_IS_LINUX_BASED 0
+-
+ #if U_HAVE_POPEN
+ 
+ using icu::LocalPointerBase;
+@@ -461,7 +458,7 @@
+         o.entryName = o.cShortName;
+     }
+ 
+-    o.withoutAssembly = TRUE;
++    o.withoutAssembly = FALSE;
+     if (options[WITHOUT_ASSEMBLY].doesOccur) {
+ #ifndef BUILD_DATA_WITHOUT_ASSEMBLY
+         fprintf(stdout, "Warning: You are using the option to build without assembly code which is not supported on this platform.\n");
