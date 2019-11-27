@@ -72,6 +72,7 @@ formulate.html: $(OBJS) $(MATERIAL_FONTS_FILES) Roboto/Roboto.css
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s USE_FREETYPE=1 \
 		-s DEMANGLE_SUPPORT=1 \
+		--preload-file usr \
 		-s TOTAL_MEMORY=268435456
 
 favicon.png: favicon.svg

@@ -9,6 +9,8 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include <SkCanvas.h>
+
 #include <txt/paragraph_builder.h>
 
 namespace formulate {
@@ -170,7 +172,8 @@ class RichFormat : public HTMLNodeWalkerInterface {
  public:
   RichFormat();
 
-  const std::vector<LayoutRow>& Format(const char* html, float width);
+  const std::vector<LayoutRow>& Format(const char* html, float width,
+                                       SkCanvas* canvas);
 
   void HTMLText(const char* text);
   void HTMLNodeStarted(const char* tag_name);

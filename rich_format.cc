@@ -4,6 +4,7 @@
 
 #include <codecvt>
 #include <emscripten.h>
+#include <locale>
 
 #include <hb.h>
 #include <hb-ft.h>
@@ -74,8 +75,15 @@ RichFormat::RichFormat() {
   }
 
   font_collection_.reset(new txt::FontCollection());
+  font_collection_->SetupDefaultFontManager();
+  txt::ParagraphStyle style;
+  style.font_family = "Arimo";
   paragraph_builder_ = txt::ParagraphBuilder::CreateTxtBuilder(
-      txt::ParagraphStyle(), font_collection_);
+      style, font_collection_);
+  txt::TextStyle textstyle;
+  textstyle.color = SK_ColorBLACK;
+  textstyle.font_families.push_back("Arimo");
+  paragraph_builder_->PushStyle(textstyle);
 }
 
 LayoutRow::CharIterator LayoutRow::CharBegin() {
@@ -139,12 +147,17 @@ const Style& LayoutRow::CharIterator::Style() const {
   return Style();
 }
 
-const std::vector<LayoutRow>& RichFormat::Format(const char* html, float width) {
+const std::vector<LayoutRow>& RichFormat::Format(const char* html, float width,
+                                                 SkCanvas* canvas) {
   fprintf(stderr, "called rich format!\n");
   HTMLWalk(html, this);
   std::unique_ptr<txt::Paragraph> paragraph(paragraph_builder_->Build());
   paragraph->Layout(width);
   fprintf(stderr, "ready for layout to skcanvas\n");
+  if (canvas) {
+    fprintf(stderr, "doing paint!\n");
+    paragraph->Paint(canvas, 100, 100);
+  }
   return rows_;
 }
 

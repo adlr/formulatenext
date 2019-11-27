@@ -5,6 +5,7 @@
 #include "SkPaint.h"
 
 #include "formulate_bridge.h"
+#include "rich_format.h"
 #include "svgpath.h"
 
 namespace formulate {
@@ -63,6 +64,12 @@ namespace {
 
 void DocView::Draw(SkCanvas* canvas, SkRect rect) {
   SkPaint paint;
+
+  RichFormat formatter;
+  const std::vector<LayoutRow>& ret =
+      formatter.Format(
+          "AV  Hi <b>there!</b><br/>Nice\nto <i>See<b>   you</b></i><br/>", 100,
+                       canvas);
 
   // Draw a rectangle for each page and paint each page
   paint.setStyle(SkPaint::kStroke_Style);

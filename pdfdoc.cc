@@ -515,7 +515,8 @@ void TestShape() {
   RichFormat formatter;
   const std::vector<LayoutRow>& ret =
       formatter.Format(
-          "AVHi <b>there!</b><br/>Nice\nto <i>See<b>   you</b></i><br/>", 100);
+          "AVHi <b>there!</b><br/>Nice\nto <i>See<b>   you</b></i><br/>", 100,
+                       nullptr);
   for (const LayoutRow& lr : ret) {
     lr.Dump();
   }
