@@ -12,6 +12,10 @@ pdfium/*
 skia/*
 depot_tools/*
 emsdk/*
+node_modules/*
+usr/*
+dist/*
+quill/*
 favicon.*
 testobjs/*
 libgtest.a
