@@ -66,10 +66,8 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
   SkPaint paint;
 
   RichFormat formatter;
-  const std::vector<LayoutRow>& ret =
-      formatter.Format(
-          "AV  Hi <b>there!</b><br/>Nice\nto <i>See<b>   you</b></i><br/>", 100,
-                       canvas);
+  std::unique_ptr<txt::Paragraph> paragraph(formatter.Format(
+      "AV  Hi <b>there!</b><br/>Nice\nto <i>See<b>   you</b></i><br/>"));
 
   // Draw a rectangle for each page and paint each page
   paint.setStyle(SkPaint::kStroke_Style);
@@ -118,6 +116,11 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
     pagetop += pgsize.height() * zoom_ + kBorderPixels;
   }
   DrawKnobs(canvas, rect);
+
+  if (paragraph) {
+    paragraph->Layout(150);
+    paragraph->Paint(canvas, 100, 100);
+  }
 }
 
 void DocView::DrawKnobs(SkCanvas* canvas, SkRect rect) {

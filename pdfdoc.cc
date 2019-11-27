@@ -503,32 +503,24 @@ void PDFDoc::InsertPath(int pageno, SkPoint center, const SkPath& path) {
 
 namespace {
 
-extern "C" {
-  extern const unsigned char g_FoxitSansFontData[15025];
-}
+// extern "C" {
+//   extern const unsigned char g_FoxitSansFontData[15025];
+// }
 
-struct SkEmbeddedResource {const uint8_t* data; const size_t size;};
-struct SkEmbeddedHeader {const SkEmbeddedResource* entries; const int count;};
-extern "C" SkEmbeddedHeader const ARIMO_FONT;
+// struct SkEmbeddedResource {const uint8_t* data; const size_t size;};
+// struct SkEmbeddedHeader {const SkEmbeddedResource* entries; const int count;};
+// extern "C" SkEmbeddedHeader const ARIMO_FONT;
 
 void TestShape() {
-  RichFormat formatter;
-  const std::vector<LayoutRow>& ret =
-      formatter.Format(
-          "AVHi <b>there!</b><br/>Nice\nto <i>See<b>   you</b></i><br/>", 100,
-                       nullptr);
-  for (const LayoutRow& lr : ret) {
-    lr.Dump();
-  }
   return;
 
   // init freetype
-  FT_Library ftlib;
-  FT_Error err = FT_Init_FreeType(&ftlib);
-  if (err) {
-    fprintf(stderr, "FT_Init_FreeType failed\n");
-    return;
-  }
+  // FT_Library ftlib;
+  // FT_Error err = FT_Init_FreeType(&ftlib);
+  // if (err) {
+  //   fprintf(stderr, "FT_Init_FreeType failed\n");
+  //   return;
+  // }
 
   // load Arimo
   // hb_blob_t* arimo_blob =
@@ -542,65 +534,65 @@ void TestShape() {
   // hb_face_set_index(face, 0);
   //hb_face_set_upem(face, ???);
 
-  FT_Face ft_face;
-  // err = FT_New_Memory_Face(ftlib, g_FoxitSansFontData,
-  //                          sizeof(g_FoxitSansFontData), 0, &ft_face);
-  err = FT_New_Memory_Face(ftlib, ARIMO_FONT.entries[0].data,
-                           ARIMO_FONT.entries[0].size, 0, &ft_face);
-  if (err) {
-    fprintf(stderr, "FT_New_Memory_Face failed\n");
-    return;
-  }
+  // FT_Face ft_face;
+  // // err = FT_New_Memory_Face(ftlib, g_FoxitSansFontData,
+  // //                          sizeof(g_FoxitSansFontData), 0, &ft_face);
+  // err = FT_New_Memory_Face(ftlib, ARIMO_FONT.entries[0].data,
+  //                          ARIMO_FONT.entries[0].size, 0, &ft_face);
+  // if (err) {
+  //   fprintf(stderr, "FT_New_Memory_Face failed\n");
+  //   return;
+  // }
 
-  // const hb_tag_t KernTag = HB_TAG('k', 'e', 'r', 'n');
-  // hb_feature_t KerningOn   = { KernTag, 1, 0, std::numeric_limits<unsigned int>::max() };
+  // // const hb_tag_t KernTag = HB_TAG('k', 'e', 'r', 'n');
+  // // hb_feature_t KerningOn   = { KernTag, 1, 0, std::numeric_limits<unsigned int>::max() };
   
-  fprintf(stderr, "line height: %d\n", (int)ft_face->height);
-  fprintf(stderr, "Font name: [%s] [%s]\n",
-          ft_face->family_name, ft_face->style_name);
-  FT_Set_Char_Size(ft_face, 0, 1200, 0, 0);
+  // fprintf(stderr, "line height: %d\n", (int)ft_face->height);
+  // fprintf(stderr, "Font name: [%s] [%s]\n",
+  //         ft_face->family_name, ft_face->style_name);
+  // FT_Set_Char_Size(ft_face, 0, 1200, 0, 0);
 
-  {
-    // get first/last char info
-    FT_UInt first_gid = 0;
-    FT_ULong first_char = FT_Get_First_Char(ft_face, &first_gid);
-    fprintf(stderr, "first gid/char: %u/%lu\n", first_gid, first_char);
-    int limit = 300;
-    while (first_gid != 0) {
-      first_char = FT_Get_Next_Char(ft_face, first_char, &first_gid);
-      fprintf(stderr, "      git/char: %u/%lu\n", first_gid, first_char);
-      if (limit-- == 0) {
-        fprintf(stderr, "breakout!\n");
-        break;
-      }
-    }
-  }
+  // {
+  //   // get first/last char info
+  //   FT_UInt first_gid = 0;
+  //   FT_ULong first_char = FT_Get_First_Char(ft_face, &first_gid);
+  //   fprintf(stderr, "first gid/char: %u/%lu\n", first_gid, first_char);
+  //   int limit = 300;
+  //   while (first_gid != 0) {
+  //     first_char = FT_Get_Next_Char(ft_face, first_char, &first_gid);
+  //     fprintf(stderr, "      git/char: %u/%lu\n", first_gid, first_char);
+  //     if (limit-- == 0) {
+  //       fprintf(stderr, "breakout!\n");
+  //       break;
+  //     }
+  //   }
+  // }
 
-  hb_font_t* hb_font = hb_ft_font_create(ft_face, nullptr);
-  // hb_font_t* hb_font = hb_font_create(face);
+  // hb_font_t* hb_font = hb_ft_font_create(ft_face, nullptr);
+  // // hb_font_t* hb_font = hb_font_create(face);
 
-  hb_font_set_scale(hb_font, 1200, 1200);
-  const char* user_input = "LAVA TVTlMfiM";
-  hb_buffer_t *hb_buffer = hb_buffer_create();
-  hb_buffer_add_utf8(hb_buffer, user_input, -1, 0, -1);
-  hb_buffer_guess_segment_properties(hb_buffer);
+  // hb_font_set_scale(hb_font, 1200, 1200);
+  // const char* user_input = "LAVA TVTlMfiM";
+  // hb_buffer_t *hb_buffer = hb_buffer_create();
+  // hb_buffer_add_utf8(hb_buffer, user_input, -1, 0, -1);
+  // hb_buffer_guess_segment_properties(hb_buffer);
 
-  hb_buffer_set_direction(hb_buffer, HB_DIRECTION_LTR);
-  hb_buffer_set_script(hb_buffer, HB_SCRIPT_LATIN);
-  hb_buffer_set_language(hb_buffer, hb_language_from_string("en", -1));
+  // hb_buffer_set_direction(hb_buffer, HB_DIRECTION_LTR);
+  // hb_buffer_set_script(hb_buffer, HB_SCRIPT_LATIN);
+  // hb_buffer_set_language(hb_buffer, hb_language_from_string("en", -1));
 
-  hb_shape(hb_font, hb_buffer, nullptr, 0);
-  hb_glyph_info_t *info = hb_buffer_get_glyph_infos(hb_buffer, NULL);
-  hb_glyph_position_t *pos = hb_buffer_get_glyph_positions(hb_buffer, NULL);
-  unsigned int len = hb_buffer_get_length(hb_buffer);
-  for (unsigned int i = 0; i < len; i++) {
-    fprintf(stderr, "cp: %d, msk: %d, cl: %d, xa: %d (%d) ya: %d xo: %d yo: %d\n",
-            info[i].codepoint, info[i].mask, info[i].cluster,
-            pos[i].x_advance,
-            hb_font_get_glyph_h_advance(hb_font, info[i].codepoint),
-            pos[i].y_advance,
-            pos[i].x_offset, pos[i].y_offset);
-  }
+  // hb_shape(hb_font, hb_buffer, nullptr, 0);
+  // hb_glyph_info_t *info = hb_buffer_get_glyph_infos(hb_buffer, NULL);
+  // hb_glyph_position_t *pos = hb_buffer_get_glyph_positions(hb_buffer, NULL);
+  // unsigned int len = hb_buffer_get_length(hb_buffer);
+  // for (unsigned int i = 0; i < len; i++) {
+  //   fprintf(stderr, "cp: %d, msk: %d, cl: %d, xa: %d (%d) ya: %d xo: %d yo: %d\n",
+  //           info[i].codepoint, info[i].mask, info[i].cluster,
+  //           pos[i].x_advance,
+  //           hb_font_get_glyph_h_advance(hb_font, info[i].codepoint),
+  //           pos[i].y_advance,
+  //           pos[i].x_offset, pos[i].y_offset);
+  // }
 }
 
 }  // namespace {}

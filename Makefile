@@ -35,7 +35,6 @@ OBJS=\
 	svgpath.o \
 	thumbnailview.o \
 	undo_manager.o \
-	Arimo-Regular.ttf.o \
 	NotoMono-Regular.ttf.o \
 	pdfium/pdfium/out/Debug/obj/libpdfium.a \
 	../engine/src/flutter/third_party/txt/libtxt.a \
