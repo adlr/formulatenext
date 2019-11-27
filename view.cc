@@ -2,6 +2,8 @@
 
 #include "view.h"
 
+#include <ostream>
+
 namespace formulate {
 
 void View::SetSize(SkSize size) {

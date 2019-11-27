@@ -9,6 +9,8 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include <txt/paragraph_builder.h>
+
 namespace formulate {
 
 // Helper class to parse HTML. For example, the following str would
@@ -205,6 +207,9 @@ class RichFormat : public HTMLNodeWalkerInterface {
   // TODO(adlr): have a font cache
   FT_Library ftlib_;
   FT_Face arimo_;
+
+  std::shared_ptr<txt::FontCollection> font_collection_;
+  std::unique_ptr<txt::ParagraphBuilder> paragraph_builder_;
 };
 
 // Final represention: PDF style

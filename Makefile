@@ -10,6 +10,10 @@ INC=\
 	-Iskia/skia/include/core \
 	-Iskia/skia/include/config \
 	-Iskia/skia/include/utils \
+	-I../engine/src/flutter/third_party/txt/src/ \
+	-I../engine/src \
+	-I../engine/src/third_party/icu/source/common \
+	-I../engine/src/third_party/skia/include/third_party/skcms \
 	-Inon-test-include
 
 %.o : %.cc
@@ -33,8 +37,12 @@ OBJS=\
 	undo_manager.o \
 	Arimo-Regular.ttf.o \
 	NotoMono-Regular.ttf.o \
+	pdfium/pdfium/out/Debug/obj/libpdfium.a \
+	../engine/src/flutter/third_party/txt/libtxt.a \
 	skia/skia/formulate_out/libskia.a \
-	pdfium/pdfium/out/Debug/obj/libpdfium.a
+	~/.emscripten_cache/asmjs/libharfbuzz.a \
+	libicuuc.bc \
+	libicudt.bc
 
 MATERIAL_FONTS_FILES=\
 	MaterialIcons-Regular.woff2 \
@@ -62,10 +70,9 @@ formulate.html: $(OBJS) $(MATERIAL_FONTS_FILES) Roboto/Roboto.css
 	emcc $(CFLAGS) -o $@ $(OBJS) \
 		-s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" \
 		-s ALLOW_MEMORY_GROWTH=1 \
-		-s USE_LIBPNG=1 \
 		-s USE_FREETYPE=1 \
-		-s USE_HARFBUZZ=1 \
-		-s DEMANGLE_SUPPORT=1
+		-s DEMANGLE_SUPPORT=1 \
+		-s TOTAL_MEMORY=268435456
 
 favicon.png: favicon.svg
 	rsvg-convert -w 192 -h 192 --format=png --output=$@ $<

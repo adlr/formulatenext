@@ -2,10 +2,12 @@
 
 #include "rich_format.h"
 
+#include <codecvt>
 #include <emscripten.h>
 
 #include <hb.h>
 #include <hb-ft.h>
+#include <txt/paragraph.h>
 
 extern "C" {
 
@@ -70,6 +72,10 @@ RichFormat::RichFormat() {
     fprintf(stderr, "FT_New_Memory_Face failed\n");
     return;
   }
+
+  font_collection_.reset(new txt::FontCollection());
+  paragraph_builder_ = txt::ParagraphBuilder::CreateTxtBuilder(
+      txt::ParagraphStyle(), font_collection_);
 }
 
 LayoutRow::CharIterator LayoutRow::CharBegin() {
@@ -134,7 +140,11 @@ const Style& LayoutRow::CharIterator::Style() const {
 }
 
 const std::vector<LayoutRow>& RichFormat::Format(const char* html, float width) {
+  fprintf(stderr, "called rich format!\n");
   HTMLWalk(html, this);
+  std::unique_ptr<txt::Paragraph> paragraph(paragraph_builder_->Build());
+  paragraph->Layout(width);
+  fprintf(stderr, "ready for layout to skcanvas\n");
   return rows_;
 }
 
@@ -179,6 +189,10 @@ void RichFormat::HandleNewline() {
 }
 
 void RichFormat::HandleStringWithoutNewline(const char* text) {
+  std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> utf16conv;
+  std::u16string u16text = utf16conv.from_bytes(std::string(text));
+  paragraph_builder_->AddText(u16text);
+
   fprintf(stderr, "HandleStringWithoutNewline called: %s\n", text);
   if (rows_.empty())
     rows_.resize(1);

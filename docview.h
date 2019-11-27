@@ -4,6 +4,7 @@
 #define FORMULATE_DOCVIEW_H__
 
 #include <set>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
