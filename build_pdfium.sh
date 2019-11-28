@@ -27,6 +27,7 @@ gn gen ${BUILD_DIR} \
   is_component_build=false \
   clang_use_chrome_plugins=false \
   use_libjpeg_turbo=true \
+  use_system_libpng=true \
   use_glib=false \
   target_os=\"wasm\" \
   target_cpu=\"wasm\" \
