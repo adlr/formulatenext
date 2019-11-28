@@ -1,21 +1,21 @@
-From f0606f51e7b484fcdf6388dc7d662a8a831a54d3 Mon Sep 17 00:00:00 2001
+From 7142683b829f82648ca51442522046c40e581525 Mon Sep 17 00:00:00 2001
 From: Andrew de los Reyes <adlr@chromium.org>
 Date: Tue, 26 Nov 2019 17:13:21 -0800
 Subject: [PATCH] patch to build libtxt for FN
 
 ---
- third_party/txt/Makefile        | 69 ++++++++++++++++++++++++++++++++++++
+ third_party/txt/Makefile        | 67 +++++++++++++++++++++++++++++++++++
  third_party/txt/flutter_shim.cc | 78 +++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 147 insertions(+)
+ 2 files changed, 145 insertions(+)
  create mode 100644 third_party/txt/Makefile
  create mode 100644 third_party/txt/flutter_shim.cc
 
 diff --git a/third_party/txt/Makefile b/third_party/txt/Makefile
 new file mode 100644
-index 000000000..bfc5e4257
+index 000000000..8c15482b7
 --- /dev/null
 +++ b/third_party/txt/Makefile
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,67 @@
 +all: libtxt.a
 +
 +OBJECTS=\
@@ -73,13 +73,11 @@ index 000000000..bfc5e4257
 +obj/%.o : %.cc
 +	mkdir -p $(@D)
 +	emcc $(CFLAGS) -MMD -std=c++17 $(INC) -o $@ $< \
-+		-s USE_FREETYPE=1 \
 +		-s USE_HARFBUZZ=1
 +
 +obj/%.o : %.cpp
 +	mkdir -p $(@D)
 +	emcc $(CFLAGS) -MMD -std=c++17 $(INC) -o $@ $< \
-+		-s USE_FREETYPE=1 \
 +		-s USE_HARFBUZZ=1
 +
 +libtxt.a: $(OBJECTS)
