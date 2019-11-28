@@ -67,7 +67,7 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
 
   RichFormat formatter;
   std::unique_ptr<txt::Paragraph> paragraph(formatter.Format(
-      "AV  Hi <b>there!</b><br/>Nice\nto <i>See<b>   you</b></i><br/>"));
+      "AV  Hi <b>the\xC5\x97 e!</b><br/>Nice\nto <i>See<b>   you</b></i>\xf0\x9f\x98\x8a<br/>"));
 
   // Draw a rectangle for each page and paint each page
   paint.setStyle(SkPaint::kStroke_Style);
