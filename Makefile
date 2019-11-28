@@ -69,7 +69,6 @@ formulate.html: $(OBJS) $(MATERIAL_FONTS_FILES) Roboto/Roboto.css
 	emcc $(CFLAGS) -o $@ $(OBJS) \
 		-s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" \
 		-s ALLOW_MEMORY_GROWTH=1 \
-		-s USE_FREETYPE=1 \
 		-s DEMANGLE_SUPPORT=1 \
 		--preload-file usr \
 		-s TOTAL_MEMORY=268435456
