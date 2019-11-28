@@ -1,0 +1,47 @@
+From 80607485ac7791759350d01032cad04c9af2978d Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Thu, 28 Nov 2019 14:59:40 -0800
+Subject: [PATCH] FreeType: build w/ png/bitmap support
+
+---
+ third_party/BUILD.gn                                           | 1 +
+ third_party/freetype/include/freetype-custom-config/ftoption.h | 4 ++--
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/third_party/BUILD.gn b/third_party/BUILD.gn
+index 9d24e1cf9..639a69b45 100644
+--- a/third_party/BUILD.gn
++++ b/third_party/BUILD.gn
+@@ -58,6 +58,7 @@ if (pdf_bundle_freetype) {
+       cflags = [
+         "-Wno-unused-function",
+         "-Wno-int-to-void-pointer-cast",
++        "-s", "USE_LIBPNG",
+       ]
+     }
+   }
+diff --git a/third_party/freetype/include/freetype-custom-config/ftoption.h b/third_party/freetype/include/freetype-custom-config/ftoption.h
+index d3f43a0e3..3e071a302 100644
+--- a/third_party/freetype/include/freetype-custom-config/ftoption.h
++++ b/third_party/freetype/include/freetype-custom-config/ftoption.h
+@@ -255,7 +255,7 @@ FT_BEGIN_HEADER
+   /*                                                                       */
+   /*   Define this macro if you want to enable this `feature'.             */
+   /*                                                                       */
+-/* #define FT_CONFIG_OPTION_USE_PNG */
++#define FT_CONFIG_OPTION_USE_PNG
+ 
+ 
+   /*************************************************************************/
+@@ -540,7 +540,7 @@ FT_BEGIN_HEADER
+   /* embedded bitmaps in all formats using the SFNT module (namely         */
+   /* TrueType & OpenType).                                                 */
+   /*                                                                       */
+-#undef TT_CONFIG_OPTION_EMBEDDED_BITMAPS
++#define TT_CONFIG_OPTION_EMBEDDED_BITMAPS
+ 
+ 
+   /*************************************************************************/
+-- 
+2.11.0
+
