@@ -14,95 +14,6 @@
 #include "toolbox.h"
 #include "view.h"
 
-namespace formulate {
-
-// Annotion objects represent things on a page that the user can
-// interact with. For example, editable text, freehand drawings, etc.
-// Annotations may be created by user interaction (for new things) or
-// from an annotation in a PDF.
-
-// All coordinates for annotations are given in page coordinates
-
-class AnnotationDelegate {
- public:
-  // virtual void Redraw(int pageno, SkRect rect) {}
-  // virtual FPDF_ANNOTATION GetFpdfAnnot(int pageno, int annot_index) {
-  //   return nullptr;
-  // }
-  // virtual FPDF_ANNOTATION CreateFpdfAnnot(int pageno) { return nullptr; }
-  virtual void StartComposingText(SkPoint pt,  // top-left corner
-                                  float width,  // width, or 0 for bound text
-                                  const char* html,  // body text
-                                  int cursorpos) {}  // where to put cursor
-};
-
-class Annotation {
- public:
-  explicit Annotation(AnnotationDelegate* delegate)
-      : delegate_(delegate) {}
-  virtual ~Annotation() {
-    if (dirty_)
-      fprintf(stderr, "ERR: Deleting dirty annotation\n");
-  }
-
-  // Called when creating an annotation w/ the mouse:
-  virtual void CreateMouseDown(SkPoint pt) = 0;
-  virtual void CreateMouseDrag(SkPoint pt) = 0;
-  virtual void CreateMouseUp(SkPoint pt) = 0;
-
-  // To move the Annotation:
-  // void MouseDown(SkPoint pt);
-  // void MouseDrag(SkPoint pt);
-  // void MouseUp(SkPoint pt);
-
-  virtual void Flush() = 0;
-  virtual bool IsEditing() const { return false; }
-
- protected:
-  AnnotationDelegate* delegate_{nullptr};
-  bool dirty_{false};  // If true, PDF doesn't reflect current state
-};
-
-class TextAnnotation : public Annotation {
- public:
-  explicit TextAnnotation(AnnotationDelegate* delegate)
-      : Annotation(delegate) {}
-  // void Resize();
-  void CreateMouseDown(SkPoint pt);
-  void CreateMouseDrag(SkPoint pt);
-  void CreateMouseUp(SkPoint pt);
-  void Flush();
-
- private:
-  SkPoint create_down_, create_up_;
-  bool editing_{false};
-  std::string editing_value_;
-  int pageno_{-1};
-  int annot_index_{-1};
-};
-
-// class PathAnnotation : public Annotation {
-//  public:
-//   void Resize();
-//   void CreateMouseDown(SkPoint pt);
-//   void CreateMouseDrag(SkPoint pt);
-//   void CreateMouseUp(SkPoint pt);
-
-//  private:
-// }
-
-typedef char Knobmask;
-const char kTopLeftKnob      = 0b10000000;
-const char kTopCenterKnob    = 0b01000000;
-const char kTopRightKnob     = 0b00100000;
-const char kMiddleLeftKnob   = 0b00010000;
-const char kMiddleRightKnob  = 0b00001000;
-const char kBottomLeftKnob   = 0b00000100;
-const char kBottomCenterKnob = 0b00000010;
-const char kBottomRightKnob  = 0b00000001;
-const char kAllKnobs         = 0b11111111;
-const char kNoKnobs          = 0;
-
 char KnobsForType(PDFDoc::ObjType type);
 
 class DocView : public View,
@@ -184,18 +95,18 @@ class DocView : public View,
                       bool freeform);
 
   // AnnotationDelegate method:
-  void StartComposingText(SkPoint pt,
-                          float width,
-                          const char* html,
-                          int cursorpos);
-
+  void StartComposingText(SkPoint pt,  // top-left corner
+                          float width,  // width, or 0 for bound text
+                          const char* html,  // body text
+                          int cursorpos,  // where to put cursor
+                          std::function<void(const char*)> setText);
+  void StopEditingText();
+  std::unique_ptr<txt::Paragraph> ParseText(const char* text);
 
   PDFDoc doc_;
   Toolbox toolbox_;
 
-  void SetEditingString(const char* str) {
-    editing_text_str_ = str;
-  }
+  void SetEditingString(const char* str);
 
   // PDFDocEventHandler methods
   void PagesChanged() {
@@ -211,13 +122,24 @@ class DocView : public View,
   // if |index| is -1, redraw whole page. Includes knobs.
   void SetNeedsDisplayInObj(int pageno, int index);
 
+  void SetNeedsDisplayForAnnotation(Annotation* annot);
+
  private:
+  void ToggleAnnotationSelected(Annotation* annot);
+
+  RichFormat rich_format_;
+
   std::vector<SkSize> page_sizes_;  // in PDF points
   float max_page_width_{0};  // in PDF points
   float zoom_{1};  // user zoom in/out
 
-  std::unique_ptr<Annotation> editing_annot_;
-  int editing_annot_page_{-1};
+  std::vector<std::unique_ptr<Annotation>> annotations_;
+  std::set<Annotation*> selected_annotations_;
+  Annotation* editing_annotation_{nullptr};
+  Annotation* placing_annotation_{nullptr};
+  std::function<void(const char*)> set_text_callback_;
+
+  // TODO Delete these:
 
   int editing_text_page_{-1};
   SkPoint editing_text_point_;  // in PDF points

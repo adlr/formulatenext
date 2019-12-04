@@ -1,4 +1,4 @@
-// Copyright
+/ Copyright
 
 #include "docview.h"
 
@@ -9,40 +9,6 @@
 #include "svgpath.h"
 
 namespace formulate {
-
-void TextAnnotation::CreateMouseDown(SkPoint pt) {
-  create_down_ = pt;
-}
-
-void TextAnnotation::CreateMouseDrag(SkPoint pt) {
-  create_up_ = pt;
-}
-
-void TextAnnotation::CreateMouseUp(SkPoint pt) {
-  create_up_ = pt;
-  if (fabsf(create_up_.x() - create_down_.x()) < 5) {
-    // create at a point
-    create_down_ = create_up_ = SkPoint::Make(std::min(create_up_.x(),
-                                                       create_down_.x()),
-                                              std::min(create_up_.y(),
-                                                       create_down_.y()));
-  } else {
-    // use the bounding rect of the two points
-    SkRect temp;
-    temp.set(create_down_, create_up_);
-    SkPoint quad[4];
-    temp.toQuad(quad);
-    create_down_ = quad[0];  // set to top-left corner
-    create_up_ = quad[2];  // set to bottom-right corner
-  }
-  delegate_->StartComposingText(create_down_, create_up_.x() - create_down_.x(),
-                                "<b>hi</b> there", 0);
-}
-
-void TextAnnotation::Flush() {
-  fprintf(stderr, "TODO: write text annot to pdfium\n");
-  dirty_ = false;
-}
 
 char KnobsForType(PDFDoc::ObjType type) {
   return kNoKnobs;  // temporary
@@ -64,10 +30,6 @@ namespace {
 
 void DocView::Draw(SkCanvas* canvas, SkRect rect) {
   SkPaint paint;
-
-  RichFormat formatter;
-  std::unique_ptr<txt::Paragraph> paragraph(formatter.Format(
-      "AV  Hi <b>the\xC5\x97 e!</b><br/>Nice\nto <i>See<b>   you</b></i>\xf0\x9f\x98\x8a<br/>"));
 
   // Draw a rectangle for each page and paint each page
   paint.setStyle(SkPaint::kStroke_Style);
@@ -116,11 +78,6 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
     pagetop += pgsize.height() * zoom_ + kBorderPixels;
   }
   DrawKnobs(canvas, rect);
-
-  if (paragraph) {
-    paragraph->Layout(150);
-    paragraph->Paint(canvas, 100, 100);
-  }
 }
 
 void DocView::DrawKnobs(SkCanvas* canvas, SkRect rect) {
@@ -338,6 +295,95 @@ SkRect DocView::ConvertRectFromPage(int page, const SkRect& rect) const {
 }
 
 View* DocView::MouseDown(MouseInputEvent ev) {
+  bool stopped_editing = false;
+
+  if (editing_annotation_) {
+    editing_annotation_->StopEditing();
+    editing_annotation_ = nullptr;
+    stopped_editing = true;
+  }
+
+  int pageno = -1;
+  SkPoint pagept = SkPoint::Make(0, 0);
+  ViewPointToPageAndPoint(ev.position(), &pageno, &pagept);
+
+  if (toolbox_.current_tool() == Toolbox::kArrow_Tool) {
+    // TODO(adlr): see if we hit a knob
+    ssize_t i;
+    for (i = annotations_.size() - 1; i >= 0; i--) {
+      Annotation* annot = annotations_[i].get();
+      if (annot->page() == pageno &&
+          annot->Bounds().contains(pagept.x(), pagept.y())) {
+        // We hit annot
+        if (ev.modifiers() & kShiftKey) {
+          ToggleAnnotationSelected(annot);
+          SetNeedsDisplayForAnnotation(annot);
+          return;
+        } else {
+          if (ev.ClickCount() == 2) {
+            if (annot->Editable()) {
+              editing_annotation_ = annot;
+              selected_annotations_.clear();
+              selected_annotations_.insert(annot);
+              annot->StartEditing(pagept);
+              SetNeedsDisplayForAnnotation(annot);
+              return;
+            }
+          } else if (!AnnotationIsSelected(annot)) {
+            selected_annotations_.clear();
+            selected_annotations_.insert(annot);
+          }
+        }
+        break;
+      }
+    }
+    if (i < 0) {  // point didn't hit any shape
+      // if we just stopped editing a shape, keep that selected,
+      // otherwise, select none
+      if (!stopped_editing) {
+        selected_annotations_.clear();
+      }
+    } else {
+      if (!selected_annotations_.empty()) {
+        if (ev.modifiers() & kAltKey) {
+          fprintf(stderr, "TODO: drag a copy\n");
+        }
+      }
+    }
+    SetNeedsDisplay();
+  }
+
+  // we aren't the arrow tool. if we hit a graphic that's editable,
+  // and the tool is that class, edit that graphic. otherwise make a
+  // new graphic and get it up and running.
+
+  Toolbox::Tool tool = toolbox_.current_tool();
+
+  ssize_t i;
+  for (i = annotations_.size() - 1; i >= 0; i--) {
+    Annotation* annot = annotations_[i].get();
+    if (annot->page() == pageno && annot->Editable() &&
+        annot->Type() == tool &&
+        annot->Bounds().contains(pagept.x(), pagept.y())) {
+      if (editing_annotation_)
+        editing_annotation_.StopEditing();
+      editing_annotation_ = annot;
+      selected_annotations_.clear();
+      selected_annotations_.insert(editing_annotation_);
+      editing_annotation_->StartEditing(pagept);
+      SetNeedsDisplay();
+      break;
+    }
+  }
+  if (i < 0) {  // didn't start editing
+    placing_annotation_ = Annotation::Create(this, tool);
+    annotations_.insert(placing_annotation_);
+    placing_annotation_->CreateMouseDown(pageno, pagept);
+  }
+
+  return;
+  
+  // Old version:
   mouse_down_point_ = ev.position();
   mouse_moved_ = false;
   mouse_down_obj_ = -1;
@@ -397,6 +443,16 @@ std::pair<SkPoint, SkPoint> ControlPoints(const SkPoint* pts) {
 }  // namespace {}
 
 void DocView::MouseDrag(MouseInputEvent ev) {
+  if (placing_annotation_) {
+    SkPoint pt =
+        ViewPointToPagePoint(ev.position(), placing_annotation_->page());
+    placing_annotation_->CreateMouseDrag(pt);
+  }
+
+  return;
+  // Old version:
+
+
   mouse_moved_ = true;
   
   if (editing_annot_) {
@@ -464,6 +520,30 @@ void DocView::MouseDrag(MouseInputEvent ev) {
 }
 
 void DocView::MouseUp(MouseInputEvent ev) {
+
+  if (placing_annotation_) {
+    SkPoint pt =
+        ViewPointToPagePoint(ev.position(), placing_annotation_->page());
+    bool keep = placing_annotation_->CreateMouseUp(pt);
+    if (!keep) {
+      placing_annotation_ = nullptr;
+      annotations_.pop_back();
+    } else {
+      if (placing_annotation_->Editable()) {
+        annotations_.clear();
+        editing_annotation_ = placing_annotation_;
+        placing_annotation_ = nullptr;
+        selected_annotations_.insert(editing_annotation_);
+        editing_annotation_->StartEditing(SkPoint());
+        SetNeedsDisplay();
+      }
+    }
+  }
+
+  return;
+
+  // Old version:
+
   if (editing_annot_) {
     SkPoint pt = ViewPointToPagePoint(ev.position(), editing_annot_page_);
     editing_annot_->CreateMouseUp(pt);
@@ -710,9 +790,25 @@ SkRect DocView::GetNewBounds(SkRect old_bounds, Knobmask knob,
   return old_bounds;
 }
 
-void DocView::StartComposingText(SkPoint pt, float width, const char* html,
-                                int cursorpos) {
+void DocView::StartComposingText(SkPoint pt,  // top-left corner
+                                 float width,  // width, or 0 for bound text
+                                 const char* html,  // body text
+                                 int cursorpos,  // where to put cursor
+                                 std::function<void(const char*)> set_text) {
+  set_text_callback_ = set_text;
   bridge_startComposingText(pt, width, zoom_, html, cursorpos);
+}
+
+void DocView::SetEditingString(const char* str) {
+  set_text_callback_(str);
+}
+
+void DocView::StopEditingText() {
+  bridge_stopComposingText();
+}
+
+std::unique_ptr<txt::Paragraph> DocView::ParseText(const char* text) {
+  return rich_format_.Format(text);
 }
 
 }  // namespace formulate

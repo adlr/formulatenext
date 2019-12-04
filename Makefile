@@ -35,7 +35,6 @@ OBJS=\
 	svgpath.o \
 	thumbnailview.o \
 	undo_manager.o \
-	NotoMono-Regular.ttf.o \
 	pdfium/pdfium/out/Debug/obj/libpdfium.a \
 	../engine/src/flutter/third_party/txt/libtxt.a \
 	skia/skia/formulate_out/libskia.a \
