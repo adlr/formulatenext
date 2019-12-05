@@ -255,8 +255,6 @@ void DocView::ViewPointToPageAndPoint(const SkPoint& viewpt,
   *out_page = i;
   *out_pagept = SkPoint::Make((viewpt.x() - left) / zoom_,
                               (viewpt.y() - top) / zoom_);
-  // flip y on page
-  out_pagept->fY = page_sizes_[i].height() - out_pagept->fY;
 }
 
 SkPoint DocView::ViewPointToPagePoint(const SkPoint& point, int page) {
@@ -269,8 +267,6 @@ SkPoint DocView::ViewPointToPagePoint(const SkPoint& point, int page) {
       kBorderPixels + (max_page_width_ - page_sizes_[page].width()) * zoom_ / 2;
   SkPoint ret = SkPoint::Make((point.x() - left) / zoom_,
                               (point.y() - top) / zoom_);
-  // flip y on page
-  ret.fY = page_sizes_[page].height() - ret.fY;
   return ret;
 }
 
@@ -285,9 +281,8 @@ SkPoint DocView::PagePointToViewPoint(int page, const SkPoint& pagept) const {
   }
   float left =
     kBorderPixels + (max_page_width_ - page_sizes_[page].width()) / 2 * zoom_;
-  // flip y back on page, but not x
   return SkPoint::Make(pagept.x() * zoom_ + left,
-                       (page_sizes_[page].height() - pagept.y()) * zoom_ + top);
+                       pagept.y() * zoom_ + top);
 }
 
 SkRect DocView::ConvertRectFromPage(int page, const SkRect& rect) const {
