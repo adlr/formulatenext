@@ -54,6 +54,11 @@ void HTMLWalk(const char* str, HTMLNodeWalkerInterface* callbacks) {
 RichFormat::RichFormat() {
   font_collection_.reset(new txt::FontCollection());
   font_collection_->SetupDefaultFontManager();
+}
+
+std::unique_ptr<txt::Paragraph> RichFormat::Format(const char* html) {
+  fprintf(stderr, "called rich format!\n");
+
   txt::ParagraphStyle style;
   style.font_family = "Arimo";
   paragraph_builder_ = txt::ParagraphBuilder::CreateTxtBuilder(
@@ -62,12 +67,10 @@ RichFormat::RichFormat() {
   textstyle.color = SK_ColorBLACK;
   textstyle.font_families.push_back("Arimo");
   paragraph_builder_->PushStyle(textstyle);
-}
 
-std::unique_ptr<txt::Paragraph> RichFormat::Format(const char* html) {
-  fprintf(stderr, "called rich format!\n");
   HTMLWalk(html, this);
   std::unique_ptr<txt::Paragraph> paragraph(paragraph_builder_->Build());
+  paragraph_builder_.reset();
   return paragraph;
 }
 

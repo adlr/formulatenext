@@ -124,15 +124,19 @@ void TextAnnotation::StopEditing() {
     fprintf(stderr, "No delegate. Can't stop editing.\n");
     return;
   }
-  editing_ = false;
   delegate_->StopEditingText();
+  editing_ = false;
 
   paragraph_ = delegate_->ParseText(editing_value_.c_str());
   // Re-layout text
-  paragraph_->Layout(fixed_width_ ? kMaxUnboundedTextWidth : bounds_.width());
-  if (fixed_width_)
-    SetWidth(paragraph_->GetLongestLine());
+  fprintf(stderr, "using width: %f\n",
+          fixed_width_ ? bounds_.width() : kMaxUnboundedTextWidth);
+  paragraph_->Layout(fixed_width_ ? bounds_.width() : kMaxUnboundedTextWidth);
+  if (!fixed_width_)
+    SetWidth(ceilf(paragraph_->GetLongestLine()));
   SetHeight(paragraph_->GetHeight());
+  fprintf(stderr, "size: %f %f\n", bounds_.width(), bounds_.height());
+
   // set needs display
 }
 

@@ -17,8 +17,6 @@ void RootView::SetNeedsDisplayInRect(const SkRect& rect) {
     fprintf(stderr, "Don't have redraw object!\n");
     return;
   }
-  fprintf(stderr, "Redraw in rect %f %f %f %f\n", rect.left(),
-          rect.top(), rect.right(), rect.bottom());
   redraw_->AddRect(rect);
 }
 

@@ -372,10 +372,10 @@ document.addEventListener('DOMContentLoaded', function() {
       placeholder: 'Text goes here...',
       theme: 'snow'
     });
-    quill.on('text-change', (delta, oldDelta, source) => {
-      console.log(`Text is now: ${quill.root.innerHTML}`);
-      UpdateEditText(quill.root.innerHTML);
-    });
+    // quill.on('text-change', (delta, oldDelta, source) => {
+    //   console.log(`Text is now: ${quill.root.innerHTML}`);
+    //   UpdateEditText(quill.root.innerHTML);
+    // });
     quill.enable();
 
     let update = () => {
@@ -401,6 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
     bridge_stopComposingText = () => {
       console.log('stop composing');
+      UpdateEditText(quill.root.innerHTML);
       textarea.parentNode.removeChild(textarea);
       // quill.destroy() or leak?
     }

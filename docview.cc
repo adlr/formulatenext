@@ -38,7 +38,6 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
   float pagetop = kBorderPixels;
   for (int i = 0; i < page_sizes_.size(); i++) {
     const SkSize& pgsize = page_sizes_[i];
-    fprintf(stderr, "page size: %f x %f\n", pgsize.width(), pgsize.height());
     const float pageleft = kBorderPixels +
       floorf((max_page_width_ - pgsize.width()) * zoom_ / 2);
     SkRect page = SkRect::MakeXYWH(pageleft, pagetop,
@@ -357,6 +356,7 @@ View* DocView::MouseDown(MouseInputEvent ev) {
       }
     }
     SetNeedsDisplay();
+    return this;
   }
 
   // we aren't the arrow tool. if we hit a graphic that's editable,
