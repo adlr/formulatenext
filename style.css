@@ -114,9 +114,6 @@ body {
 }
 
 .texteditor {
-  font-family: Arial;
-  font-size: 12px;
-  white-space: pre;
   position: absolute;
   z-index: 15;
   margin: 0;

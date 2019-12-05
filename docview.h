@@ -10,9 +10,12 @@
 #include <gtest/gtest.h>
 #include "SkCanvas.h"
 
+#include "annotation.h"
 #include "pdfdoc.h"
 #include "toolbox.h"
 #include "view.h"
+
+namespace formulate {
 
 char KnobsForType(PDFDoc::ObjType type);
 
@@ -95,7 +98,8 @@ class DocView : public View,
                       bool freeform);
 
   // AnnotationDelegate method:
-  void StartComposingText(SkPoint pt,  // top-left corner
+  void StartComposingText(int page,
+                          SkPoint pt,  // top-left corner
                           float width,  // width, or 0 for bound text
                           const char* html,  // body text
                           int cursorpos,  // where to put cursor
@@ -122,9 +126,14 @@ class DocView : public View,
   // if |index| is -1, redraw whole page. Includes knobs.
   void SetNeedsDisplayInObj(int pageno, int index);
 
-  void SetNeedsDisplayForAnnotation(Annotation* annot);
+  void SetNeedsDisplayForAnnotation(Annotation* annot) {
+    NeedsDisplayInRect(annot->page(), annot->Bounds());
+  }
 
  private:
+  bool AnnotationIsSelected(Annotation* annot) const {
+    return selected_annotations_.find(annot) != selected_annotations_.end();
+  }
   void ToggleAnnotationSelected(Annotation* annot);
 
   RichFormat rich_format_;

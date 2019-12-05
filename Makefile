@@ -1,7 +1,7 @@
 all: formulate.html
 
 CFLAGS=\
-	-g -O0
+	-g -O0 -Wall -Werror
 #	-g -Os --profiling
 
 INC=\
@@ -17,13 +17,14 @@ INC=\
 	-Inon-test-include
 
 %.o : %.cc
-	emcc $(CFLAGS) -MMD -std=c++14 $(INC) -o $@ $< -s USE_FREETYPE=1 -s USE_HARFBUZZ=1
+	emcc $(CFLAGS) -MMD -std=c++17 $(INC) -o $@ $< -s USE_FREETYPE=1 -s USE_HARFBUZZ=1
 
 %.o : %.cpp
-	emcc $(CFLAGS) -MMD -std=c++14 $(INC) -o $@ $< -s USE_FREETYPE=1 -s USE_HARFBUZZ=1
+	emcc $(CFLAGS) -MMD -std=c++17 $(INC) -o $@ $< -s USE_FREETYPE=1 -s USE_HARFBUZZ=1
 
 OBJS=\
 	formulate_bridge.o \
+	annotation.o \
 	docview.o \
 	scrollview.o \
 	pdfdoc.o \
@@ -58,7 +59,7 @@ Roboto/Roboto.css :
 
 NotoMono-Regular.ttf.o : skia/skia/modules/canvaskit/fonts/NotoMono-Regular.ttf.cpp
 	emcc -c -o $@ \
-		-std=c++14 \
+		-std=c++17 \
 		-Iskia/skia \
 		-Iskia/skia/include/core \
 		-Iskia/skia/include/config \

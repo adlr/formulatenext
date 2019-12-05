@@ -3,7 +3,8 @@
 #ifndef ANNOTATION_H_
 #define ANNOTATION_H_
 
-#include <toolbox.h>
+#include "rich_format.h"
+#include "toolbox.h"
 
 namespace formulate {
 
@@ -31,7 +32,8 @@ const char kNoKnobs          = 0;
 class AnnotationDelegate {
  public:
   // virtual void Redraw(int pageno, SkRect rect) {}
-  virtual void StartComposingText(SkPoint pt,  // top-left corner
+  virtual void StartComposingText(int page,
+                                  SkPoint pt,  // top-left corner
                                   float width,  // width, or 0 for bound text
                                   const char* html,  // body text
                                   int cursorpos,  // where to put cursor
@@ -48,7 +50,7 @@ class Annotation {
       : delegate_(delegate) {}
   virtual ~Annotation();
 
-  virtual Toolbox::Tool Type() { return 0; }
+  virtual Toolbox::Tool Type() { return Toolbox::kArrow_Tool; }
   static Annotation* Create(AnnotationDelegate* delegate, Toolbox::Tool type);
 
   // Called when creating an annotation w/ the mouse:
@@ -61,7 +63,7 @@ class Annotation {
   // void MouseDrag(SkPoint pt);
   // void MouseUp(SkPoint pt);
 
-  char KnobAtPoint(SkPoint pt);
+  char KnobAtPoint(SkPoint pt) { return kNoKnobs; }
 
   virtual void Draw(SkCanvas* canvas, SkRect rect) = 0;
   char Knobs() const { return kAllKnobs; }
@@ -88,22 +90,25 @@ class Annotation {
   int page_{-1};
   SkRect bounds_;
   SkPoint down_pt_;  // where mouse down occurred
+
+  DISALLOW_COPY_AND_ASSIGN(Annotation);
 };
 
 class TextAnnotation : public Annotation {
  public:
   explicit TextAnnotation(AnnotationDelegate* delegate)
       : Annotation(delegate) {}
-  bool CreateMouseUp(SkPoint pt);
+  virtual ~TextAnnotation();
+  bool CreateMouseUp(SkPoint pt) override;
 
-  void Draw(SkCanvas* canvas, SkRect rect);
+  void Draw(SkCanvas* canvas, SkRect rect) override;
 
-  void Flush();
+  void Flush() override;
 
-  bool Editable() const { return true; }
-  bool IsEditing() const { return editing_; }
-  void StartEditing(SkPoint pt);
-  void StopEditing();
+  bool Editable() const override { return true; }
+  bool IsEditing() const override { return editing_; }
+  void StartEditing(SkPoint pt) override;
+  void StopEditing() override;
 
  private:
   bool editing_{false};
@@ -111,5 +116,7 @@ class TextAnnotation : public Annotation {
   std::unique_ptr<txt::Paragraph> paragraph_;
   bool fixed_width_{false};
 };
+
+}  // namespace formulate
 
 #endif  // ANNOTATION_H_

@@ -13,12 +13,12 @@ class ScrollView : public View {
  public:
   explicit ScrollView(bool vertically_center)
       : vertically_center_(vertically_center) {}
-  virtual const char* Name() const { return "ScrollView"; }
-  void SetSize(const SkSize& size) {
+  virtual const char* Name() const override { return "ScrollView"; }
+  void SetSize(SkSize size) override {
     View::SetSize(size);
     RepositionChild();
   }
-  void SetOrigin(SkPoint origin) {
+  void SetOrigin(SkPoint origin) override {
     origin_ = origin;
     RepositionChild();
   }

@@ -108,7 +108,7 @@ void RenderCacheEntry::Draw(SkCanvas* canvas, SkRect rect) {
     fprintf(stderr, "nothing to draw\n");
     return;
   }
-  char* orig_dst_pixels = dst_pixels;
+  // char* orig_dst_pixels = dst_pixels;
   dst_pixels += dst_irect.left() * 4 + dst_irect.top() * dst_rowbytes;
   char* src_pixels = reinterpret_cast<char*>(
       bitmap_.getAddr32(src_irect.left(), src_irect.top()));

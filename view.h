@@ -32,6 +32,7 @@ class MouseInputEvent {
   const SkPoint& position() const { return position_; }
   uint32_t modifiers() const { return modifiers_; }
   int32_t ClickCount() const { return click_count_; }
+  Type type() const { return type_; }
 
  private:
   SkPoint position_;
@@ -109,8 +110,8 @@ class View {
 
   void Dump(int indent) const;
  protected:
-  SkPoint origin_;  // in parent's coordinates
-  SkSize size_;  // in this' coordinates
+  SkPoint origin_{0.0f, 0.0f};  // in parent's coordinates
+  SkSize size_{0.0f, 0.0f};  // in this' coordinates
   float scale_{1.0f};  // relative to parent
   View* parent_{nullptr};
   std::vector<View*> children_;
@@ -131,5 +132,9 @@ SkRect ScaleRect(SkRect rect, float scale);
 }  // namespace formulate
 
 std::ostream& operator<<(std::ostream& os, const SkRect& rect);
+
+#define DISALLOW_COPY_AND_ASSIGN(TypeName)     \
+  TypeName(const TypeName&) = delete;           \
+  TypeName& operator=(const TypeName&) = delete
 
 #endif  // FORMULATE_VIEW_H__

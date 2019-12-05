@@ -1,5 +1,7 @@
 // Copyright...
 
+#include "annotation.h"
+
 namespace formulate {
 
 namespace {
@@ -7,13 +9,27 @@ const double kMaxUnboundedTextWidth = 72.0 * 8.5;
 } // namespace {}
 
 Annotation::~Annotation() {
+  fprintf(stderr, "deleted annotation\n");
   if (dirty_)
     fprintf(stderr, "ERR: Deleting dirty annotation\n");
 }
 
-void Annotation::CreateMouseDown(SkPoint pt) {
+Annotation* Annotation::Create(AnnotationDelegate* delegate,
+                               Toolbox::Tool type) {
+  switch (type) {
+    case Toolbox::kText_Tool:
+      fprintf(stderr, "creating text annotation\n");
+      return new TextAnnotation(delegate);
+    default:
+      fprintf(stderr, "can't create annotation for type %d\n", type);
+      return nullptr;
+  }
+}
+
+void Annotation::CreateMouseDown(int page, SkPoint pt) {
+  page_ = page;
   down_pt_ = pt;
-  bounds_ = SkRect.MakeLTRB(pt.x(), pt.y(), pt.x(), pt.y());
+  bounds_ = SkRect::MakeLTRB(pt.x(), pt.y(), pt.x(), pt.y());
 }
 
 void Annotation::CreateMouseDrag(SkPoint pt) {
@@ -40,10 +56,14 @@ SkRect Annotation::KnobBounds(char knob) {
   // For now, a dummy value:
   SkPoint quad[4];
   bounds_.toQuad(quad);
-  return SkRect.MakeLTRB(quad[0].x() - 2,
-                         quad[0].y() - 2,
-                         quad[0].x() + 2,
-                         quad[0].y() + 2);
+  return SkRect::MakeLTRB(quad[0].x() - 2,
+                          quad[0].y() - 2,
+                          quad[2].x() + 2,
+                          quad[2].y() + 2);
+}
+
+TextAnnotation::~TextAnnotation() {
+  fprintf(stderr, "deleted text annotation\n");
 }
 
 bool TextAnnotation::CreateMouseUp(SkPoint pt) {
@@ -76,6 +96,7 @@ void TextAnnotation::Flush() {
 }
 
 void TextAnnotation::StartEditing(SkPoint pt) {
+  fprintf(stderr, "called TA::StartEditing\n");
   if (!delegate_) {
     fprintf(stderr, "No delegate. Can't start editing.\n");
     return;
@@ -83,6 +104,7 @@ void TextAnnotation::StartEditing(SkPoint pt) {
   editing_ = true;
   // TODO(adlr): incorporate pt to cursor position
   delegate_->StartComposingText(
+      page(),
       SkPoint::Make(bounds_.left(),
                     bounds_.top()),
       fixed_width_ ? bounds_.width() : 0,
@@ -103,7 +125,7 @@ void TextAnnotation::StopEditing() {
     return;
   }
   editing_ = false;
-  delegate_->StopComposingText();
+  delegate_->StopEditingText();
 
   paragraph_ = delegate_->ParseText(editing_value_.c_str());
   // Re-layout text

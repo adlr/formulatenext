@@ -49,11 +49,11 @@ SkPoint View::ConvertPointFromChild(const View* child, SkPoint pt) const {
     pt = child->Parent()->ConvertPointFromChild(child, pt);
     return ConvertPointFromChild(child->Parent(), pt);
   }
-  // fprintf(stderr, "Conv %f %f %f (in %f %f)\n", child->scale_,
+  // fprintf(stderr, "ConvPFC %f %f %f (in %f %f)\n", child->scale_,
   //         child->origin_.x(), child->origin_.y(), pt.x(), pt.y());
   pt *= child->scale_;
   pt.offset(child->origin_.x(), child->origin_.y());
-  // fprintf(stderr, "Conv (out %f %f)\n", pt.x(), pt.y());
+  // fprintf(stderr, "ConvFPC (out %f %f)\n", pt.x(), pt.y());
   return pt;
 }
 
@@ -66,8 +66,12 @@ SkSize View::ConvertSizeFromChild(const View* child, SkSize size) const {
     size = child->Parent()->ConvertSizeFromChild(child, size);
     return ConvertSizeFromChild(child->Parent(), size);
   }
+  // fprintf(stderr, "CZFC %f %f * %f\n",
+  //         size.width(), size.height(), child->scale_);
   size.fWidth *= child->scale_;
   size.fHeight *= child->scale_;
+  // fprintf(stderr, "CZFC out %f %f\n",
+  //         size.width(), size.height());
   return size;
 }
 
@@ -92,6 +96,9 @@ void View::SetNeedsDisplayInRect(const SkRect& rect) {
     fprintf(stderr, "no parent!\n");
     return;
   }
+  // fprintf(stderr, "SetNeedsDisplayInRect(%f %f %f %f) in progress (%f %f)\n",
+  //         rect.left(), rect.top(), rect.right(), rect.bottom(),
+  //         parent_->scale_, scale_);
   parent_->SetNeedsDisplayInRect(parent_->ConvertRectFromChild(this, rect));
 }
 
@@ -122,7 +129,6 @@ View* View::MouseDown(MouseInputEvent ev) {
 void View::OnClick(MouseInputEvent ev) {
   for (ssize_t i = children_.size() - 1; i >= 0; i--) {
     View* child = children_[i];
-    SkRect frame = child->Frame();
     if (!child->Frame().contains(ev.position().x(), ev.position().y()))
       continue;
     MouseInputEvent child_evt = ev;

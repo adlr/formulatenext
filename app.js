@@ -244,6 +244,17 @@ document.addEventListener('DOMContentLoaded', function() {
         new SignatureManager(['Signature', 'Insert Signature'],
                              ['Signature', 'Delete Signature'],
                              ['Signature', 'Import Signature...']);
+
+    // Init Quill library
+    {
+      let bold = Quill.import('formats/bold');
+      bold.tagName = 'b';   // Quill uses <strong> by default
+      Quill.register(bold, true);
+
+      let italic = Quill.import('formats/italic');
+      italic.tagName = 'i';   // Quill uses <em> by default
+      Quill.register(italic, true);
+    }
   };
 
   var outer = document.getElementById('main-scroll-outer');
@@ -332,19 +343,21 @@ document.addEventListener('DOMContentLoaded', function() {
   let launchEditor = (xpos, ypos, width, zoom, text, caretPos) => {
     const dpr = window.devicePixelRatio || 1;
     console.log(`Edit at ${xpos} ${ypos}, ${zoom}, ${text}, ${caretPos}`);
-    let vertOffset = calcFontMetrics((zoom * 12) | 0);
+    // let vertOffset = calcFontMetrics((zoom * 12) | 0);
     let padding = 5;
     xpos -= padding;
-    ypos -= padding + vertOffset;
+    ypos -= padding;
     let textarea = document.createElement('div');
     textarea.classList.add('texteditor');
     textarea.style.width = textarea.style.height = '200px';
-    textarea.innerHTML = text;
-    textarea.id = 'quill-editor';
+    let quillarea = document.createElement('div');
+    quillarea.innerHTML = text;
+    quillarea.id = 'quill-editor';
 
     textarea.style.marginLeft = xpos + 'px';
     textarea.style.marginTop = ypos + 'px';
     textarea.style.transform = 'scale(' + zoom + ')';
+    textarea.appendChild(quillarea);
     document.getElementById('main-scroll-inner').appendChild(textarea);
 
     let quill = g_quill = new Quill('#quill-editor', {
@@ -359,6 +372,10 @@ document.addEventListener('DOMContentLoaded', function() {
       placeholder: 'Text goes here...',
       theme: 'snow'
     });
+    quill.on('text-change', (delta, oldDelta, source) => {
+      console.log(`Text is now: ${quill.root.innerHTML}`);
+      UpdateEditText(quill.root.innerHTML);
+    });
     quill.enable();
 
     let update = () => {
@@ -370,10 +387,10 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     // textarea.addEventListener('keyup', update);
     // textarea.addEventListener('input', update);
-    textarea.addEventListener('blur', (ev) => {
-      textarea.parentNode.removeChild(textarea);
-      // quill.destroy(); // are we just leaking?
-    });
+    // textarea.addEventListener('blur', (ev) => {
+    //   textarea.parentNode.removeChild(textarea);
+    //   // quill.destroy(); // are we just leaking?
+    // });
     // textarea.value = text;
     update();
     setTimeout(() => {
