@@ -2,6 +2,10 @@
 
 #include "annotation.h"
 
+#include "public/cpp/fpdf_scopers.h"
+#include "public/fpdf_ppo.h"
+#include "SkPDFDocument.h"
+
 namespace formulate {
 
 namespace {
@@ -91,8 +95,65 @@ void TextAnnotation::Draw(SkCanvas* canvas, SkRect rect) {
   canvas->restore();
 }
 
-void TextAnnotation::Flush() {
-  fprintf(stderr, "TODO: save text annotation to PDF\n");
+void TextAnnotation::Flush(FPDF_DOCUMENT doc, FPDF_PAGE page) {
+  SkDynamicMemoryWStream mem_stream;
+  {
+    // Create temp PDF, write to mem_stream, then destroy it
+    SkPDF::Metadata metadata;
+    auto pdf = SkPDF::MakeDocument(&mem_stream, metadata);
+    if (!pdf.get()) {
+      fprintf(stderr, "couldn't create PDF document\n");
+      return;
+    }
+    SkCanvas* page_canvas = pdf->beginPage(bounds_.width(), bounds_.height());
+    if (!page_canvas) {
+      fprintf(stderr, "couldn't create page canvas\n");
+      return;
+    }
+    page_canvas->save();
+    page_canvas->translate(-Bounds().left(), -Bounds().top());
+    Draw(page_canvas, Bounds());
+    page_canvas->restore();
+    pdf->endPage();
+    pdf->close();
+  }
+  // Open the new PDF in pdfium and convert to Form XObject
+  sk_sp<SkData> src_bytes = mem_stream.detachAsData();
+  fprintf(stderr, "temp PDF is %zu bytes in size\n", src_bytes->size());
+  ScopedFPDFDocument src(FPDF_LoadMemDocument(
+      src_bytes->data(),
+      static_cast<int>(src_bytes->size()),
+      nullptr));
+  if (!src) {
+    fprintf(stderr, "Can't open temp PDF in pdfium\n");
+    return;
+  }
+  ScopedFPDFPageObject form_object(
+      FPDF_ImportPageToXObject(doc, src.get(), 1));
+  if (!form_object) {
+    fprintf(stderr, "failed to import pdf to form xobject\n");
+    return;
+  }
+
+  // Set marked content value on the object
+  FPDF_PAGEOBJECTMARK mark = FPDFPageObj_AddMark(form_object.get(),
+                                                 "FN:RichText");
+  if (!mark) {
+    fprintf(stderr, "failed to create mark\n");
+    return;
+  }
+  if (!FPDFPageObjMark_SetStringParam(
+          doc, form_object.get(), mark, "V", editing_value_.c_str())) {
+    fprintf(stderr, "failed to set mark value\n");
+    return;
+  }
+
+  // Position the object on the page and add to the page
+  double page_height = FPDF_GetPageHeight(page);
+  double y_bottom = page_height - Bounds().height() - Bounds().top();
+  FPDFPageObj_Transform(form_object.get(),
+                        1, 0, 0, 1, Bounds().left(), y_bottom);
+  FPDFPage_InsertObject(page, form_object.release());
 }
 
 void TextAnnotation::StartEditing(SkPoint pt) {

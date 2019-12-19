@@ -122,6 +122,9 @@ class DocView : public View,
   void NeedsDisplayForObj(int pageno, int index) {
     SetNeedsDisplayInObj(pageno, index);
   }
+  bool FlushAnnotations(FPDF_DOCUMENT doc,
+                        FPDF_PAGE page,
+                        int pageno);
 
   // if |index| is -1, redraw whole page. Includes knobs.
   void SetNeedsDisplayInObj(int pageno, int index);

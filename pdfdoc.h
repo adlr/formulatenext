@@ -82,6 +82,11 @@ class PDFDocEventHandler {
   virtual void PagesChanged() {}
   virtual void NeedsDisplayInRect(int page, SkRect rect) {}
   virtual void NeedsDisplayForObj(int page, int index) {}
+  // |doc| and |page| are gauaranteed only to be valid for the
+  // |duration of the call. Return true if page was modified.
+  virtual bool FlushAnnotations(FPDF_DOCUMENT doc,
+                                FPDF_PAGE page,
+                                int pageno) { return false; }
 };
 
 class PDFDoc : PDFRenderer {
@@ -112,6 +117,8 @@ class PDFDoc : PDFRenderer {
 
   int Pages() const;
   SkSize PageSize(int page) const;
+
+  void DumpPage(int pageno) const;
 
   // Attemps to render w/ the cache
   void DrawPage(SkCanvas* canvas, SkRect rect, int pageno);

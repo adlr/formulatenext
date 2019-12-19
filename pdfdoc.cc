@@ -78,6 +78,7 @@ void PDFDoc::FinishLoad() {
   pagecache_.SetDoc(doc_.get());
   for (PDFDocEventHandler* handler : event_handlers_)
     handler->PagesChanged();
+  DumpPage(0);
 }
 
 int PDFDoc::Pages() const {
@@ -94,6 +95,22 @@ SkSize PDFDoc::PageSize(int page) const {
     fprintf(stderr, "FPDF_GetPageSizeByIndex error\n");
   }
   return SkSize::Make(width, height);
+}
+
+void PDFDoc::DumpPage(int pageno) const {
+  ScopedPage page = pagecache_.OpenPage(pageno);
+  if (!page) {
+    fprintf(stderr, "failed to load PDFPage\n");
+    return;
+  }
+  int objcount = FPDFPage_CountObjects(page.get());
+  for (int i = objcount - 1; i >= 0; i--) {
+    SkRect bbox = BoundingBoxForObj(pageno, i);
+    FPDF_PAGEOBJECT obj = page.GetObject(i);
+    fprintf(stderr, "BBox: %f %f %f %f type: %d\n",
+            bbox.fLeft, bbox.fTop, bbox.fRight, bbox.fBottom,
+            FPDFPageObj_GetType(obj));
+  }
 }
 
 void DbgMatrix(const char* str, const SkMatrix& mat) {
@@ -841,6 +858,21 @@ void PDFDoc::MovePages(const std::vector<std::pair<int, int>>& from, int to) {
 }
 
 void PDFDoc::DownloadDoc() const {
+  // Remember objects in each page and save annotations
+  std::vector<int> objects_per_page(Pages());
+  for (size_t i = 0; i < objects_per_page.size(); i++) {
+    ScopedPage page = pagecache_.OpenPage(i);
+    if (!page) {
+      fprintf(stderr, "failed to load PDFPage\n");
+      return;
+    }
+    objects_per_page[i] = FPDFPage_CountObjects(page.get());
+    for (PDFDocEventHandler* handler : event_handlers_) {
+      if (handler->FlushAnnotations(doc_.get(), page.get(), i)) {
+        page.MarkDirty();
+      }
+    }
+  }
   pagecache_.GenerateContentStreams();
   FileSaver fs;
   if (!FPDF_SaveAsCopy(doc_.get(), &fs, FPDF_REMOVE_SECURITY)) {
@@ -848,6 +880,29 @@ void PDFDoc::DownloadDoc() const {
     return;
   }
   bridge_downloadBytes(&fs.data_[0], fs.data_.size());
+
+  // Clean up each page by deleting the new objects
+  for (size_t i = 0; i < objects_per_page.size(); i++) {
+    ScopedPage page = pagecache_.OpenPage(i);
+    if (!page) {
+      fprintf(stderr, "failed to load PDFPage\n");
+      return;
+    }
+    while (true) {
+      int obj_cnt = FPDFPage_CountObjects(page.get());
+      if (obj_cnt <= objects_per_page[i])
+        break;
+      FPDF_PAGEOBJECT pageobj = page.GetObject(obj_cnt - 1);
+      if (!pageobj) {
+        fprintf(stderr, "Unable to get page obj\n");
+        return;
+      }
+      if (!FPDFPage_RemoveObject(page.get(), pageobj)) {
+        fprintf(stderr, "Unable to remove object\n");
+        return;
+      }
+    }
+  }
 }
 
 void PDFDoc::AppendPDF(const char* bytes, size_t length) {

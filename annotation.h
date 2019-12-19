@@ -3,6 +3,8 @@
 #ifndef ANNOTATION_H_
 #define ANNOTATION_H_
 
+#include "public/fpdfview.h"
+
 #include "rich_format.h"
 #include "toolbox.h"
 
@@ -69,7 +71,7 @@ class Annotation {
   char Knobs() const { return kAllKnobs; }
   void DrawKnobs(SkCanvas* canvas, SkRect rect);
 
-  virtual void Flush() = 0;
+  virtual void Flush(FPDF_DOCUMENT doc, FPDF_PAGE page) = 0;
 
   virtual bool Editable() const { return false; }
   virtual bool IsEditing() const { return false; }
@@ -103,7 +105,7 @@ class TextAnnotation : public Annotation {
 
   void Draw(SkCanvas* canvas, SkRect rect) override;
 
-  void Flush() override;
+  void Flush(FPDF_DOCUMENT doc, FPDF_PAGE page) override;
 
   bool Editable() const override { return true; }
   bool IsEditing() const override { return editing_; }

@@ -9,6 +9,7 @@ INC=\
 	-Iskia/skia \
 	-Iskia/skia/include/core \
 	-Iskia/skia/include/config \
+	-Iskia/skia/include/docs \
 	-Iskia/skia/include/utils \
 	-I../engine/src/flutter/third_party/txt/src/ \
 	-I../engine/src \

@@ -818,6 +818,19 @@ void DocView::SetEditingString(const char* str) {
   set_text_callback_(str);
 }
 
+bool DocView::FlushAnnotations(FPDF_DOCUMENT doc,
+                               FPDF_PAGE page,
+                               int pageno) {
+  bool dirty = false;
+  for (auto& annotation : annotations_) {
+    if (annotation->page() == pageno) {
+      annotation->Flush(doc, page);
+      dirty = true;
+    }
+  }
+  return dirty;
+}
+
 void DocView::StopEditingText() {
   bridge_stopComposingText();
 }
