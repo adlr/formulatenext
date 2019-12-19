@@ -1,7 +1,7 @@
 From 92643e87e568ed961dd73dc107874280963baeb0 Mon Sep 17 00:00:00 2001
 From: Andrew de los Reyes <adlr@chromium.org>
 Date: Thu, 28 Nov 2019 14:57:32 -0800
-Subject: [PATCH 2/2] Support for fallback font selection (needed for emoji)
+Subject: [PATCH 2/3] Support for fallback font selection (needed for emoji)
 
 ---
  src/ports/SkFontMgr_custom.cpp | 16 +++++++++++++++-

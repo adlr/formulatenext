@@ -1,0 +1,25 @@
+From f8250efee52b81ec50c281bcef936d2e17c7b90f Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Thu, 19 Dec 2019 13:30:50 -0800
+Subject: [PATCH 3/3] Compile with PDF support
+
+---
+ modules/canvaskit/compile.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/modules/canvaskit/compile.sh b/modules/canvaskit/compile.sh
+index 40927206f8..7a665a9cdb 100755
+--- a/modules/canvaskit/compile.sh
++++ b/modules/canvaskit/compile.sh
+@@ -206,7 +206,7 @@ echo "Compiling bitcode"
+   skia_enable_ccpr=false \
+   skia_enable_nvpr=false \
+   skia_enable_skparagraph=true \
+-  skia_enable_pdf=false"
++  skia_enable_pdf=true"
+ 
+ # Build all the libs, we'll link the appropriate ones down below
+ ${NINJA} -C ${BUILD_DIR} libskia.a libskottie.a libsksg.a \
+-- 
+2.11.0
+
