@@ -1,0 +1,209 @@
+From ef00fb5bec434a31849e1c61912f624ea6ae8a6e Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Thu, 19 Dec 2019 13:34:09 -0800
+Subject: [PATCH] Add FPDF_ImportPageToXObject API and corresponding support
+
+---
+ core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp | 24 +++++++++++++
+ core/fpdfapi/edit/cpdf_pagecontentgenerator.h   |  2 ++
+ fpdfsdk/fpdf_ppo.cpp                            | 48 ++++++++++++++++++++++++-
+ public/fpdf_ppo.h                               | 13 +++++++
+ 4 files changed, 86 insertions(+), 1 deletion(-)
+
+diff --git a/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp b/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
+index 0bb8a2e09..a798b824f 100644
+--- a/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
++++ b/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
+@@ -18,6 +18,8 @@
+ #include "core/fpdfapi/font/cpdf_type1font.h"
+ #include "core/fpdfapi/page/cpdf_contentmarks.h"
+ #include "core/fpdfapi/page/cpdf_docpagedata.h"
++#include "core/fpdfapi/page/cpdf_form.h"
++#include "core/fpdfapi/page/cpdf_formobject.h"
+ #include "core/fpdfapi/page/cpdf_image.h"
+ #include "core/fpdfapi/page/cpdf_imageobject.h"
+ #include "core/fpdfapi/page/cpdf_page.h"
+@@ -314,6 +316,8 @@ void CPDF_PageContentGenerator::ProcessPageObject(std::ostringstream* buf,
+                                                   CPDF_PageObject* pPageObj) {
+   if (CPDF_ImageObject* pImageObject = pPageObj->AsImage())
+     ProcessImage(buf, pImageObject);
++  else if (CPDF_FormObject* pFormObj = pPageObj->AsForm())
++    ProcessForm(buf, pFormObj);
+   else if (CPDF_PathObject* pPathObj = pPageObj->AsPath())
+     ProcessPath(buf, pPathObj);
+   else if (CPDF_TextObject* pTextObj = pPageObj->AsText())
+@@ -352,6 +356,26 @@ void CPDF_PageContentGenerator::ProcessImage(std::ostringstream* buf,
+   *buf << "/" << PDF_NameEncode(name) << " Do Q  % ProcessImage\n";
+ }
+ 
++void CPDF_PageContentGenerator::ProcessForm(std::ostringstream* buf,
++                                             CPDF_FormObject* pFormObj) {
++  if ((pFormObj->form_matrix().a == 0 && pFormObj->form_matrix().b == 0) ||
++      (pFormObj->form_matrix().c == 0 && pFormObj->form_matrix().d == 0)) {
++    fprintf(stderr, "null matrix\n");
++    return;
++  }
++  *buf << "q % ProcessForm\n" << pFormObj->form_matrix() << " cm ";
++
++  const CPDF_Form* pForm = pFormObj->form();
++
++  const CPDF_Stream* pStream = pForm->GetStream();
++  if (!pStream)
++    return;
++
++  ByteString name = RealizeResource(pStream, "XObject");
++
++  *buf << "/" << PDF_NameEncode(name) << " Do Q  % ProcessForm\n";
++}
++
+ // Processing path with operators from Tables 4.9 and 4.10 of PDF spec 1.7:
+ // "re" appends a rectangle (here, used only if the whole path is a rectangle)
+ // "m" moves current point to the given coordinates
+diff --git a/core/fpdfapi/edit/cpdf_pagecontentgenerator.h b/core/fpdfapi/edit/cpdf_pagecontentgenerator.h
+index ead3950f8..ba5d4b249 100644
+--- a/core/fpdfapi/edit/cpdf_pagecontentgenerator.h
++++ b/core/fpdfapi/edit/cpdf_pagecontentgenerator.h
+@@ -18,6 +18,7 @@
+ 
+ class CPDF_ContentMarks;
+ class CPDF_Document;
++class CPDF_FormObject;
+ class CPDF_ImageObject;
+ class CPDF_Object;
+ class CPDF_PageObject;
+@@ -38,6 +39,7 @@ class CPDF_PageContentGenerator {
+ 
+   void ProcessPageObject(std::ostringstream* buf, CPDF_PageObject* pPageObj);
+   void ProcessPath(std::ostringstream* buf, CPDF_PathObject* pPathObj);
++  void ProcessForm(std::ostringstream* buf, CPDF_FormObject* pFormObj);
+   void ProcessImage(std::ostringstream* buf, CPDF_ImageObject* pImageObj);
+   void ProcessGraphics(std::ostringstream* buf, CPDF_PageObject* pPageObj);
+   void ProcessDefaultGraphics(std::ostringstream* buf);
+diff --git a/fpdfsdk/fpdf_ppo.cpp b/fpdfsdk/fpdf_ppo.cpp
+index b9200b9f4..e0e49475f 100644
+--- a/fpdfsdk/fpdf_ppo.cpp
++++ b/fpdfsdk/fpdf_ppo.cpp
+@@ -13,6 +13,8 @@
+ #include <vector>
+ 
+ #include "constants/page_object.h"
++#include "core/fpdfapi/page/cpdf_form.h"
++#include "core/fpdfapi/page/cpdf_formobject.h"
+ #include "core/fpdfapi/page/cpdf_page.h"
+ #include "core/fpdfapi/page/cpdf_pageobject.h"
+ #include "core/fpdfapi/parser/cpdf_array.h"
+@@ -540,6 +542,8 @@ class CPDF_NPageToOneExporter final : public CPDF_PageOrganizer {
+                          size_t nPagesOnXAxis,
+                          size_t nPagesOnYAxis);
+ 
++  CPDF_FormObject* ExportPageToForm(const CPDF_Dictionary* pSrcPageDict);
++
+  private:
+   // Map page object number to XObject object name.
+   using PageXObjectMap = std::map<uint32_t, ByteString>;
+@@ -554,6 +558,7 @@ class CPDF_NPageToOneExporter final : public CPDF_PageOrganizer {
+   // Creates an XObject from |pSrcPageDict|. Updates mapping as needed.
+   // Returns the name of the newly created XObject.
+   ByteString MakeXObjectFromPage(const CPDF_Dictionary* pSrcPageDict);
++  CPDF_Stream* MakeXObjectFromPageRaw(const CPDF_Dictionary* pSrcPageDict);
+ 
+   // Adds |bsContent| as the Contents key in |pDestPageDict|.
+   // Adds the objects in |m_XObjectNameToNumberMap| to the XObject dictionary in
+@@ -652,7 +657,7 @@ ByteString CPDF_NPageToOneExporter::AddSubPage(
+   return ByteString(contentStream);
+ }
+ 
+-ByteString CPDF_NPageToOneExporter::MakeXObjectFromPage(
++CPDF_Stream* CPDF_NPageToOneExporter::MakeXObjectFromPageRaw(
+     const CPDF_Dictionary* pSrcPageDict) {
+   ASSERT(pSrcPageDict);
+ 
+@@ -697,6 +702,12 @@ ByteString CPDF_NPageToOneExporter::MakeXObjectFromPage(
+     }
+     pNewXObject->SetDataAndRemoveFilter(bsSrcContentStream.AsRawSpan());
+   }
++  return pNewXObject;
++}
++
++ByteString CPDF_NPageToOneExporter::MakeXObjectFromPage(
++    const CPDF_Dictionary* pSrcPageDict) {
++  CPDF_Stream* pNewXObject = MakeXObjectFromPageRaw(pSrcPageDict);
+ 
+   // TODO(xlou): A better name schema to avoid possible object name collision.
+   ByteString bsXObjectName = ByteString::Format("X%d", ++m_nObjectNumber);
+@@ -705,6 +716,15 @@ ByteString CPDF_NPageToOneExporter::MakeXObjectFromPage(
+   return bsXObjectName;
+ }
+ 
++CPDF_FormObject* CPDF_NPageToOneExporter::ExportPageToForm(
++    const CPDF_Dictionary* pSrcPageDict) {
++  CPDF_Stream* pNewXObject = MakeXObjectFromPageRaw(pSrcPageDict);
++  auto form = pdfium::MakeUnique<CPDF_Form>(
++      dest(), nullptr, pNewXObject, nullptr);
++  return new CPDF_FormObject(CPDF_PageObject::kNoContentStream,
++                             std::move(form), CFX_Matrix());
++}
++
+ void CPDF_NPageToOneExporter::FinishPage(CPDF_Dictionary* pDestPageDict,
+                                          const ByteString& bsContent) {
+   ASSERT(pDestPageDict);
+@@ -795,6 +815,32 @@ FPDF_ImportNPagesToOne(FPDF_DOCUMENT src_doc,
+   return output_doc.release();
+ }
+ 
++FPDF_EXPORT FPDF_PAGEOBJECT FPDF_CALLCONV
++FPDF_ImportPageToXObject(FPDF_DOCUMENT dest_doc, FPDF_DOCUMENT src_doc,
++                         int src_page) {
++  CPDF_Document* pDestDoc = CPDFDocumentFromFPDFDocument(dest_doc);
++  if (!pDestDoc)
++    return nullptr;
++
++  CPDF_Document* pSrcDoc = CPDFDocumentFromFPDFDocument(src_doc);
++  if (!pSrcDoc)
++    return nullptr;
++
++  CPDF_Dictionary* pSrcPageDict = pSrcDoc->GetPageDictionary(src_page - 1);
++  if (!pSrcPageDict) {
++    fprintf(stderr, "Can't get source page dictionary\n");
++    return nullptr;
++  }
++  
++  CPDF_NPageToOneExporter exporter(pDestDoc, pSrcDoc);
++  CPDF_FormObject* pFormObject = exporter.ExportPageToForm(pSrcPageDict);
++
++  // // Make output page object
++  // CPDF_FormObject* pFormObject = new CPDF_FormObject(
++  //     kNoContentStream, form, CFX_Matrix());
++  return FPDFPageObjectFromCPDFPageObject(pFormObject);
++}
++
+ FPDF_EXPORT FPDF_BOOL FPDF_CALLCONV
+ FPDF_CopyViewerPreferences(FPDF_DOCUMENT dest_doc, FPDF_DOCUMENT src_doc) {
+   CPDF_Document* pDstDoc = CPDFDocumentFromFPDFDocument(dest_doc);
+diff --git a/public/fpdf_ppo.h b/public/fpdf_ppo.h
+index e9f3f6663..2280f9ce1 100644
+--- a/public/fpdf_ppo.h
++++ b/public/fpdf_ppo.h
+@@ -52,6 +52,19 @@ FPDF_ImportNPagesToOne(FPDF_DOCUMENT src_doc,
+                        size_t num_pages_on_x_axis,
+                        size_t num_pages_on_y_axis);
+ 
++// Experimental API.
++//
++// Create a new Form XObject in |dest_doc| from the page |src_page|
++// in |src_doc|.
++//
++// Return value:
++//   A handle to the new FPDF_PAGEOBJECT, or nullptr on failure.
++//   Caller must destroy it or add it to a page in |dest_doc|.
++FPDF_EXPORT FPDF_PAGEOBJECT FPDF_CALLCONV
++FPDF_ImportPageToXObject(FPDF_DOCUMENT dest_doc,
++                         FPDF_DOCUMENT src_doc,
++                         int src_page);
++
+ // Copy the viewer preferences from |src_doc| into |dest_doc|.
+ //
+ //   dest_doc - Document to write the viewer preferences into.
+-- 
+2.11.0
+

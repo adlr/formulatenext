@@ -1,0 +1,70 @@
+From e1c745adb2143714f9e57242081f9baaa39ed311 Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Wed, 3 Jul 2019 15:11:27 -0700
+Subject: [PATCH] FPDFTextObj_GetText: Make text_page optional
+
+This is handy b/c generating the text_page is very expensive and
+(seemingly) unnecessary for just getting an object's text.
+---
+ fpdfsdk/fpdf_edittext.cpp | 22 +++++++++++++++++-----
+ public/fpdf_edit.h        |  5 ++++-
+ 2 files changed, 21 insertions(+), 6 deletions(-)
+
+diff --git a/fpdfsdk/fpdf_edittext.cpp b/fpdfsdk/fpdf_edittext.cpp
+index 7ac862312..015b4dbaa 100644
+--- a/fpdfsdk/fpdf_edittext.cpp
++++ b/fpdfsdk/fpdf_edittext.cpp
+@@ -571,11 +571,23 @@ FPDFTextObj_GetText(FPDF_PAGEOBJECT text_object,
+   if (!pTextObj)
+     return 0;
+ 
+-  CPDF_TextPage* pTextPage = CPDFTextPageFromFPDFTextPage(text_page);
+-  if (!pTextPage)
+-    return 0;
+-
+-  WideString text = pTextPage->GetTextByObject(pTextObj);
++  WideString text;
++  if (text_page) {
++    CPDF_TextPage* pTextPage = CPDFTextPageFromFPDFTextPage(text_page);
++    if (!pTextPage)
++      return 0;
++
++    text = pTextPage->GetTextByObject(pTextObj);
++  } else {
++    fprintf(stderr, "Doing the quick texttext\n");
++    const std::vector<uint32_t>& charcodes = pTextObj->GetCharCodes();
++    for (uint32_t charcode : charcodes) {
++      if (charcode == CPDF_Font::kInvalidCharCode)
++        continue;
++      WideString unichar = pTextObj->GetFont()->UnicodeFromCharCode(charcode);
++      text += unichar;
++    }
++  }
+   return Utf16EncodeMaybeCopyAndReturnLength(text, buffer, length);
+ }
+ 
+diff --git a/public/fpdf_edit.h b/public/fpdf_edit.h
+index 38f1f835b..49aee15bb 100644
+--- a/public/fpdf_edit.h
++++ b/public/fpdf_edit.h
+@@ -1357,13 +1357,16 @@ FPDFTextObj_GetFontName(FPDF_PAGEOBJECT text,
+ // Get the text of a text object.
+ //
+ // text_object      - the handle to the text object.
+-// text_page        - the handle to the text page.
++// text_page        - optional: the handle to the text page.
+ // buffer           - the address of a buffer that receives the text.
+ // length           - the size, in bytes, of |buffer|.
+ //
+ // Returns the number of bytes in the text (including the trailing NUL
+ // character) on success, 0 on error.
+ //
++// if |text_page| is non-NULL, it will be used to fetch the
++// text. Otherwise, the text will be read directly from the object.
++//
+ // Regardless of the platform, the |buffer| is always in UTF16-LE encoding.
+ // If |length| is less than the returned length, or |buffer| is NULL, |buffer|
+ // will not be modified.
+-- 
+2.11.0
+
