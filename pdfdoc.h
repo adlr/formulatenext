@@ -89,7 +89,7 @@ class PDFDocEventHandler {
                                 int pageno) { return false; }
 };
 
-class PDFDoc : PDFRenderer {
+class PDFDoc : public PDFRenderer, public AnnotationDelegate {
  public:
   enum ObjType {
     kUnknown,
@@ -124,43 +124,52 @@ class PDFDoc : PDFRenderer {
   void DrawPage(SkCanvas* canvas, SkRect rect, int pageno);
 
   // Does the actual render
-  void RenderPage(SkCanvas* canvas, SkRect rect, int pageno) const;
+  void RenderPage(SkCanvas* canvas, SkRect rect, int pageno);
 
-  // Test to make a change to a doc
-  void ModifyPage(int pageno, SkPoint point);
-  void DeleteObjUnderPoint(int pageno, SkPoint point);
+  const std::vector<std::unique_ptr<Annotation>>& AnnotationsOnPage(
+      int pageno);
+  void PushAnnotation(int pageno, std::unique_ptr<Annotation> annot);
 
-  // Returns the index of the object under |pt| or -1 if not found.
-  // If |native| is true, it will only find an object that's native
-  // to this software.
-  int ObjectUnderPoint(int pageno, SkPoint pt, bool native) const;
+  void AnnotationsMovedUndo(int pageno, const std::set<Annotation*>& annots,
+                            float dx, float dy);
 
- public:
-  SkRect BoundingBoxForObj(int pageno, int index) const;
-  ObjType ObjectType(int pageno, int index) const;
-  // Returns the body string of a text object as UTF-8. Return empty string
-  // on error.
-  std::string TextObjValue(int pageno, int index) const;
-  // Returns the origin point of the text object (the left baseline point)
-  SkPoint TextObjOrigin(int pageno, int index) const;
-  int TextObjCaretPosition(int pageno, int objindex, float xpos) const;
+  // AnnotationDelegate method:
+  virtual std::unique_ptr<txt::Paragraph> ParseText(const char* text);
 
-  void DeleteObject(int pageno, int index);
-  void InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj);
-  int ObjectsOnPage(int pageno) const;
+  // // Test to make a change to a doc
+  // void ModifyPage(int pageno, SkPoint point);
+  // void DeleteObjUnderPoint(int pageno, SkPoint point);
 
-  void InsertPath(int pageno, SkPoint center, const SkPath& path);
+  // // Returns the index of the object under |pt| or -1 if not found.
+  // // If |native| is true, it will only find an object that's native
+  // // to this software.
+  // int ObjectUnderPoint(int pageno, SkPoint pt, bool native) const;
 
-  void PlaceText(int pageno, SkPoint pagept, const std::string& ascii);
-  void UpdateText(int pageno, int index, const std::string& ascii,
-                  const std::string& orig_value, bool undo);
-  void InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& pts);
+  // SkRect BoundingBoxForObj(int pageno, int index) const;
+  // ObjType ObjectType(int pageno, int index) const;
+  // // Returns the body string of a text object as UTF-8. Return empty string
+  // // on error.
+  // std::string TextObjValue(int pageno, int index) const;
+  // // Returns the origin point of the text object (the left baseline point)
+  // SkPoint TextObjOrigin(int pageno, int index) const;
+  // int TextObjCaretPosition(int pageno, int objindex, float xpos) const;
 
-  void MoveObjects(int pageno, const std::set<int>& objs,
-                   float dx, float dy, bool do_move, bool do_undo);
-  void SetObjectBounds(int pageno, int objindex, SkRect bounds);
+  // void DeleteObject(int pageno, int index);
+  // void InsertObject(int pageno, int index, FPDF_PAGEOBJECT pageobj);
+  // int ObjectsOnPage(int pageno) const;
 
-  void DumpAPAtPagePt(int pageno, SkPoint pt);
+  // void InsertPath(int pageno, SkPoint center, const SkPath& path);
+
+  // void PlaceText(int pageno, SkPoint pagept, const std::string& ascii);
+  // void UpdateText(int pageno, int index, const std::string& ascii,
+  //                 const std::string& orig_value, bool undo);
+  // void InsertFreehandDrawing(int pageno, const std::vector<SkPoint>& pts);
+
+  // void MoveObjects(int pageno, const std::set<int>& objs,
+  //                  float dx, float dy, bool do_move, bool do_undo);
+  // void SetObjectBounds(int pageno, int objindex, SkRect bounds);
+
+  // void DumpAPAtPagePt(int pageno, SkPoint pt);
 
   // Move the pages in the range [start, end) to index |to|.
   void MovePages(int start, int end, int to);
@@ -178,6 +187,8 @@ class PDFDoc : PDFRenderer {
 
   UndoManager undo_manager_;
  private:
+  RichFormat rich_format_;
+
   RenderCache render_cache;
 
   bool valid_{false};

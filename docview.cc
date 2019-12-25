@@ -73,14 +73,6 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
                          pagePaint.height() / zoom_);
       doc_.DrawPage(canvas, pageDrawClip, static_cast<int>(i));
 
-      // Draw each annotation on this page
-      for (ssize_t j = annotations_.size() - 1; j >= 0; j--) {
-        Annotation* annot = annotations_[j].get();
-        if (annot->page() != i)
-          continue;
-        annot->Draw(canvas, pageDrawClip);
-      }
-
       canvas->restore();
     }
     pagetop += pgsize.height() * zoom_ + kBorderPixels;
@@ -98,34 +90,34 @@ void DocView::DrawKnobs(SkCanvas* canvas, SkRect rect) {
     return;
   SkPaint paint;
   paint.setAntiAlias(true);
-  for (int index : selected_objs_) {
-    SkRect bbox =
-        ConvertRectFromPage(selected_page_,
-                            doc_.BoundingBoxForObj(selected_page_, index));
-    // Draw grey border around object
-    paint.setStyle(SkPaint::kStroke_Style);
-    paint.setColor(0xffdddddd);  // opaque light grey
-    paint.setStrokeWidth(1);
-    canvas->drawRect(bbox.makeOutset(0.5, 0.5), paint);
+  // for (int index : selected_objs_) {
+  //   SkRect bbox =
+  //       ConvertRectFromPage(selected_page_,
+  //                           doc_.BoundingBoxForObj(selected_page_, index));
+  //   // Draw grey border around object
+  //   paint.setStyle(SkPaint::kStroke_Style);
+  //   paint.setColor(0xffdddddd);  // opaque light grey
+  //   paint.setStrokeWidth(1);
+  //   canvas->drawRect(bbox.makeOutset(0.5, 0.5), paint);
 
-    Knobmask knobs = KnobsForType(doc_.ObjectType(selected_page_, index));
-    for (int i = 0; i < 8; i++) {
-      Knobmask knob = 1 << i;
-      if (knob & knobs) {
-        SkRect knobrect = KnobRect(knob, bbox);
-        // Draw white part
-        paint.setStyle(SkPaint::kFill_Style);
-        paint.setColor(0xffffffff);  // opaque white
-        paint.setStrokeWidth(0);
-        canvas->drawRect(knobrect, paint);
-        // Draw border
-        paint.setStyle(SkPaint::kStroke_Style);
-        paint.setColor(0xff000000);  // opaque black
-        paint.setStrokeWidth(1);
-        canvas->drawRect(knobrect, paint);
-      }
-    }
-  }
+  //   Knobmask knobs = KnobsForType(doc_.ObjectType(selected_page_, index));
+  //   for (int i = 0; i < 8; i++) {
+  //     Knobmask knob = 1 << i;
+  //     if (knob & knobs) {
+  //       SkRect knobrect = KnobRect(knob, bbox);
+  //       // Draw white part
+  //       paint.setStyle(SkPaint::kFill_Style);
+  //       paint.setColor(0xffffffff);  // opaque white
+  //       paint.setStrokeWidth(0);
+  //       canvas->drawRect(knobrect, paint);
+  //       // Draw border
+  //       paint.setStyle(SkPaint::kStroke_Style);
+  //       paint.setColor(0xff000000);  // opaque black
+  //       paint.setStrokeWidth(1);
+  //       canvas->drawRect(knobrect, paint);
+  //     }
+  //   }
+  // }
 }
 
 SkRect DocView::KnobRect(Knobmask knob, SkRect objbounds) {
@@ -289,22 +281,15 @@ SkRect DocView::ConvertRectFromPage(int page, const SkRect& rect) const {
   SkPoint botright = SkPoint::Make(rect.right(), rect.bottom());
   topleft = PagePointToViewPoint(page, topleft);
   botright = PagePointToViewPoint(page, botright);
-  // Note we are flipping y coordinate in this transform
-  if (!rect.isEmpty()) {
-    if (topleft.y() < botright.y()) {
-      fprintf(stderr, "failed to flip y coordinate!\n");
-    }
-  }
-  return SkRect::MakeLTRB(topleft.x(), botright.y(),
-                          botright.x(), topleft.y());
+  return SkRect::MakeLTRB(topleft.x(), topleft.y(),
+                          botright.x(), botright.y());
 }
 
 View* DocView::MouseDown(MouseInputEvent ev) {
   bool stopped_editing = false;
 
   if (editing_annotation_) {
-    editing_annotation_->StopEditing();
-    editing_annotation_ = nullptr;
+    StopEditing();
     stopped_editing = true;
   }
 
@@ -314,29 +299,28 @@ View* DocView::MouseDown(MouseInputEvent ev) {
 
   if (toolbox_.current_tool() == Toolbox::kArrow_Tool) {
     // TODO(adlr): see if we hit a knob
+    const std::vector<std::unique_ptr<Annotation>>& annotations =
+        doc_.AnnotationsOnPage(pageno);
     ssize_t i;
-    for (i = annotations_.size() - 1; i >= 0; i--) {
-      Annotation* annot = annotations_[i].get();
-      if (annot->page() == pageno &&
-          annot->Bounds().contains(pagept.x(), pagept.y())) {
+    for (i = annotations.size() - 1; i >= 0; i--) {
+      Annotation* annot = annotations[i].get();
+      if (annot->Bounds().contains(pagept.x(), pagept.y())) {
         // We hit annot
         if (ev.modifiers() & kShiftKey) {
-          ToggleAnnotationSelected(annot);
-          SetNeedsDisplayForAnnotation(annot);
+          ToggleAnnotationSelected(pageno, annot);
+          SetNeedsDisplayForAnnotation(pageno, annot);
           return this;
         } else {
           if (ev.ClickCount() == 2) {
             if (annot->Editable()) {
-              editing_annotation_ = annot;
-              selected_annotations_.clear();
-              selected_annotations_.insert(annot);
-              annot->StartEditing(pagept);
-              SetNeedsDisplayForAnnotation(annot);
+              StartEditing(pageno, pagept, annot->AsTextAnnotation());
+              SetNeedsDisplayForAnnotation(pageno, annot);
               return this;
             }
           } else if (!AnnotationIsSelected(annot)) {
             selected_annotations_.clear();
             selected_annotations_.insert(annot);
+            selected_annotations_page_ = pageno;
           }
         }
         break;
@@ -347,44 +331,45 @@ View* DocView::MouseDown(MouseInputEvent ev) {
       // otherwise, select none
       if (!stopped_editing) {
         selected_annotations_.clear();
+        selected_annotations_page_ = -1;
       }
     } else {
       if (!selected_annotations_.empty()) {
         if (ev.modifiers() & kAltKey) {
           fprintf(stderr, "TODO: drag a copy\n");
         }
+        // Start move
+        dragging_ = true;
+        last_drag_pt_ = drag_start_ = pagept;
       }
     }
     SetNeedsDisplay();
     return this;
   }
 
-  // we aren't the arrow tool. if we hit a graphic that's editable,
-  // and the tool is that class, edit that graphic. otherwise make a
-  // new graphic and get it up and running.
+  // we aren't the arrow tool. if we hit an annotation that's editable,
+  // and the tool is that class, edit that annotation. otherwise make a
+  // new annotation and get it up and running.
 
   Toolbox::Tool tool = toolbox_.current_tool();
 
+  const std::vector<std::unique_ptr<Annotation>>& annotations =
+      doc_.AnnotationsOnPage(pageno);
   ssize_t i;
-  for (i = annotations_.size() - 1; i >= 0; i--) {
-    Annotation* annot = annotations_[i].get();
-    if (annot->page() == pageno && annot->Editable() &&
+  for (i = annotations.size() - 1; i >= 0; i--) {
+    Annotation* annot = annotations[i].get();
+    if (annot->Editable() &&
         annot->Type() == tool &&
         annot->Bounds().contains(pagept.x(), pagept.y())) {
-      if (editing_annotation_)
-        editing_annotation_->StopEditing();
-      editing_annotation_ = annot;
-      selected_annotations_.clear();
-      selected_annotations_.insert(editing_annotation_);
-      editing_annotation_->StartEditing(pagept);
+      StartEditing(pageno, pagept, annot->AsTextAnnotation());
       SetNeedsDisplay();
       break;
     }
   }
   if (i < 0) {  // didn't start editing
-    placing_annotation_ = Annotation::Create(this, tool);
-    annotations_.emplace_back(placing_annotation_);
-    placing_annotation_->CreateMouseDown(pageno, pagept);
+    placing_annotation_.reset(Annotation::Create(&doc_, tool));
+    placing_annotation_page_ = pageno;
+    placing_annotation_->CreateMouseDown(pagept);
   }
 
   return this;
@@ -451,8 +436,19 @@ namespace {
 void DocView::MouseDrag(MouseInputEvent ev) {
   if (placing_annotation_) {
     SkPoint pt =
-        ViewPointToPagePoint(ev.position(), placing_annotation_->page());
+        ViewPointToPagePoint(ev.position(), placing_annotation_page_);
     placing_annotation_->CreateMouseDrag(pt);
+  } else if (dragging_) {
+    SkPoint pt =
+        ViewPointToPagePoint(ev.position(), selected_annotations_page_);
+    float dx = pt.x() - last_drag_pt_.x();
+    float dy = pt.y() - last_drag_pt_.y();
+    for (Annotation* annot : selected_annotations_) {
+      SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
+      annot->Move(dx, dy);
+      SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
+    }
+    last_drag_pt_ = pt;
   }
 
   return;
@@ -529,21 +525,35 @@ void DocView::MouseUp(MouseInputEvent ev) {
 
   if (placing_annotation_) {
     SkPoint pt =
-        ViewPointToPagePoint(ev.position(), placing_annotation_->page());
+        ViewPointToPagePoint(ev.position(), placing_annotation_page_);
     bool keep = placing_annotation_->CreateMouseUp(pt);
     if (!keep) {
-      placing_annotation_ = nullptr;
-      annotations_.pop_back();
+      placing_annotation_.reset();
     } else {
-      if (placing_annotation_->Editable()) {
-        selected_annotations_.clear();
-        editing_annotation_ = placing_annotation_;
-        placing_annotation_ = nullptr;
-        selected_annotations_.insert(editing_annotation_);
-        editing_annotation_->StartEditing(pt);
+      Annotation* annot = placing_annotation_.get();
+      doc_.PushAnnotation(placing_annotation_page_,
+                          std::move(placing_annotation_));
+      if (annot->Editable()) {
+        StartEditing(placing_annotation_page_, pt, annot->AsTextAnnotation());
         SetNeedsDisplay();
       }
     }
+  } else if (dragging_) {
+    SkPoint pt =
+        ViewPointToPagePoint(ev.position(), selected_annotations_page_);
+    float dx = pt.x() - last_drag_pt_.x();
+    float dy = pt.y() - last_drag_pt_.y();
+    for (Annotation* annot : selected_annotations_) {
+      SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
+      annot->Move(dx, dy);
+      SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
+    }
+    float full_dx = pt.x() - drag_start_.x();
+    float full_dy = pt.y() - drag_start_.y();
+    doc_.AnnotationsMovedUndo(selected_annotations_page_,
+                              selected_annotations_,
+                              full_dx, full_dy);
+    dragging_ = false;
   }
 
   return;
@@ -635,138 +645,147 @@ void DocView::MouseUp(MouseInputEvent ev) {
   // }
 }
 
-void DocView::SelectOneObject(int pageno, int index) {
-  SetNeedsDisplayInSelection();  // previously selected object(s)
-  selected_page_ = pageno;
-  selected_objs_.clear();
-  selected_objs_.insert(index);
-  SetNeedsDisplayInSelection();  // new object
-}
+// void DocView::SelectOneObject(int pageno, int index) {
+//   SetNeedsDisplayInSelection();  // previously selected object(s)
+//   selected_page_ = pageno;
+//   selected_objs_.clear();
+//   selected_objs_.insert(index);
+//   SetNeedsDisplayInSelection();  // new object
+// }
 
-void DocView::AddObjectToSelection(int pageno, int index) {
-  if (selected_page_ >= 0 && pageno != selected_page_) {
-    fprintf(stderr, "Can't add to selection in different page\n");
-    return;
-  }
-  if (selected_objs_.find(index) != selected_objs_.end()) {
-    // Already selected
-    return;
-  }
-  selected_objs_.insert(index);
-  SetNeedsDisplayInObj(pageno, index);
-}
+// void DocView::AddObjectToSelection(int pageno, int index) {
+//   if (selected_page_ >= 0 && pageno != selected_page_) {
+//     fprintf(stderr, "Can't add to selection in different page\n");
+//     return;
+//   }
+//   if (selected_objs_.find(index) != selected_objs_.end()) {
+//     // Already selected
+//     return;
+//   }
+//   selected_objs_.insert(index);
+//   SetNeedsDisplayInObj(pageno, index);
+// }
 
-void DocView::UnselectObject(int pageno, int index) {
-  if (selected_page_ != pageno) {
-    fprintf(stderr, "Invalid page in UnselectObject\n");
-    return;
-  }
-  if (selected_objs_.find(index) == selected_objs_.end()) {
-    fprintf(stderr, "Invalid index in UnselectObject\n");
-    return;
-  }
-  SetNeedsDisplayInObj(pageno, index);
-  selected_objs_.erase(index);
-  if (selected_objs_.empty())
-    selected_page_ = -1;
-}
+// void DocView::UnselectObject(int pageno, int index) {
+//   if (selected_page_ != pageno) {
+//     fprintf(stderr, "Invalid page in UnselectObject\n");
+//     return;
+//   }
+//   if (selected_objs_.find(index) == selected_objs_.end()) {
+//     fprintf(stderr, "Invalid index in UnselectObject\n");
+//     return;
+//   }
+//   SetNeedsDisplayInObj(pageno, index);
+//   selected_objs_.erase(index);
+//   if (selected_objs_.empty())
+//     selected_page_ = -1;
+// }
 
-void DocView::ClearSelection() {
-  SetNeedsDisplayInSelection();
-  selected_page_ = -1;
-  selected_objs_.clear();
-}
+// void DocView::ClearSelection() {
+//   SetNeedsDisplayInSelection();
+//   selected_page_ = -1;
+//   selected_objs_.clear();
+// }
 
-void DocView::SetNeedsDisplayInSelection() {
-  if (selected_page_ < 0)
-    return;
-  for (int index : selected_objs_) {
-    SetNeedsDisplayInObj(selected_page_, index);
-  }
-}
+// void DocView::SetNeedsDisplayInSelection() {
+//   if (selected_page_ < 0)
+//     return;
+//   for (int index : selected_objs_) {
+//     SetNeedsDisplayInObj(selected_page_, index);
+//   }
+// }
 
-void DocView::SetNeedsDisplayInObj(int pageno, int index) {
-  if (pageno < 0)
-    return;
-  SkRect bbox = ConvertRectFromPage(pageno,
-                                    doc_.BoundingBoxForObj(pageno, index));
-  SkRect full_bounds = KnobBounds(KnobsForType(doc_.ObjectType(pageno, index)),
-                                  bbox);
-  SetNeedsDisplayInRect(full_bounds);
-}
+// void DocView::SetNeedsDisplayInObj(int pageno, int index) {
+//   if (pageno < 0)
+//     return;
+//   SkRect bbox = ConvertRectFromPage(pageno,
+//                                     doc_.BoundingBoxForObj(pageno, index));
+//   SkRect full_bounds = KnobBounds(KnobsForType(doc_.ObjectType(pageno, index)),
+//                                   bbox);
+//   SetNeedsDisplayInRect(full_bounds);
+// }
 
-void DocView::ToggleAnnotationSelected(Annotation* annot) {
-  if (AnnotationIsSelected(annot))
+void DocView::ToggleAnnotationSelected(int page, Annotation* annot) {
+  if (AnnotationIsSelected(annot)) {
     selected_annotations_.erase(annot);
-  else
+    if (selected_annotations_.empty())
+      selected_annotations_page_ = -1;
+  } else {
+    if (!selected_annotations_.empty() && selected_annotations_page_ != page) {
+      // selecting something on a page other than existing
+      // selection. Drop older selection.
+      selected_annotations_.clear();
+    }
     selected_annotations_.insert(annot);
+    selected_annotations_page_ = page;
+  }
 }
 
 void DocView::InsertSignature(const char* svgpath) {
-  SVGPathIterator it(svgpath);
-  // SVGPathIterator::Token tok;
-  float nums[6];
-  int numcnt = 0;
-  int numneeded = 0;
+  // SVGPathIterator it(svgpath);
+  // // SVGPathIterator::Token tok;
+  // float nums[6];
+  // int numcnt = 0;
+  // int numneeded = 0;
 
-  SkPath path;
+  // SkPath path;
 
-  for (SVGPathIterator::Token tok = it.Next();
-       tok.type != SVGPathIterator::Token::END;
-       tok = it.Next()) {
-    numcnt = 0;
-    if (tok.type == SVGPathIterator::Token::MOVETO ||
-        tok.type == SVGPathIterator::Token::LINETO) {
-      numneeded = 2;
-    } else if (tok.type == SVGPathIterator::Token::CURVETO) {
-      numneeded = 6;
-    } else if (tok.type != SVGPathIterator::Token::END) {
-      fprintf(stderr, "unexpected svg path token\n");
-      return;
-    }
-    while (numcnt < numneeded) {
-      SVGPathIterator::Token numtok = it.Next();
-      if (numtok.type != SVGPathIterator::Token::NUMBER) {
-        fprintf(stderr, "expected number svg token: %d (%d %d)\n", numtok.type,
-                numcnt, numneeded);
-        return;
-      }
-      nums[numcnt++] = numtok.number;
-    }
-    if (tok.type == SVGPathIterator::Token::MOVETO) {
-      path.moveTo(nums[0], nums[1]);
-    } else if (tok.type == SVGPathIterator::Token::LINETO) {
-      path.lineTo(nums[0], nums[1]);
-    } else if (tok.type == SVGPathIterator::Token::CURVETO) {
-      path.cubicTo(nums[0], nums[1], nums[2], nums[3], nums[4], nums[5]);
-    }
-  }
-  path.setFillType(SkPath::kEvenOdd_FillType);
-  // move object to center of current view.
+  // for (SVGPathIterator::Token tok = it.Next();
+  //      tok.type != SVGPathIterator::Token::END;
+  //      tok = it.Next()) {
+  //   numcnt = 0;
+  //   if (tok.type == SVGPathIterator::Token::MOVETO ||
+  //       tok.type == SVGPathIterator::Token::LINETO) {
+  //     numneeded = 2;
+  //   } else if (tok.type == SVGPathIterator::Token::CURVETO) {
+  //     numneeded = 6;
+  //   } else if (tok.type != SVGPathIterator::Token::END) {
+  //     fprintf(stderr, "unexpected svg path token\n");
+  //     return;
+  //   }
+  //   while (numcnt < numneeded) {
+  //     SVGPathIterator::Token numtok = it.Next();
+  //     if (numtok.type != SVGPathIterator::Token::NUMBER) {
+  //       fprintf(stderr, "expected number svg token: %d (%d %d)\n", numtok.type,
+  //               numcnt, numneeded);
+  //       return;
+  //     }
+  //     nums[numcnt++] = numtok.number;
+  //   }
+  //   if (tok.type == SVGPathIterator::Token::MOVETO) {
+  //     path.moveTo(nums[0], nums[1]);
+  //   } else if (tok.type == SVGPathIterator::Token::LINETO) {
+  //     path.lineTo(nums[0], nums[1]);
+  //   } else if (tok.type == SVGPathIterator::Token::CURVETO) {
+  //     path.cubicTo(nums[0], nums[1], nums[2], nums[3], nums[4], nums[5]);
+  //   }
+  // }
+  // path.setFillType(SkPath::kEvenOdd_FillType);
+  // // move object to center of current view.
 
-  int page = 0;
-  SkPoint point;
-  VisibleCenterPagePoint(&page, &point);
-  point = ClampToPage(page, point);
-  doc_.InsertPath(page, point, path);
+  // int page = 0;
+  // SkPoint point;
+  // VisibleCenterPagePoint(&page, &point);
+  // point = ClampToPage(page, point);
+  // doc_.InsertPath(page, point, path);
 }
 
-bool DocView::SetKnobUnderPoint(SkPoint viewpt) {
-  for (auto it = selected_objs_.rbegin(); it != selected_objs_.rend(); ++it) {
-    fprintf(stderr, "set reverse %d\n", *it);
-    SkRect bbox = doc_.BoundingBoxForObj(selected_page_, *it);
-    for (int i = 0; i < 8; i++) {
-      Knobmask knob = 1 << i;
-      SkRect knobrect = KnobRect(knob, bbox);
-      if (knobrect.contains(viewpt.x(), viewpt.y())) {
-        mouse_down_obj_ = *it;
-        mouse_down_knob_ = knob;
-        return true;
-      }
-    }
-  }
-  return false;
-}
+// bool DocView::SetKnobUnderPoint(SkPoint viewpt) {
+//   for (auto it = selected_objs_.rbegin(); it != selected_objs_.rend(); ++it) {
+//     fprintf(stderr, "set reverse %d\n", *it);
+//     SkRect bbox = doc_.BoundingBoxForObj(selected_page_, *it);
+//     for (int i = 0; i < 8; i++) {
+//       Knobmask knob = 1 << i;
+//       SkRect knobrect = KnobRect(knob, bbox);
+//       if (knobrect.contains(viewpt.x(), viewpt.y())) {
+//         mouse_down_obj_ = *it;
+//         mouse_down_knob_ = knob;
+//         return true;
+//       }
+//     }
+//   }
+//   return false;
+// }
 
 SkRect DocView::GetNewBounds(SkRect old_bounds, Knobmask knob,
                              float dx, float dy, bool freeform) {
@@ -803,40 +822,64 @@ SkRect DocView::GetNewBounds(SkRect old_bounds, Knobmask knob,
   return old_bounds;
 }
 
+void DocView::StartEditing(int page, SkPoint pagept, TextAnnotation* annot) {
+  if (editing_annotation_)
+    StopEditing();
+
+  selected_annotations_.clear();
+  selected_annotations_.insert(annot);
+  selected_annotations_page_ = page;
+
+  editing_annotation_ = annot;
+  editing_annotation_->StartEditing(pagept);
+  StartComposingText(
+      page, annot->Origin(),
+      annot->fixed_width() ? annot->Bounds().width() : 0,
+      annot->editing_value().c_str(), 0);
+}
+
+void DocView::StopEditing() {
+  fprintf(stderr, "called stop editing\n");
+  if (!editing_annotation_) {
+    fprintf(stderr, "Missing editing annotation\n");
+    return;
+  }
+  bridge_stopComposingText();
+  editing_annotation_->StopEditing();
+  editing_annotation_ = nullptr;
+}
+
 void DocView::StartComposingText(int page,
                                  SkPoint pt,  // top-left corner
                                  float width,  // width, or 0 for bound text
                                  const char* html,  // body text
-                                 int cursorpos,  // where to put cursor
-                                 std::function<void(const char*)> set_text) {
+                                 int cursorpos) {  // where to put cursor
   fprintf(stderr, "called docview::StartComposingText\n");
-  set_text_callback_ = set_text;
   bridge_startComposingText(PagePointToViewPoint(page, pt), width, zoom_, html, cursorpos);
 }
 
 void DocView::SetEditingString(const char* str) {
-  set_text_callback_(str);
-}
-
-bool DocView::FlushAnnotations(FPDF_DOCUMENT doc,
-                               FPDF_PAGE page,
-                               int pageno) {
-  bool dirty = false;
-  for (auto& annotation : annotations_) {
-    if (annotation->page() == pageno) {
-      annotation->Flush(doc, page);
-      dirty = true;
-    }
+  if (!editing_annotation_) {
+    fprintf(stderr, "No editing annotation!\n");
+    return;
   }
-  return dirty;
+  editing_annotation_->SetEditingValue(str);
 }
 
-void DocView::StopEditingText() {
-  bridge_stopComposingText();
-}
+// bool DocView::FlushAnnotations(FPDF_DOCUMENT doc,
+//                                FPDF_PAGE page,
+//                                int pageno) {
+//   bool dirty = false;
+//   for (auto& annotation : annotations_) {
+//     if (annotation->page() == pageno) {
+//       annotation->Flush(doc, page);
+//       dirty = true;
+//     }
+//   }
+//   return dirty;
+// }
 
-std::unique_ptr<txt::Paragraph> DocView::ParseText(const char* text) {
-  return rich_format_.Format(text);
-}
+// void DocView::StopEditingText() {
+// }
 
 }  // namespace formulate

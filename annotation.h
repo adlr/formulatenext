@@ -29,22 +29,26 @@ const char kNoKnobs          = 0;
 // Annotations may be created by user interaction (for new things) or
 // from an annotation in a PDF.
 
-// All coordinates for annotations are given in page coordinates
+// All coordinates for annotations are given in page coordinates,
+// where the page origin is the upper left and positive values go to
+// the right and down.
 
 class AnnotationDelegate {
  public:
   // virtual void Redraw(int pageno, SkRect rect) {}
-  virtual void StartComposingText(int page,
-                                  SkPoint pt,  // top-left corner
-                                  float width,  // width, or 0 for bound text
-                                  const char* html,  // body text
-                                  int cursorpos,  // where to put cursor
-                                  std::function<void(const char*)> set_text) {}
-  virtual void StopEditingText() {}
+  // virtual void StartComposingText(int page,
+  //                                 SkPoint pt,  // top-left corner
+  //                                 float width,  // width, or 0 for bound text
+  //                                 const char* html,  // body text
+  //                                 int cursorpos,  // where to put cursor
+  //                                 std::function<void(const char*)> set_text) {}
+  // virtual void StopEditingText() {}
   virtual std::unique_ptr<txt::Paragraph> ParseText(const char* text) {
     return nullptr;
   }
 };
+
+class TextAnnotation;
 
 class Annotation {
  public:
@@ -52,11 +56,12 @@ class Annotation {
       : delegate_(delegate) {}
   virtual ~Annotation();
 
+  bool dirty() const { return dirty_; }
   virtual Toolbox::Tool Type() { return Toolbox::kArrow_Tool; }
   static Annotation* Create(AnnotationDelegate* delegate, Toolbox::Tool type);
 
   // Called when creating an annotation w/ the mouse:
-  virtual void CreateMouseDown(int page, SkPoint pt);
+  virtual void CreateMouseDown(SkPoint pt);
   virtual void CreateMouseDrag(SkPoint pt);
   virtual bool CreateMouseUp(SkPoint pt);  // return true to keep this obj
 
@@ -77,30 +82,46 @@ class Annotation {
   virtual bool IsEditing() const { return false; }
   virtual void StartEditing(SkPoint pt) {}
   virtual void StopEditing() {}
+  virtual TextAnnotation* AsTextAnnotation() { return nullptr; }
 
   SkRect Bounds() const { return bounds_; }
   void SetWidth(float width) { bounds_.fRight = bounds_.fLeft + width; }
   void SetHeight(float height) { bounds_.fBottom = bounds_.fTop + height; }
   SkRect BoundsWithKnobs() const;
-  int page() const { return page_; }
+  SkPoint Origin() const { return SkPoint::Make(bounds_.fLeft, bounds_.fTop); }
+  void Move(float dx, float dy);
 
  protected:
   SkRect KnobBounds(char knob);
 
   AnnotationDelegate* delegate_{nullptr};  // weak ptr to containing doc
   bool dirty_{false};  // If true, PDF doesn't reflect current state
-  int page_{-1};
+  // int page_{-1};
   SkRect bounds_;
   SkPoint down_pt_;  // where mouse down occurred
 
   DISALLOW_COPY_AND_ASSIGN(Annotation);
 };
 
+std::vector<std::unique_ptr<Annotation>> AnnotationsFromPage(
+    AnnotationDelegate* delegate, FPDF_PAGE page);
+
 class TextAnnotation : public Annotation {
  public:
   explicit TextAnnotation(AnnotationDelegate* delegate)
       : Annotation(delegate) {}
+  // Load a TextAnnotation from saved PDF:
+  TextAnnotation(AnnotationDelegate* delegate,
+                 FPDF_PAGE page,
+                 FPDF_PAGEOBJECT obj,
+                 FPDF_PAGEOBJECTMARK mark);
   virtual ~TextAnnotation();
+  TextAnnotation* AsTextAnnotation() override { return this; }
+  static constexpr char kSaveKey[] = "FN:RichText";
+  static constexpr char kSaveKeyUTF16LE[] =
+      "F\0N\0:\0R\0i\0c\0h\0T\0e\0x\0t\0\0";
+  static const int SaveKeyUTF16LELen() { return 22; }
+
   bool CreateMouseUp(SkPoint pt) override;
 
   void Draw(SkCanvas* canvas, SkRect rect) override;
@@ -111,6 +132,11 @@ class TextAnnotation : public Annotation {
   bool IsEditing() const override { return editing_; }
   void StartEditing(SkPoint pt) override;
   void StopEditing() override;
+  void SetEditingValue(const char* str) { editing_value_ = str; dirty_ = true; }
+  bool fixed_width() const { return fixed_width_; }
+  const std::string& editing_value() const { return editing_value_; }
+
+  void LayoutText();
 
  private:
   bool editing_{false};

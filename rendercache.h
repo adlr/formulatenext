@@ -42,7 +42,7 @@ class RenderCacheEntry {
 class PDFRenderer {
  public:
   virtual SkSize PageSize(int pageno) const = 0;
-  virtual void RenderPage(SkCanvas* canvas, SkRect rect, int pageno) const = 0;
+  virtual void RenderPage(SkCanvas* canvas, SkRect rect, int pageno) = 0;
 };
 
 class RenderCache {

@@ -20,8 +20,7 @@ namespace formulate {
 char KnobsForType(PDFDoc::ObjType type);
 
 class DocView : public View,
-                public PDFDocEventHandler,
-                public AnnotationDelegate {
+                public PDFDocEventHandler {
  public:
   DocView() { doc_.AddEventHandler(this); }
   virtual const char* Name() const { return "DocView"; }
@@ -79,11 +78,11 @@ class DocView : public View,
   void MouseUp(MouseInputEvent ev);
 
   // These trigger redraw requests
-  void SelectOneObject(int pageno, int index);
-  void AddObjectToSelection(int pageno, int index);
-  void UnselectObject(int pageno, int index);
-  void ClearSelection();
-  void SetNeedsDisplayInSelection();
+  // void SelectOneObject(int pageno, int index);
+  // void AddObjectToSelection(int pageno, int index);
+  // void UnselectObject(int pageno, int index);
+  // void ClearSelection();
+  // void SetNeedsDisplayInSelection();
 
   void InsertSignature(const char* svgpath);
 
@@ -97,15 +96,15 @@ class DocView : public View,
   SkRect GetNewBounds(SkRect old_bounds, Knobmask knob, float dx, float dy,
                       bool freeform);
 
-  // AnnotationDelegate method:
+  void StartEditing(int page, SkPoint pagept, TextAnnotation* annot);
+  void StopEditing();
+
   void StartComposingText(int page,
                           SkPoint pt,  // top-left corner
                           float width,  // width, or 0 for bound text
                           const char* html,  // body text
-                          int cursorpos,  // where to put cursor
-                          std::function<void(const char*)> setText);
+                          int cursorpos);  // where to put cursor
   void StopEditingText();
-  std::unique_ptr<txt::Paragraph> ParseText(const char* text);
 
   PDFDoc doc_;
   Toolbox toolbox_;
@@ -119,37 +118,41 @@ class DocView : public View,
   void NeedsDisplayInRect(int page, SkRect rect) {
     SetNeedsDisplayInRect(ConvertRectFromPage(page, rect));
   }
-  void NeedsDisplayForObj(int pageno, int index) {
-    SetNeedsDisplayInObj(pageno, index);
-  }
-  bool FlushAnnotations(FPDF_DOCUMENT doc,
-                        FPDF_PAGE page,
-                        int pageno);
+  // void NeedsDisplayForObj(int pageno, int index) {
+  //   SetNeedsDisplayInObj(pageno, index);
+  // }
+  // bool FlushAnnotations(FPDF_DOCUMENT doc,
+  //                       FPDF_PAGE page,
+  //                       int pageno);
 
   // if |index| is -1, redraw whole page. Includes knobs.
-  void SetNeedsDisplayInObj(int pageno, int index);
+  // void SetNeedsDisplayInObj(int pageno, int index);
 
-  void SetNeedsDisplayForAnnotation(Annotation* annot) {
-    NeedsDisplayInRect(annot->page(), annot->Bounds());
+  void SetNeedsDisplayForAnnotation(int pageno, Annotation* annot) {
+    NeedsDisplayInRect(pageno, annot->Bounds());
   }
 
  private:
   bool AnnotationIsSelected(Annotation* annot) const {
     return selected_annotations_.find(annot) != selected_annotations_.end();
   }
-  void ToggleAnnotationSelected(Annotation* annot);
-
-  RichFormat rich_format_;
+  void ToggleAnnotationSelected(int page, Annotation* annot);
 
   std::vector<SkSize> page_sizes_;  // in PDF points
   float max_page_width_{0};  // in PDF points
   float zoom_{1};  // user zoom in/out
 
-  std::vector<std::unique_ptr<Annotation>> annotations_;
+  // std::vector<std::unique_ptr<Annotation>> annotations_;
   std::set<Annotation*> selected_annotations_;
-  Annotation* editing_annotation_{nullptr};
-  Annotation* placing_annotation_{nullptr};
-  std::function<void(const char*)> set_text_callback_;
+  int selected_annotations_page_{-1};
+  TextAnnotation* editing_annotation_{nullptr};
+  std::unique_ptr<Annotation> placing_annotation_;
+  int placing_annotation_page_{-1};
+
+  // Move annotations intermediate data
+  bool dragging_{false};
+  SkPoint drag_start_;  // in page coords
+  SkPoint last_drag_pt_;
 
   // TODO Delete these:
 

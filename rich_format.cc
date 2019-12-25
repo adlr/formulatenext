@@ -16,27 +16,23 @@ using formulate::HTMLNodeWalkerInterface;
 
 EMSCRIPTEN_KEEPALIVE
 void StaticHTMLText(HTMLNodeWalkerInterface* self, const char* text) {
-  fprintf(stderr, "StaticHTMLText\n");
   self->HTMLText(text);
 }
 
 EMSCRIPTEN_KEEPALIVE
 void StaticHTMLNodeStarted(HTMLNodeWalkerInterface* self,
                            const char* tag_name) {
-  fprintf(stderr, "StaticHTMLNodeStarted\n");
   self->HTMLNodeStarted(tag_name);
 }
 
 EMSCRIPTEN_KEEPALIVE
 void StaticHTMLNodeAttribute(HTMLNodeWalkerInterface* self,
                         const char* key, const char* value) {
-  fprintf(stderr, "StaticHTMLNodeAttribute\n");
   self->HTMLNodeAttribute(key, value);
 }
 
 EMSCRIPTEN_KEEPALIVE
 void StaticHTMLNodeEnded(HTMLNodeWalkerInterface* self) {
-  fprintf(stderr, "StaticHTMLNodeEnded\n");
   self->HTMLNodeEnded();
 }
 
@@ -57,8 +53,6 @@ RichFormat::RichFormat() {
 }
 
 std::unique_ptr<txt::Paragraph> RichFormat::Format(const char* html) {
-  fprintf(stderr, "called rich format!\n");
-
   txt::ParagraphStyle style;
   style.font_family = "Arimo";
   paragraph_builder_ = txt::ParagraphBuilder::CreateTxtBuilder(
@@ -78,21 +72,6 @@ void RichFormat::HTMLText(const char* text) {
   std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> utf16conv;
   std::u16string u16text = utf16conv.from_bytes(std::string(text));
   paragraph_builder_->AddText(u16text);
-  // std::string str;
-  // while (text[0] != '\0') {
-  //   if (text[0] == '\n') {
-  //     if (!str.empty()) {
-  //       HandleStringWithoutNewline(str.c_str());
-  //       str.clear();
-  //     }
-  //     HandleNewline();
-  //   } else {
-  //     str += text[0];
-  //   }
-  //   text++;
-  // }
-  // if (!str.empty())
-  //   HandleStringWithoutNewline(str.c_str());
 }
 
 void RichFormat::HTMLNodeStarted(const char* tag_name) {
