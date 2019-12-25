@@ -1,0 +1,32 @@
+From 38f23bc926e121a10afbbaca18a72c15f4e0bfcb Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Wed, 25 Dec 2019 05:16:20 -0800
+Subject: [PATCH] CFX_UTF8Decoder: Handle surrogate pairs
+
+---
+ core/fxcrt/cfx_utf8decoder.cpp | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/core/fxcrt/cfx_utf8decoder.cpp b/core/fxcrt/cfx_utf8decoder.cpp
+index 68ea30ac2..689f022bc 100644
+--- a/core/fxcrt/cfx_utf8decoder.cpp
++++ b/core/fxcrt/cfx_utf8decoder.cpp
+@@ -11,7 +11,14 @@ CFX_UTF8Decoder::CFX_UTF8Decoder() = default;
+ CFX_UTF8Decoder::~CFX_UTF8Decoder() = default;
+ 
+ void CFX_UTF8Decoder::AppendCodePoint(uint32_t ch) {
+-  m_Buffer.AppendChar(static_cast<wchar_t>(ch));
++  if (ch >= 0x10000 && ch <= 0x10FFFF) {
++    // save as surrogate pair
++    ch -= 0x10000;
++    m_Buffer.AppendChar(static_cast<wchar_t>(0xD800 + (ch >> 10)));
++    m_Buffer.AppendChar(static_cast<wchar_t>(0xDC00 + (ch & 0x3ff)));
++  } else {
++    m_Buffer.AppendChar(static_cast<wchar_t>(ch));
++  }
+ }
+ 
+ void CFX_UTF8Decoder::Input(uint8_t byte) {
+-- 
+2.11.0
+
