@@ -99,3 +99,25 @@
 #mybutton {
     margin-top: 200px;
 }
+
+#tb-dropdown-font {
+    width: 80px;
+}
+
+.menu-labelbox {
+    display: inline-flex;
+}
+
+.menu-labelbox-label {
+    width: 52px;
+    overflow: hidden;
+    margin-top: 9px;
+}
+
+.menu-labelbox-arrow {
+    margin-top: 3px;
+}
+
+.menu-dropdown-container {
+    left: -10px;
+}

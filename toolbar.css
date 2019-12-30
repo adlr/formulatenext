@@ -42,3 +42,18 @@
     fill: rgba(0, 0, 0, 1);
     background-color: rgb(232, 240, 254);
 }
+
+.toolbar-menu {
+    color: rgba(0, 0, 0, 0.5);
+    fill: rgba(0, 0, 0, 0.5);
+    padding: 0;
+    margin-right: 2px;
+    margin-left: 7px;
+    display: inline-flex;
+    vertical-align: top;
+    font-size: 12px;
+    width: 60px;
+    position: relative;
+    flex-direction: column;
+}
+

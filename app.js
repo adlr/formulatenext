@@ -240,6 +240,21 @@ document.addEventListener('DOMContentLoaded', function() {
       toolbox.setEnabled(enabled);
     }
 
+    // init text editing toolbar section
+    let fontDropdown =
+        new DropdownMenu(false, document.getElementById('tb-dropdown-font'));
+    fontDropdown.setText('Arimo');
+    let fontDropdownContainer = new MenuContainer(fontDropdown);
+    fontDropdownContainer.addMenuItem(
+      new MenuItem('Arimo', fontDropdownContainer, null, () => {
+        console.log('do Arimo');
+      }, null));
+    fontDropdownContainer.addMenuItem(
+      new MenuItem('Tinos', fontDropdownContainer, null, () => {
+        console.log('do Tinos');
+      }, null));
+    fontDropdown.setContainer(fontDropdownContainer);
+
     let signatureManager =
         new SignatureManager(['Signature', 'Insert Signature'],
                              ['Signature', 'Delete Signature'],
@@ -345,14 +360,16 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log(`Edit at ${xpos} ${ypos}, ${zoom}, ${text}, ${caretPos}`);
     // let vertOffset = calcFontMetrics((zoom * 12) | 0);
     let padding = 5;
-    xpos -= padding;
-    ypos -= padding;
+    xpos -= padding + 16;
+    ypos -= padding + 13;
     let textarea = document.createElement('div');
     textarea.classList.add('texteditor');
-    textarea.style.width = textarea.style.height = '200px';
+    // textarea.style.width = textarea.style.height = '200px';
     let quillarea = document.createElement('div');
     quillarea.innerHTML = text;
     quillarea.id = 'quill-editor';
+    quillarea.style.width = 'fit-content';
+    quillarea.style.height = 'auto';
 
     textarea.style.marginLeft = xpos + 'px';
     textarea.style.marginTop = ypos + 'px';
@@ -362,20 +379,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let quill = g_quill = new Quill('#quill-editor', {
       modules: {
-        toolbar: [
-          ['bold', 'italic'],
-          [{ 'size': ['small', false, 'large', 'huge'] }],
-          [{ 'color': [] }, { 'font': [] }],
-          ['clean']
-        ],
+        // toolbar: [
+        //   ['bold', 'italic'],
+        //   [{ 'size': ['small', false, 'large', 'huge'] }],
+        //   [{ 'color': [] }, { 'font': [] }],
+        //   ['clean']
+        // ],
+        toolbar: false
       },
       placeholder: 'Text goes here...',
       theme: 'snow'
     });
-    // quill.on('text-change', (delta, oldDelta, source) => {
-    //   console.log(`Text is now: ${quill.root.innerHTML}`);
-    //   UpdateEditText(quill.root.innerHTML);
-    // });
+    let fixupSize = () => {
+      return;
+      const xPad = padding + 10;  // make room for growth
+      const yPad = padding;
+      const xSize = quill.root.offsetWidth + xPad;
+      const ySize = quill.root.offsetHeight + yPad;
+      textarea.style.width = 'fit-content'; // xSize + 'px';
+      textarea.style.height = ySize + 'px';
+    };
+    quill.on('text-change', (delta, oldDelta, source) => {
+      fixupSize();
+    });
     quill.enable();
 
     let update = () => {
@@ -383,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // textarea.style.height = Math.max(10, textarea.scrollHeight) + 'px';
       // textarea.style.width = '';
       // textarea.style.width = Math.max(10, textarea.scrollWidth + padding) + 'px';
-      UpdateEditText(quill.root.innerHTML);
+      fixupSize();
     };
     // textarea.addEventListener('keyup', update);
     // textarea.addEventListener('input', update);
@@ -395,6 +421,9 @@ document.addEventListener('DOMContentLoaded', function() {
     update();
     setTimeout(() => {
       quill.focus();
+      quill.root.style.height = 'auto';
+      quill.root.style.width = 'fit-content';
+      quill.root.style.maxWidth = '612px';
       update();
       // textarea.setSelectionRange(caretPos, caretPos);
       console.log("set caret here: " + caretPos);

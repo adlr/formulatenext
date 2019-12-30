@@ -107,6 +107,7 @@ body {
   display: block;
   touch-action: none;
   margin: auto;
+  position: relative;
 }
 
 #file-input {
@@ -116,7 +117,7 @@ body {
 .texteditor {
   position: absolute;
   z-index: 15;
-  margin: 0;
+  width: 1000px;
   padding: 5px;
   /*transform-origin: 5px 5px;*/
   /*overflow: hidden;*/

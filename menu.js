@@ -17,9 +17,9 @@ let menus = [
     {name: "Undo", key: "z"},
     {name: "Redo", key: "Z"},
     {name: "-"},
-    {name: "Cut", key: "x"},
-    {name: "Copy", key: "c"},
-    {name: "Paste", key: "v"},
+    {name: "Cut"},
+    {name: "Copy"},
+    {name: "Paste"},
     {name: "-"},
     {name: "Rotate Selected Pages", children: [
       {name: "90&deg; Clockwise"},
@@ -245,7 +245,7 @@ class MenuBarLabel {
     this.div = document.createElement('div');
     this.div.classList.add('rootmenuitem');
     this.div.innerHTML = str;
-    this.container = null;
+    this.container = null;  // child menu container
     this.handleClick = null;
     this.domClickHandler = ev => {
       console.log('label got a click');
@@ -367,6 +367,62 @@ class MenuBar {
       }
     }
     return null;
+  }
+}
+
+class DropdownMenu {
+  constructor(combo, div) {
+    this.div = div;
+    this.combo = combo;
+    this.labelBox = document.createElement('div');
+    this.labelBox.classList.add('menu-labelbox');
+    this.labelField = document.createElement('div');
+    this.labelField.classList.add('menu-labelbox-label');
+    this.labelBox.appendChild(this.labelField);
+    let arrow = document.createElement('div');
+    arrow.classList.add('menu-labelbox-arrow');
+    arrow.innerHTML = '<i class="material-icons">arrow_drop_down</i>';
+    this.labelBox.appendChild(arrow);
+    this.div.appendChild(this.labelBox);
+    this.container = null;  // child menu container
+    this.childVisible = false;
+    this.div.addEventListener('click', ev => {
+      this.setChildVisible(!this.childVisible);
+    });
+
+    this.docClicked = (evt) => {
+      if (this.div.contains(evt.target)) {
+        return;
+      }
+      this.setChildVisible(false);
+    };
+  }
+  setContainer(container) {
+    if (this.container) {
+      this.container.div.remove();
+    }
+    this.container = container;
+    this.div.appendChild(this.container.div);
+    this.container.div.classList.add('menu-dropdown-container');
+  }
+  hide(child) {
+    this.setChildVisible(false);
+  }
+  setChildVisible(vis) {
+    if (this.childVisible == vis)
+      return;
+    this.childVisible = vis;
+    if (vis) {
+      document.addEventListener('click', this.docClicked);
+      this.div.classList.add('menu-labelbox-active');
+    } else {
+      document.removeEventListener('click', this.docClicked);
+      this.div.classList.remove('menu-labelbox-active');
+    }
+    this.container.div.style.display = vis ? 'block' : 'none';
+  }
+  setText(text) {
+    this.labelField.innerHTML = text;
   }
 }
 
