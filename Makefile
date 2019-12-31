@@ -93,6 +93,7 @@ signature.html: signature.o
 DISTFILES=\
 	formulate.js \
 	formulate.wasm \
+	formulate.data \
 	Roboto \
 	app.html \
 	app.js \
@@ -101,6 +102,8 @@ DISTFILES=\
 	menu.js \
 	menu.css \
 	toolbar.css \
+	quill \
+	rich_format.js \
 	material-icons.css \
 	MaterialIcons-Regular.* \
 	sig.html \
