@@ -119,10 +119,15 @@ body {
   z-index: 15;
   width: 1000px;
   padding: 5px;
+  transform-origin: top left;
   /*transform-origin: 5px 5px;*/
   /*overflow: hidden;*/
   outline: none;
   border: none;
   resize: none;
   background-color: rgba(255, 255, 255, 0.8);
+}
+
+.ql-editor {
+  line-height: unset;
 }

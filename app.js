@@ -360,8 +360,8 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log(`Edit at ${xpos} ${ypos}, ${zoom}, ${text}, ${caretPos}`);
     // let vertOffset = calcFontMetrics((zoom * 12) | 0);
     let padding = 5;
-    xpos -= padding + 16;
-    ypos -= padding + 13;
+    xpos -= zoom * (padding + 16);
+    ypos -= zoom * (padding + 13);
     let textarea = document.createElement('div');
     textarea.classList.add('texteditor');
     // textarea.style.width = textarea.style.height = '200px';
@@ -443,6 +443,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const kEventKindUp = 2;
   const kEventKindMove = 3;
   const kEventKindClick = 4;
+  const kEventKindDown2 = 5;  // Down with click count of 2
   let pushMouseEvent = (ev, div, kind, id) => {
     if (MouseEvent === null)
       return;
@@ -461,12 +462,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
   let setupMouseHandlers = (div, id) => {
     let dragInProgress = false;
+    let clickTimestamp = 0;
     div.addEventListener('pointerdown', ev => {
       if (ev.path.some((elt) => { return elt.id == 'quill-editor'; })) {
         console.log('ignoring in quill editor');
         return;
       }
-      dragInProgress = pushMouseEvent(ev, div, kEventKindDown, id);
+      let kind = kEventKindDown;
+      if (clickTimestamp && (ev.timeStamp - clickTimestamp) < 500) {
+        // looks like start of a double click
+        kind = kEventKindDown2;
+        clickTimestamp = 0;
+      }
+      dragInProgress = pushMouseEvent(ev, div, kind, id);
       if (dragInProgress)
         ev.preventDefault();
     });
@@ -493,6 +501,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
     div.addEventListener('click', ev => {
+      clickTimestamp = ev.timeStamp;
       pushMouseEvent(ev, div, kEventKindClick, id);
     });
   };

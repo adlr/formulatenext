@@ -117,6 +117,7 @@ class TextAnnotation : public Annotation {
                  FPDF_PAGEOBJECT obj,
                  FPDF_PAGEOBJECTMARK mark);
   virtual ~TextAnnotation();
+  Toolbox::Tool Type() override { return Toolbox::kText_Tool; }
   TextAnnotation* AsTextAnnotation() override { return this; }
   static constexpr char kSaveKey[] = "FN:RichText";
   static constexpr char kSaveKeyUTF16LE[] =

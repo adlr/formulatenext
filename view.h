@@ -18,7 +18,7 @@ class View;
 class MouseInputEvent {
  public:
   enum Type {
-    DOWN, DRAG, UP, MOVE, CLICK
+    DOWN, DRAG, UP, MOVE, CLICK, DOWN2
   };
   MouseInputEvent(SkPoint position, Type type,
                   int32_t click_count,

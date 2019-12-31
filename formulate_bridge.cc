@@ -151,8 +151,13 @@ bool MouseEvent(int id, float xpos, float ypos, int type, int modifiers) {
   ScopedRedraw redraw_main(root_views_[kIDMain]);
   ScopedRedraw redraw_thumb(root_views_[kIDThumb]);
   MouseInputEvent::Type ty = static_cast<MouseInputEvent::Type>(type);
-  MouseInputEvent ev(SkPoint::Make(xpos, ypos), ty, 1, modifiers);
-  switch (ty) {
+  MouseInputEvent::Type out_ty =
+      ty != MouseInputEvent::DOWN2 ? ty : MouseInputEvent::DOWN;
+  MouseInputEvent ev(SkPoint::Make(xpos, ypos),
+                     out_ty,
+                     ty == MouseInputEvent::DOWN2 ? 2 : 1,
+                     modifiers);
+  switch (out_ty) {
     case MouseInputEvent::DOWN:
       return root_views_[id]->MouseDown(ev) != nullptr;
       break;
@@ -169,6 +174,9 @@ bool MouseEvent(int id, float xpos, float ypos, int type, int modifiers) {
       break;
     case MouseInputEvent::CLICK:
       root_views_[id]->OnClick(ev);
+      break;
+    case MouseInputEvent::DOWN2:
+      fprintf(stderr, "Should never have Down2 event here\n");
       break;
   }
   return false;

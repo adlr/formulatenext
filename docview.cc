@@ -99,6 +99,8 @@ void DocView::DrawKnobs(SkCanvas* canvas, SkRect rect) {
     const std::unique_ptr<Annotation>& annot = *it;
     if (selected_annotations_.find(annot.get()) == selected_annotations_.end())
       continue;
+    if (editing_annotation_ == annot.get())
+      continue;
     SkRect bbox =
         ConvertRectFromPage(selected_annotations_page_, annot->Bounds());
     // Draw grey border around object
@@ -400,6 +402,15 @@ View* DocView::MouseDown(MouseInputEvent ev) {
       StartEditing(pageno, pagept, annot->AsTextAnnotation());
       SetNeedsDisplay();
       break;
+    } else {
+      fprintf(stderr, "Failed to edit: %d, %d == %d?, %f %f %f %f c %f %f\n",
+              annot->Editable(),
+              annot->Type(), tool,
+              annot->Bounds().left(),
+              annot->Bounds().top(),
+              annot->Bounds().right(),
+              annot->Bounds().bottom(),
+              pagept.x(), pagept.y());
     }
   }
   if (i < 0) {  // didn't start editing
