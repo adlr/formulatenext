@@ -136,22 +136,65 @@ class DocView : public View,
   }
   void ToggleAnnotationSelected(int page, Annotation* annot);
 
+  // DragHandler objects handle a full drag event and maintain the
+  // state associated with that particular drag event. This way,
+  // during mouse down, we can figure out what is happening and
+  // delegate to a DragHandler, without having DocView maintain state
+  // mid-drag.
+  class DragHandler {
+   public:
+    explicit DragHandler(DocView* parent) : parent_(parent) {}
+    virtual ~DragHandler() {}
+    virtual void MouseDown(MouseInputEvent ev) = 0;
+    virtual void MouseDrag(MouseInputEvent ev) = 0;
+    virtual void MouseUp(MouseInputEvent ev) = 0;
+
+   protected:
+    DocView* parent_{nullptr};
+  };
+
+  class PlaceAnnotationDragHandler : public DragHandler {
+   public:
+    explicit PlaceAnnotationDragHandler(DocView* parent,
+                                        Annotation* annotation,
+                                        int pageno)
+        : DragHandler(parent),
+          placing_annotation_page_(pageno) {
+      placing_annotation_.reset(annotation);
+    }
+    void MouseDown(MouseInputEvent ev);
+    void MouseDrag(MouseInputEvent ev);
+    void MouseUp(MouseInputEvent ev);
+
+   private:
+    std::unique_ptr<Annotation> placing_annotation_;
+    int placing_annotation_page_{-1};
+  };
+
+  // Handles moving many annotations or dragging a knob on one
+  class AnnotationsDragHandler : public DragHandler {
+   public:
+    AnnotationsDragHandler(DocView* parent, Knobmask knob)
+        : DragHandler(parent), knob_(knob) {}
+    void MouseDown(MouseInputEvent ev);
+    void MouseDrag(MouseInputEvent ev);
+    void MouseUp(MouseInputEvent ev);
+
+   private:
+    SkPoint drag_start_;  // in page coords
+    SkPoint last_drag_pt_;  // in page coords
+    Knobmask knob_;
+  };
+
   std::vector<SkSize> page_sizes_;  // in PDF points
   float max_page_width_{0};  // in PDF points
   float zoom_{1};  // user zoom in/out
 
-  // std::vector<std::unique_ptr<Annotation>> annotations_;
   std::set<Annotation*> selected_annotations_;
   int selected_annotations_page_{-1};
   TextAnnotation* editing_annotation_{nullptr};
-  std::unique_ptr<Annotation> placing_annotation_;
-  int placing_annotation_page_{-1};
 
-  // Move annotations intermediate data
-  bool dragging_{false};
-  SkPoint drag_start_;  // in page coords
-  SkPoint last_drag_pt_;  // in page coords
-  Knobmask dragging_knob_{kNoKnobs};  // if set, we're dragging this knob
+  std::unique_ptr<DragHandler> drag_handler_;
 
   // TODO Delete these:
 
@@ -178,6 +221,7 @@ class DocView : public View,
   Knobmask mouse_down_knob_{kNoKnobs};
 
   FRIEND_TEST(DocViewTest, KnobsTest);
+  friend class DragHandler;
 };
 
 }  // namespace formulate

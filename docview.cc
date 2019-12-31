@@ -329,9 +329,8 @@ View* DocView::MouseDown(MouseInputEvent ev) {
             selected_annotations_.clear();
             selected_annotations_.insert(annot);
             SetNeedsDisplay();  // to fix up the knobs
-            dragging_knob_ = knob;
-            dragging_ = true;
-            drag_start_ = last_drag_pt_ = pagept;
+            drag_handler_.reset(new AnnotationsDragHandler(this, knob));
+            drag_handler_->MouseDown(ev);
             return this;
           }
         }
@@ -376,9 +375,8 @@ View* DocView::MouseDown(MouseInputEvent ev) {
           fprintf(stderr, "TODO: drag a copy\n");
         }
         // Start move
-        dragging_ = true;
-        last_drag_pt_ = drag_start_ = pagept;
-        dragging_knob_ = kNoKnobs;
+        drag_handler_.reset(new AnnotationsDragHandler(this, kNoKnobs));
+        drag_handler_->MouseDown(ev);
       }
     }
     SetNeedsDisplay();
@@ -405,9 +403,10 @@ View* DocView::MouseDown(MouseInputEvent ev) {
     }
   }
   if (i < 0) {  // didn't start editing
-    placing_annotation_.reset(Annotation::Create(&doc_, tool));
-    placing_annotation_page_ = pageno;
-    placing_annotation_->CreateMouseDown(pagept);
+    drag_handler_.reset(
+        new PlaceAnnotationDragHandler(
+            this, Annotation::Create(&doc_, tool), pageno));
+    drag_handler_->MouseDown(ev);
   }
 
   return this;
@@ -472,37 +471,10 @@ namespace {
 }  // namespace {}
 
 void DocView::MouseDrag(MouseInputEvent ev) {
-  if (placing_annotation_) {
-    SkPoint pt =
-        ViewPointToPagePoint(ev.position(), placing_annotation_page_);
-    placing_annotation_->CreateMouseDrag(pt);
-  } else if (dragging_ && dragging_knob_ == kNoKnobs) {
-    SkPoint pt =
-        ViewPointToPagePoint(ev.position(), selected_annotations_page_);
-    float dx = pt.x() - last_drag_pt_.x();
-    float dy = pt.y() - last_drag_pt_.y();
-    for (Annotation* annot : selected_annotations_) {
-      SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
-      annot->Move(dx, dy);
-      SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
-    }
-    last_drag_pt_ = pt;
-  } else if (dragging_) {  // dragging a knob
-    if (selected_annotations_.size() != 1) {
-      fprintf(stderr, "can't drag knob of so many annotations!\n");
-      return;
-    }
-    SkPoint pt =
-        ViewPointToPagePoint(ev.position(), selected_annotations_page_);
-    float dx = pt.x() - last_drag_pt_.x();
-    float dy = pt.y() - last_drag_pt_.y();
-    Annotation* annot = *selected_annotations_.begin();
-    SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
-    annot->MoveKnob(dragging_knob_, dx, dy);
-    SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
-    last_drag_pt_ = pt;
+  if (drag_handler_) {
+    drag_handler_->MouseDrag(ev);
+    return;
   }
-
   return;
   // Old version:
 
@@ -574,53 +546,9 @@ void DocView::MouseDrag(MouseInputEvent ev) {
 }
 
 void DocView::MouseUp(MouseInputEvent ev) {
-
-  if (placing_annotation_) {
-    SkPoint pt =
-        ViewPointToPagePoint(ev.position(), placing_annotation_page_);
-    bool keep = placing_annotation_->CreateMouseUp(pt);
-    if (!keep) {
-      placing_annotation_.reset();
-    } else {
-      Annotation* annot = placing_annotation_.get();
-      doc_.PushAnnotation(placing_annotation_page_,
-                          std::move(placing_annotation_));
-      if (annot->Editable()) {
-        StartEditing(placing_annotation_page_, pt, annot->AsTextAnnotation());
-        SetNeedsDisplay();
-      }
-    }
-  } else if (dragging_ && dragging_knob_ == kNoKnobs) {
-    SkPoint pt =
-        ViewPointToPagePoint(ev.position(), selected_annotations_page_);
-    float dx = pt.x() - last_drag_pt_.x();
-    float dy = pt.y() - last_drag_pt_.y();
-    for (Annotation* annot : selected_annotations_) {
-      SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
-      annot->Move(dx, dy);
-      SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
-    }
-    float full_dx = pt.x() - drag_start_.x();
-    float full_dy = pt.y() - drag_start_.y();
-    doc_.AnnotationsMovedUndo(selected_annotations_page_,
-                              selected_annotations_,
-                              full_dx, full_dy);
-    dragging_ = false;
-  } else if (dragging_) {
-    SkPoint pt =
-        ViewPointToPagePoint(ev.position(), selected_annotations_page_);
-    float dx = pt.x() - last_drag_pt_.x();
-    float dy = pt.y() - last_drag_pt_.y();
-    Annotation* annot = *selected_annotations_.begin();
-    SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
-    annot->MoveKnob(dragging_knob_, dx, dy);
-    SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
-    // float full_dx = pt.x() - drag_start_.x();
-    // float full_dy = pt.y() - drag_start_.y();
-    // doc_.AnnotationsMovedUndo(selected_annotations_page_,
-    //                           selected_annotations_,
-    //                           full_dx, full_dy);
-    dragging_ = false;
+  if (drag_handler_) {
+    drag_handler_->MouseUp(ev);
+    drag_handler_.reset();
   }
 
   return;
@@ -958,5 +886,78 @@ void DocView::SetEditingString(const char* str) {
 
 // void DocView::StopEditingText() {
 // }
+
+void DocView::PlaceAnnotationDragHandler::MouseDown(MouseInputEvent ev) {
+  SkPoint pt =
+      parent_->ViewPointToPagePoint(ev.position(), placing_annotation_page_);
+  placing_annotation_->CreateMouseDown(pt);
+}
+
+void DocView::PlaceAnnotationDragHandler::MouseDrag(MouseInputEvent ev) {
+  SkPoint pt =
+      parent_->ViewPointToPagePoint(ev.position(), placing_annotation_page_);
+  placing_annotation_->CreateMouseDrag(pt);
+}
+
+void DocView::PlaceAnnotationDragHandler::MouseUp(MouseInputEvent ev) {
+  SkPoint pt =
+      parent_->ViewPointToPagePoint(ev.position(), placing_annotation_page_);
+  bool keep = placing_annotation_->CreateMouseUp(pt);
+  if (!keep) {
+    placing_annotation_.reset();
+  } else {
+    Annotation* annot = placing_annotation_.get();
+    parent_->doc_.PushAnnotation(placing_annotation_page_,
+                                 std::move(placing_annotation_));
+    if (annot->Editable()) {
+      parent_->StartEditing(placing_annotation_page_, pt,
+                            annot->AsTextAnnotation());
+      parent_->SetNeedsDisplay();
+    }
+  }
+}
+
+void DocView::AnnotationsDragHandler::MouseDown(MouseInputEvent ev) {
+  SkPoint pt =
+      parent_->ViewPointToPagePoint(ev.position(),
+                                    parent_->selected_annotations_page_);
+  last_drag_pt_ = drag_start_ = pt;
+}
+
+void DocView::AnnotationsDragHandler::MouseDrag(MouseInputEvent ev) {
+  SkPoint pt =
+      parent_->ViewPointToPagePoint(ev.position(),
+                                    parent_->selected_annotations_page_);
+  float dx = pt.x() - last_drag_pt_.x();
+  float dy = pt.y() - last_drag_pt_.y();
+  for (Annotation* annot : parent_->selected_annotations_) {
+    parent_->SetNeedsDisplayForAnnotation(
+        parent_->selected_annotations_page_, annot);
+    if (knob_) {
+      annot->MoveKnob(knob_, dx, dy);
+    } else {
+      annot->Move(dx, dy);
+    }
+    parent_->SetNeedsDisplayForAnnotation(
+        parent_->selected_annotations_page_, annot);
+  }
+  last_drag_pt_ = pt;
+}
+
+void DocView::AnnotationsDragHandler::MouseUp(MouseInputEvent ev) {
+  SkPoint pt =
+      parent_->ViewPointToPagePoint(ev.position(),
+                                    parent_->selected_annotations_page_);
+  MouseDrag(ev);
+  float full_dx = pt.x() - drag_start_.x();
+  float full_dy = pt.y() - drag_start_.y();
+  if (!knob_) {
+    parent_->doc_.AnnotationsMovedUndo(parent_->selected_annotations_page_,
+                                       parent_->selected_annotations_,
+                                       full_dx, full_dy);
+  } else {
+    // need to handle undo for knob drag
+  }
+}
 
 }  // namespace formulate
