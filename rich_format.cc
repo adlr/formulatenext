@@ -55,13 +55,16 @@ RichFormat::RichFormat() {
 std::unique_ptr<txt::Paragraph> RichFormat::Format(const char* html) {
   txt::ParagraphStyle style;
   style.font_family = "Arimo";
+  style.font_size = 13.0;
   paragraph_builder_ = txt::ParagraphBuilder::CreateTxtBuilder(
       style, font_collection_);
   txt::TextStyle textstyle;
   textstyle.color = SK_ColorBLACK;
   textstyle.font_families.push_back("Arimo");
+  textstyle.font_size = 13.0;
   paragraph_builder_->PushStyle(textstyle);
 
+  did_first_paragraph_ = false;
   HTMLWalk(html, this);
   std::unique_ptr<txt::Paragraph> paragraph(paragraph_builder_->Build());
   paragraph_builder_.reset();
@@ -84,8 +87,12 @@ void RichFormat::HTMLNodeStarted(const char* tag_name) {
 
   paragraph_builder_->PushStyle(top);
 
-  if (!strcmp(tag_name, "BR"))
-    HTMLText("\n");
+  if (!strcmp(tag_name, "P")) {
+    if (!did_first_paragraph_)
+      did_first_paragraph_ = true;
+    else
+      HTMLText("\n");
+  }
 }
 
 void RichFormat::HTMLNodeEnded() {

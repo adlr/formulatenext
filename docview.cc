@@ -81,43 +81,50 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
 }
 
 void DocView::DrawKnobs(SkCanvas* canvas, SkRect rect) {
-  if (selected_page_ < 0)
+  if (selected_annotations_page_ < 0)
     return;
   SkRect pagerect =
-      SkRect::MakeXYWH(0, 0, page_sizes_[selected_page_].width(),
-                                     page_sizes_[selected_page_].height());
-  if (!rect.intersects(ConvertRectFromPage(selected_page_, pagerect)))
+      SkRect::MakeXYWH(0, 0,
+                       page_sizes_[selected_annotations_page_].width(),
+                       page_sizes_[selected_annotations_page_].height());
+  if (!rect.intersects(ConvertRectFromPage(selected_annotations_page_,
+                                           pagerect)))
     return;
   SkPaint paint;
   paint.setAntiAlias(true);
-  // for (int index : selected_objs_) {
-  //   SkRect bbox =
-  //       ConvertRectFromPage(selected_page_,
-  //                           doc_.BoundingBoxForObj(selected_page_, index));
-  //   // Draw grey border around object
-  //   paint.setStyle(SkPaint::kStroke_Style);
-  //   paint.setColor(0xffdddddd);  // opaque light grey
-  //   paint.setStrokeWidth(1);
-  //   canvas->drawRect(bbox.makeOutset(0.5, 0.5), paint);
 
-  //   Knobmask knobs = KnobsForType(doc_.ObjectType(selected_page_, index));
-  //   for (int i = 0; i < 8; i++) {
-  //     Knobmask knob = 1 << i;
-  //     if (knob & knobs) {
-  //       SkRect knobrect = KnobRect(knob, bbox);
-  //       // Draw white part
-  //       paint.setStyle(SkPaint::kFill_Style);
-  //       paint.setColor(0xffffffff);  // opaque white
-  //       paint.setStrokeWidth(0);
-  //       canvas->drawRect(knobrect, paint);
-  //       // Draw border
-  //       paint.setStyle(SkPaint::kStroke_Style);
-  //       paint.setColor(0xff000000);  // opaque black
-  //       paint.setStrokeWidth(1);
-  //       canvas->drawRect(knobrect, paint);
-  //     }
-  //   }
-  // }
+  const std::vector<std::unique_ptr<Annotation>>& annots =
+      doc_.AnnotationsOnPage(selected_annotations_page_);
+  for (auto it = annots.begin(); it != annots.end(); ++it) {
+    const std::unique_ptr<Annotation>& annot = *it;
+    if (selected_annotations_.find(annot.get()) == selected_annotations_.end())
+      continue;
+    SkRect bbox =
+        ConvertRectFromPage(selected_annotations_page_, annot->Bounds());
+    // Draw grey border around object
+    paint.setStyle(SkPaint::kStroke_Style);
+    paint.setColor(0xffdddddd);  // opaque light grey
+    paint.setStrokeWidth(1);
+    canvas->drawRect(bbox.makeOutset(0.5, 0.5), paint);
+
+    Knobmask knobs = annot->Knobs();
+    for (int i = 0; i < 8; i++) {
+      Knobmask knob = 1 << i;
+      if (knob & knobs) {
+        SkRect knobrect = KnobRect(knob, bbox);
+        // Draw white part
+        paint.setStyle(SkPaint::kFill_Style);
+        paint.setColor(0xffffffff);  // opaque white
+        paint.setStrokeWidth(0);
+        canvas->drawRect(knobrect, paint);
+        // Draw border
+        paint.setStyle(SkPaint::kStroke_Style);
+        paint.setColor(0xff000000);  // opaque black
+        paint.setStrokeWidth(1);
+        canvas->drawRect(knobrect, paint);
+      }
+    }
+  }
 }
 
 SkRect DocView::KnobRect(Knobmask knob, SkRect objbounds) {
@@ -298,10 +305,40 @@ View* DocView::MouseDown(MouseInputEvent ev) {
   ViewPointToPageAndPoint(ev.position(), &pageno, &pagept);
 
   if (toolbox_.current_tool() == Toolbox::kArrow_Tool) {
-    // TODO(adlr): see if we hit a knob
     const std::vector<std::unique_ptr<Annotation>>& annotations =
         doc_.AnnotationsOnPage(pageno);
+    // See if we hit a knob
     ssize_t i;
+    if (selected_annotations_page_ == pageno) {
+      for (i = annotations.size() - 1; i >= 0; i--) {
+        Annotation* annot = annotations[i].get();
+        if (selected_annotations_.find(annot) == selected_annotations_.end())
+          continue;
+        Knobmask knobs = annot->Knobs();
+        for (int i = 7; i >= 0; i--) {
+          Knobmask knob = 1 << i;
+          if (!(knob & knobs)) {
+            fprintf(stderr, "Knob not in knobmask\n");
+            continue;
+          }
+          SkRect knobrect =
+              KnobRect(knob, ConvertRectFromPage(
+                  selected_annotations_page_, annot->Bounds()));
+          if (knobrect.contains(ev.position().x(), ev.position().y())) {
+            // Hit a knob
+            selected_annotations_.clear();
+            selected_annotations_.insert(annot);
+            SetNeedsDisplay();  // to fix up the knobs
+            dragging_knob_ = knob;
+            dragging_ = true;
+            drag_start_ = last_drag_pt_ = pagept;
+            return this;
+          }
+        }
+      }
+    }
+
+    // See if we hit the body of the Annotation
     for (i = annotations.size() - 1; i >= 0; i--) {
       Annotation* annot = annotations[i].get();
       if (annot->Bounds().contains(pagept.x(), pagept.y())) {
@@ -341,6 +378,7 @@ View* DocView::MouseDown(MouseInputEvent ev) {
         // Start move
         dragging_ = true;
         last_drag_pt_ = drag_start_ = pagept;
+        dragging_knob_ = kNoKnobs;
       }
     }
     SetNeedsDisplay();
@@ -438,7 +476,7 @@ void DocView::MouseDrag(MouseInputEvent ev) {
     SkPoint pt =
         ViewPointToPagePoint(ev.position(), placing_annotation_page_);
     placing_annotation_->CreateMouseDrag(pt);
-  } else if (dragging_) {
+  } else if (dragging_ && dragging_knob_ == kNoKnobs) {
     SkPoint pt =
         ViewPointToPagePoint(ev.position(), selected_annotations_page_);
     float dx = pt.x() - last_drag_pt_.x();
@@ -448,6 +486,20 @@ void DocView::MouseDrag(MouseInputEvent ev) {
       annot->Move(dx, dy);
       SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
     }
+    last_drag_pt_ = pt;
+  } else if (dragging_) {  // dragging a knob
+    if (selected_annotations_.size() != 1) {
+      fprintf(stderr, "can't drag knob of so many annotations!\n");
+      return;
+    }
+    SkPoint pt =
+        ViewPointToPagePoint(ev.position(), selected_annotations_page_);
+    float dx = pt.x() - last_drag_pt_.x();
+    float dy = pt.y() - last_drag_pt_.y();
+    Annotation* annot = *selected_annotations_.begin();
+    SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
+    annot->MoveKnob(dragging_knob_, dx, dy);
+    SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
     last_drag_pt_ = pt;
   }
 
@@ -538,7 +590,7 @@ void DocView::MouseUp(MouseInputEvent ev) {
         SetNeedsDisplay();
       }
     }
-  } else if (dragging_) {
+  } else if (dragging_ && dragging_knob_ == kNoKnobs) {
     SkPoint pt =
         ViewPointToPagePoint(ev.position(), selected_annotations_page_);
     float dx = pt.x() - last_drag_pt_.x();
@@ -553,6 +605,21 @@ void DocView::MouseUp(MouseInputEvent ev) {
     doc_.AnnotationsMovedUndo(selected_annotations_page_,
                               selected_annotations_,
                               full_dx, full_dy);
+    dragging_ = false;
+  } else if (dragging_) {
+    SkPoint pt =
+        ViewPointToPagePoint(ev.position(), selected_annotations_page_);
+    float dx = pt.x() - last_drag_pt_.x();
+    float dy = pt.y() - last_drag_pt_.y();
+    Annotation* annot = *selected_annotations_.begin();
+    SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
+    annot->MoveKnob(dragging_knob_, dx, dy);
+    SetNeedsDisplayForAnnotation(selected_annotations_page_, annot);
+    // float full_dx = pt.x() - drag_start_.x();
+    // float full_dy = pt.y() - drag_start_.y();
+    // doc_.AnnotationsMovedUndo(selected_annotations_page_,
+    //                           selected_annotations_,
+    //                           full_dx, full_dy);
     dragging_ = false;
   }
 
@@ -704,6 +771,16 @@ void DocView::MouseUp(MouseInputEvent ev) {
 //                                   bbox);
 //   SetNeedsDisplayInRect(full_bounds);
 // }
+
+void DocView::SetNeedsDisplayForAnnotation(int pageno, Annotation* annot) {
+  if (selected_annotations_page_ == pageno &&
+      selected_annotations_.find(annot) != selected_annotations_.end()) {
+    SetNeedsDisplayInRect(KnobBounds(
+        annot->Knobs(), ConvertRectFromPage(pageno, annot->Bounds())));
+    // need to handle knobs
+  }
+  NeedsDisplayInRect(pageno, annot->Bounds());
+}
 
 void DocView::ToggleAnnotationSelected(int page, Annotation* annot) {
   if (AnnotationIsSelected(annot)) {

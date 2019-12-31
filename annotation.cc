@@ -54,6 +54,46 @@ void Annotation::Move(float dx, float dy) {
   bounds_.offset(dx, dy);
 }
 
+void Annotation::MoveKnob(Knobmask knob, float dx, float dy) {
+  switch (knob) {
+    default:
+      fprintf(stderr, "Illegal knob passed 0x%08x\n", knob);
+      return;
+    case kTopLeftKnob:
+    case kMiddleLeftKnob:
+    case kBottomLeftKnob:
+      bounds_.fLeft += dx;
+      break;
+    case kTopCenterKnob:
+    case kBottomCenterKnob:
+      break;
+    case kTopRightKnob:
+    case kMiddleRightKnob:
+    case kBottomRightKnob:
+      bounds_.fRight += dx;
+      break;
+  }
+
+  switch (knob) {
+    default:
+      fprintf(stderr, "Illegal knob passed 0x%08x\n", knob);
+      return;
+    case kTopLeftKnob:
+    case kTopCenterKnob:
+    case kTopRightKnob:
+      bounds_.fTop += dy;
+      break;
+    case kMiddleLeftKnob:
+    case kMiddleRightKnob:
+      break;
+    case kBottomLeftKnob:
+    case kBottomCenterKnob:
+    case kBottomRightKnob:
+      bounds_.fBottom += dy;
+      break;
+  }
+}
+
 void Annotation::DrawKnobs(SkCanvas* canvas, SkRect rect) {
   // TODO(adlr): draw the knobs
 }
@@ -204,7 +244,7 @@ void TextAnnotation::Draw(SkCanvas* canvas, SkRect rect) {
     fprintf(stderr, "No paragraph to draw\n");
     return;
   }
-  paragraph_->Layout(Bounds().width());
+  // paragraph_->Layout(Bounds().width());
   canvas->save();
   canvas->translate(Bounds().left(), Bounds().top());
   paragraph_->Paint(canvas, 0, 0);
@@ -298,6 +338,19 @@ void TextAnnotation::LayoutText() {
     SetWidth(ceilf(longest_line) + 0.1);
   }
   SetHeight(paragraph_->GetHeight());
+}
+
+void TextAnnotation::MoveKnob(Knobmask knob, float dx, float dy) {
+  Annotation::MoveKnob(knob, dx, dy);
+  if (knob & (kTopLeftKnob |
+              kTopRightKnob |
+              kMiddleLeftKnob |
+              kMiddleRightKnob |
+              kBottomLeftKnob |
+              kBottomRightKnob)) {
+    fixed_width_ = true;
+  }
+  LayoutText();
 }
 
 }  // namespace formulate

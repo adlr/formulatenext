@@ -51,6 +51,7 @@ class RichFormat : public HTMLNodeWalkerInterface {
  private:
   std::shared_ptr<txt::FontCollection> font_collection_;
   std::unique_ptr<txt::ParagraphBuilder> paragraph_builder_;
+  bool did_first_paragraph_{false};
 };
 
 }  // namespace formulate

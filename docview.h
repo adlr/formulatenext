@@ -128,9 +128,7 @@ class DocView : public View,
   // if |index| is -1, redraw whole page. Includes knobs.
   // void SetNeedsDisplayInObj(int pageno, int index);
 
-  void SetNeedsDisplayForAnnotation(int pageno, Annotation* annot) {
-    NeedsDisplayInRect(pageno, annot->Bounds());
-  }
+  void SetNeedsDisplayForAnnotation(int pageno, Annotation* annot);
 
  private:
   bool AnnotationIsSelected(Annotation* annot) const {
@@ -152,7 +150,8 @@ class DocView : public View,
   // Move annotations intermediate data
   bool dragging_{false};
   SkPoint drag_start_;  // in page coords
-  SkPoint last_drag_pt_;
+  SkPoint last_drag_pt_;  // in page coords
+  Knobmask dragging_knob_{kNoKnobs};  // if set, we're dragging this knob
 
   // TODO Delete these:
 

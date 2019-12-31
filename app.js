@@ -424,6 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
       quill.root.style.height = 'auto';
       quill.root.style.width = 'fit-content';
       quill.root.style.maxWidth = '612px';
+      // TODO: unset line-height
       update();
       // textarea.setSelectionRange(caretPos, caretPos);
       console.log("set caret here: " + caretPos);

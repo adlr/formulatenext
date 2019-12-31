@@ -42,5 +42,4 @@ let HTMLWalk = (str, listener) => {
     }
   };
   innerWalk(root.childNodes);
-  console.log('done with inner walk.');
 }

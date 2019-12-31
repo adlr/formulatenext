@@ -90,6 +90,7 @@ class Annotation {
   SkRect BoundsWithKnobs() const;
   SkPoint Origin() const { return SkPoint::Make(bounds_.fLeft, bounds_.fTop); }
   void Move(float dx, float dy);
+  virtual void MoveKnob(Knobmask knob, float dx, float dy);
 
  protected:
   SkRect KnobBounds(char knob);
@@ -137,6 +138,7 @@ class TextAnnotation : public Annotation {
   const std::string& editing_value() const { return editing_value_; }
 
   void LayoutText();
+  void MoveKnob(Knobmask knob, float dx, float dy) override;
 
  private:
   bool editing_{false};
