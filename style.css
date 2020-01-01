@@ -118,7 +118,6 @@ body {
   position: absolute;
   z-index: 15;
   width: 1000px;
-  padding: 5px;
   transform-origin: top left;
   /*transform-origin: 5px 5px;*/
   /*overflow: hidden;*/
@@ -130,4 +129,7 @@ body {
 
 .ql-editor {
   line-height: unset;
+  padding: 2px;
+  font-family: "Arimo", Helvetica, Arial, "Noto Sans CJK TC", sans-serif;
+  font-size: 13px;
 }

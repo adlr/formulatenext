@@ -359,9 +359,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const dpr = window.devicePixelRatio || 1;
     console.log(`Edit at ${xpos} ${ypos}, ${zoom}, ${text}, ${caretPos}`);
     // let vertOffset = calcFontMetrics((zoom * 12) | 0);
-    let padding = 5;
-    xpos -= zoom * (padding + 16);
-    ypos -= zoom * (padding + 13);
+    let padding = 2;
+    xpos -= zoom * padding;
+    ypos -= zoom * padding;
     let textarea = document.createElement('div');
     textarea.classList.add('texteditor');
     // textarea.style.width = textarea.style.height = '200px';
