@@ -37,6 +37,8 @@ let InsertSignature = null;
 const ID_MAIN = 0;
 const ID_THUMB = 1;
 
+let g_richToolbarController = null;
+
 class ButtonMenuHelper {
   constructor(path, buttonid, clicked) {
     this.button = null;
@@ -241,19 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // init text editing toolbar section
-    let fontDropdown =
-        new DropdownMenu(false, document.getElementById('tb-dropdown-font'));
-    fontDropdown.setText('Arimo');
-    let fontDropdownContainer = new MenuContainer(fontDropdown);
-    fontDropdownContainer.addMenuItem(
-      new MenuItem('Arimo', fontDropdownContainer, null, () => {
-        console.log('do Arimo');
-      }, null));
-    fontDropdownContainer.addMenuItem(
-      new MenuItem('Tinos', fontDropdownContainer, null, () => {
-        console.log('do Tinos');
-      }, null));
-    fontDropdown.setContainer(fontDropdownContainer);
+    g_richToolbarController = new RichToolbarController();
 
     let signatureManager =
         new SignatureManager(['Signature', 'Insert Signature'],
@@ -359,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const dpr = window.devicePixelRatio || 1;
     console.log(`Edit at ${xpos} ${ypos}, ${zoom}, ${text}, ${caretPos}`);
     // let vertOffset = calcFontMetrics((zoom * 12) | 0);
-    let padding = 2;
+    let padding = 2 + 1;
     xpos -= zoom * padding;
     ypos -= zoom * padding;
     let textarea = document.createElement('div');
@@ -419,6 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // });
     // textarea.value = text;
     update();
+    g_richToolbarController.startedEditing(quill);
     setTimeout(() => {
       quill.focus();
       quill.root.style.height = 'auto';
@@ -431,6 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
     bridge_stopComposingText = () => {
       console.log('stop composing');
+      g_richToolbarController.stoppedEditing(quill);
       UpdateEditText(quill.root.innerHTML);
       textarea.parentNode.removeChild(textarea);
       // quill.destroy() or leak?

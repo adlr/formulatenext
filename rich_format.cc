@@ -27,8 +27,15 @@ void StaticHTMLNodeStarted(HTMLNodeWalkerInterface* self,
 
 EMSCRIPTEN_KEEPALIVE
 void StaticHTMLNodeAttribute(HTMLNodeWalkerInterface* self,
-                        const char* key, const char* value) {
-  self->HTMLNodeAttribute(key, value);
+                             const char* tag_name,
+                             const char* key, const char* value) {
+  self->HTMLNodeAttribute(tag_name, key, value);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void StaticHTMLNodeAttributesEnded(HTMLNodeWalkerInterface* self,
+                                   const char* tag_name) {
+  self->HTMLNodeAttributesEnded(tag_name);
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -78,14 +85,39 @@ void RichFormat::HTMLText(const char* text) {
 }
 
 void RichFormat::HTMLNodeStarted(const char* tag_name) {
-  txt::TextStyle top = paragraph_builder_->PeekStyle();
+  new_style_ = paragraph_builder_->PeekStyle();
 
   if (!strcmp(tag_name, "B"))
-    top.font_weight = txt::FontWeight::w700;
+    new_style_.font_weight = txt::FontWeight::w700;
   if (!strcmp(tag_name, "I"))
-    top.font_style = txt::FontStyle::italic;
+    new_style_.font_style = txt::FontStyle::italic;
+}
 
-  paragraph_builder_->PushStyle(top);
+void RichFormat::HTMLNodeAttribute(const char* tag_name,
+                                   const char* key, const char* value) {
+  if (!strcmp(key, "style")) {
+    while (true) {
+      std::string tag, tagval;
+      const char* rc = ParseStyleOnce(value, &tag, &tagval);
+      if (!tag.empty() && !tagval.empty()) {
+        if (tag == "font-size") {
+          float size = 0;
+          int dummy = 0;
+          tagval += '0';  // to ensure sscanf success
+          if (sscanf(tagval.c_str(), "%fpx%d", &size, &dummy) == 2) {
+            new_style_.font_size = size;
+          }
+        }
+      }
+      if (!rc)
+        break;
+      value = rc;
+    }
+  }
+}
+
+void RichFormat::HTMLNodeAttributesEnded(const char* tag_name) {
+  paragraph_builder_->PushStyle(new_style_);
 
   if (!strcmp(tag_name, "P")) {
     if (!did_first_paragraph_)
@@ -97,6 +129,45 @@ void RichFormat::HTMLNodeStarted(const char* tag_name) {
 
 void RichFormat::HTMLNodeEnded() {
   paragraph_builder_->Pop();
+}
+
+const char* RichFormat::ParseStyleOnce(const char* value,
+                                       std::string* out_tag,
+                                       std::string* out_tagval) {
+  std::string tag, tagval;
+  while (*value && isspace(*value))
+    value++;
+  if (!*value) {
+    return nullptr;
+  }
+  while (*value && !isspace(*value) && *value != ':' && *value != ';') {
+    tag += *value;
+    value++;
+  }
+  if (!*value) {
+    return nullptr;
+  }
+  while (*value && isspace(*value)) {
+    value++;
+  }
+  if (!*value || *value != ':')
+    return nullptr;
+  value++;  // iterate over ':'
+  while (*value && isspace(*value)) {
+    value++;
+  }
+  while (*value && *value != ';') {
+    tagval += *value;
+    value++;
+  }
+  *out_tag = std::move(tag);
+  *out_tagval = std::move(tagval);
+  if (*value)  // skip over ';'
+    value++;
+  if (*value) {
+    return value;
+  }
+  return nullptr;
 }
 
 }  // namespace formulate

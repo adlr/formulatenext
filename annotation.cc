@@ -214,6 +214,7 @@ TextAnnotation::TextAnnotation(AnnotationDelegate* delegate,
   bounds_.fTop = 0;
   bounds_.fRight = e + width + 0.1;
   bounds_.fBottom = 0;
+  paragraph_ = delegate_->ParseText(editing_value_.c_str());
   LayoutText();  // computes height and saves it into bounds_
 
   double page_height = FPDF_GetPageHeight(page);
@@ -325,12 +326,12 @@ void TextAnnotation::StartEditing(SkPoint pt) {
 
 void TextAnnotation::StopEditing() {
   editing_ = false;
+  paragraph_ = delegate_->ParseText(editing_value_.c_str());
   LayoutText();
   // set needs display
 }
 
 void TextAnnotation::LayoutText() {
-  paragraph_ = delegate_->ParseText(editing_value_.c_str());
   // Re-layout text
   paragraph_->Layout(fixed_width_ ? bounds_.width() : kMaxUnboundedTextWidth);
   if (!fixed_width_) {
