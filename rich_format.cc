@@ -107,6 +107,9 @@ void RichFormat::HTMLNodeAttribute(const char* tag_name,
           if (sscanf(tagval.c_str(), "%fpx%d", &size, &dummy) == 2) {
             new_style_.font_size = size;
           }
+        } else if (tag == "font-family") {
+          new_style_.font_families.clear();
+          new_style_.font_families.emplace_back(std::move(tagval));
         }
       }
       if (!rc)

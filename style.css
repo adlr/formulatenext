@@ -133,3 +133,15 @@ body {
   font-family: "Arimo", Helvetica, Arial, "Noto Sans CJK TC", sans-serif;
   font-size: 13px;
 }
+
+.ql-font-Arimo {
+  font-family: 'Arimo', 'Arial', 'Helvetica', sans-serif;
+}
+
+.ql-font-Cousine {
+  font-family: 'Cousine', 'Courier', monospace;
+}
+
+.ql-font-Tinos {
+  font-family: 'Tinos', 'Times New Roman', 'Times', serif;
+}
