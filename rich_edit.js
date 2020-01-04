@@ -47,6 +47,9 @@ class RichToolbarController {
         this.toggleBoldItalic('italic');
       });
     this.italicButtonHelper.setEnabled(true);
+
+    this.toolbarShowing = true;
+    this.setToolbarShowing(false);
   }
   startedEditing(quill) {
     this.quill = quill;
@@ -54,10 +57,29 @@ class RichToolbarController {
       if (eventName === 'selection-change')
         this.updateToolbar();
     });
+    this.setToolbarShowing(true);
     this.updateToolbar();
   }
   stoppedEditing() {
     this.quill = null;
+    this.setToolbarShowing(false);
+  }
+  setToolbarShowing(show) {
+    if (show == this.toolbarShowing)
+      return;
+    let elts = document.getElementsByClassName('show-text-format');
+    for (let i = 0; i < elts.length; i++) {
+      if (show) {
+        if (elts[i].hasOwnProperty('backupDisplay')) {
+          elts[i].style.display = elts[i].backupDisplay;
+          delete elts[i].backupDisplay;
+        }
+      } else {
+        elts[i].backupDisplay = elts[i].style.display;
+        elts[i].style.display = 'none';
+      }
+    }
+    this.toolbarShowing = show;
   }
   toggleBoldItalic(property) {
     const format = this.quill.getFormat();

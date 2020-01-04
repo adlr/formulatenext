@@ -44,8 +44,8 @@
 }
 
 .toolbar-menu {
-    color: rgba(0, 0, 0, 0.5);
-    fill: rgba(0, 0, 0, 0.5);
+    color: rgba(0, 0, 0, 1);
+    fill: rgba(0, 0, 0, 1);
     padding: 0;
     margin-right: 2px;
     margin-left: 7px;
