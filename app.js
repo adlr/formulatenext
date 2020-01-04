@@ -53,6 +53,7 @@ class ButtonMenuHelper {
     }
     this.enabled = false;
     this.callback = clicked;
+    this.selected = false;
   }
   clicked(ev) {
     if (!this.enabled)
@@ -65,12 +66,28 @@ class ButtonMenuHelper {
     this.enabled = enabled;
     if (this.menuItem)
       this.menuItem.setEnabled(enabled);
+    this.fixCSS();
+  }
+  fixCSS() {
     if (this.button) {
-      if (enabled)
+      if (this.enabled) {
         this.button.classList.add('toolbar-button-enabled');
-      else
+        if (this.selected)
+          this.button.classList.add('toolbar-selected');
+        else {
+          this.button.classList.remove('toolbar-selected');
+        }
+      } else {
         this.button.classList.remove('toolbar-button-enabled');
+        this.button.classList.remove('toolbar-selected');
+      }
     }
+  }
+  setSelected(selected) {
+    if (this.selected == selected)
+      return;
+    this.selected = selected;
+    this.fixCSS();
   }
 }
 
