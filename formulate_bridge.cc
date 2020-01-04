@@ -26,7 +26,7 @@ class ThumbnailEventHandlerImpl : public ThumbnailEventHandler {
   void ScrollToPage(int page) {
     SkPoint pagecorner = doc_view_->PagePointToViewPoint(
         page,
-        SkPoint::Make(0, doc_view_->PageHeight(page)));
+        SkPoint::Make(0, 0));
     doc_view_->SetNeedsDisplay();
     doc_view_->SetOrigin(SkPoint::Make(-pagecorner.x(), -pagecorner.y()));
     scroll_views_[kIDMain]->RepositionChild();
