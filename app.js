@@ -424,6 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const kEventKindMove = 3;
   const kEventKindClick = 4;
   const kEventKindDown2 = 5;  // Down with click count of 2
+  const kEventKindLeave = 6;
   let pushMouseEvent = (ev, div, kind, id) => {
     if (MouseEvent === null)
       return;
@@ -479,6 +480,9 @@ document.addEventListener('DOMContentLoaded', function() {
         dragInProgress = false;
         ev.preventDefault();
       }
+    });
+    div.addEventListener('pointerleave', ev => {
+      pushMouseEvent(ev, div, kEventKindLeave, id);
     });
     div.addEventListener('click', ev => {
       clickTimestamp = ev.timeStamp;

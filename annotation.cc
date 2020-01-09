@@ -18,7 +18,6 @@ const double kMaxUnboundedTextWidth = 72.0 * 8.5;
 } // namespace {}
 
 Annotation::~Annotation() {
-  fprintf(stderr, "deleted annotation\n");
   if (dirty_)
     fprintf(stderr, "ERR: Deleting dirty annotation\n");
 }
@@ -27,7 +26,6 @@ Annotation* Annotation::Create(AnnotationDelegate* delegate,
                                Toolbox::Tool type) {
   switch (type) {
     case Toolbox::kText_Tool:
-      fprintf(stderr, "creating text annotation\n");
       return new TextAnnotation(delegate);
     default:
       fprintf(stderr, "can't create annotation for type %d\n", type);
@@ -48,6 +46,16 @@ bool Annotation::CreateMouseUp(SkPoint pt) {
   bounds_.set(pt, down_pt_);
   // Only keep Annotations that are big enough:
   return bounds_.width() > 2.0 && bounds_.height() > 2.0;
+}
+
+void Annotation::SetHoverPoint(SkPoint pt) {
+  // Default: center annotation at point
+  float width = bounds_.width();
+  float height = bounds_.height();
+  bounds_.fLeft = pt.x() - width / 2;
+  bounds_.fTop = pt.y() - height / 2;
+  SetWidth(width);
+  SetHeight(height);
 }
 
 void Annotation::Move(float dx, float dy) {
@@ -112,6 +120,12 @@ SkRect Annotation::KnobBounds(char knob) {
                           quad[0].y() - 2,
                           quad[2].x() + 2,
                           quad[2].y() + 2);
+}
+
+TextAnnotation::TextAnnotation(AnnotationDelegate* delegate)
+    : Annotation(delegate) {
+  paragraph_ = delegate_->ParseText("Text");
+  LayoutText();  // computes height and saves it into bounds_
 }
 
 std::u16string UTF8To16(const std::string& str) {
@@ -224,7 +238,6 @@ TextAnnotation::TextAnnotation(AnnotationDelegate* delegate,
 }
 
 TextAnnotation::~TextAnnotation() {
-  fprintf(stderr, "deleted text annotation\n");
 }
 
 bool TextAnnotation::CreateMouseUp(SkPoint pt) {
@@ -236,6 +249,15 @@ bool TextAnnotation::CreateMouseUp(SkPoint pt) {
     bounds_.fBottom = bounds_.fTop;
   }
   return true;
+}
+
+void TextAnnotation::SetHoverPoint(SkPoint pt) {
+  float width = bounds_.width();
+  float height = bounds_.height();
+  bounds_.fLeft = pt.x();
+  bounds_.fTop = pt.y();
+  SetWidth(width);
+  SetHeight(height);
 }
 
 void TextAnnotation::Draw(SkCanvas* canvas, SkRect rect) {

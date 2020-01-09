@@ -73,6 +73,10 @@ void DocView::Draw(SkCanvas* canvas, SkRect rect) {
                          pagePaint.height() / zoom_);
       doc_.DrawPage(canvas, pageDrawClip, static_cast<int>(i));
 
+      if (hovering_annotation_.get() && hovering_annotation_page_ == i) {
+        hovering_annotation_->Draw(canvas, pageDrawClip);
+      }
+
       canvas->restore();
     }
     pagetop += pgsize.height() * zoom_ + kBorderPixels;
@@ -294,8 +298,52 @@ SkRect DocView::ConvertRectFromPage(int page, const SkRect& rect) const {
                           botright.x(), botright.y());
 }
 
+void DocView::MouseMove(MouseInputEvent ev) {
+  if (toolbox_.current_tool() == Toolbox::kArrow_Tool) {
+    if (hovering_annotation_.get()) {
+      SetNeedsDisplayForAnnotation(hovering_annotation_page_,
+                                   hovering_annotation_.get());
+      hovering_annotation_.reset();
+    }
+    return;
+  }
+  if (hovering_annotation_.get()) {
+    SetNeedsDisplayForAnnotation(hovering_annotation_page_,
+                                 hovering_annotation_.get());
+    if (hovering_annotation_->Type() != toolbox_.current_tool())
+      hovering_annotation_.reset();
+  }
+  if (!hovering_annotation_.get()) {
+    hovering_annotation_.reset(
+        Annotation::Create(&doc_, toolbox_.current_tool()));
+  }
+
+  int pageno = -1;
+  SkPoint pagept = SkPoint::Make(0, 0);
+  ViewPointToPageAndPoint(ev.position(), &pageno, &pagept);
+
+  hovering_annotation_->SetHoverPoint(pagept);
+  hovering_annotation_page_ = pageno;
+  SetNeedsDisplayForAnnotation(hovering_annotation_page_,
+                               hovering_annotation_.get());
+}
+
+void DocView::MouseLeave(MouseInputEvent ev) {
+  if (hovering_annotation_.get()) {
+    SetNeedsDisplayForAnnotation(hovering_annotation_page_,
+                                 hovering_annotation_.get());
+    hovering_annotation_.reset();
+  }
+}
+
 View* DocView::MouseDown(MouseInputEvent ev) {
   bool stopped_editing = false;
+
+  if (hovering_annotation_.get()) {
+    SetNeedsDisplayForAnnotation(hovering_annotation_page_,
+                                 hovering_annotation_.get());
+    hovering_annotation_.reset();
+  }
 
   if (editing_annotation_) {
     StopEditing();

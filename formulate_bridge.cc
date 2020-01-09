@@ -170,7 +170,10 @@ bool MouseEvent(int id, float xpos, float ypos, int type, int modifiers) {
       return false;
       break;
     case MouseInputEvent::MOVE:
-      // TODO(adlr): support hover events
+      root_views_[id]->MouseMove(ev);
+      break;
+    case MouseInputEvent::LEAVE:
+      root_views_[id]->MouseLeave(ev);
       break;
     case MouseInputEvent::CLICK:
       root_views_[id]->OnClick(ev);

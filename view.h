@@ -18,7 +18,7 @@ class View;
 class MouseInputEvent {
  public:
   enum Type {
-    DOWN, DRAG, UP, MOVE, CLICK, DOWN2
+    DOWN, DRAG, UP, MOVE, CLICK, DOWN2, LEAVE
   };
   MouseInputEvent(SkPoint position, Type type,
                   int32_t click_count,
@@ -99,6 +99,9 @@ class View {
   // than what is actually visible.
   SkRect VisibleSubrect() const;
 
+  // Called when the mouse hovers
+  virtual void MouseMove(MouseInputEvent ev);
+  virtual void MouseLeave(MouseInputEvent ev);  // Hover stops
   // MouseDown returns null if not consumed, or the consumer if consumed.
   // MouseDrag/MouseUp reported to the consumer of the down.
   // Default implementation calls to children
@@ -117,6 +120,7 @@ class View {
   std::vector<View*> children_;
 
   View* drag_consumer_{nullptr};
+  View* move_consumer_{nullptr};
 };
 
 template<typename T>

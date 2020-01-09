@@ -112,6 +112,41 @@ SkRect View::VisibleSubrect() const {
   return parent_visible;
 }
 
+void View::MouseMove(MouseInputEvent ev) {
+  View* child = nullptr;
+  for (ssize_t i = children_.size() - 1; i >= 0; i--) {
+    child = children_[i];
+    if (!child->Frame().contains(ev.position().x(), ev.position().y())) {
+      child = nullptr;
+      continue;
+    }
+    break;
+  }
+
+  if (child != move_consumer_ && move_consumer_) {
+    MouseInputEvent leave_evt = ev;
+    leave_evt.UpdateToChild(move_consumer_, this);
+    move_consumer_->MouseLeave(leave_evt);
+    move_consumer_ = nullptr;
+  }
+
+  if (child) {
+    MouseInputEvent child_evt = ev;
+    child_evt.UpdateToChild(child, this);
+    child->MouseMove(child_evt);
+    move_consumer_ = child;
+  }
+}
+
+void View::MouseLeave(MouseInputEvent ev) {
+  if (move_consumer_) {
+    MouseInputEvent leave_evt = ev;
+    leave_evt.UpdateToChild(move_consumer_, this);
+    move_consumer_->MouseLeave(leave_evt);
+    move_consumer_ = nullptr;
+  }
+}
+
 View* View::MouseDown(MouseInputEvent ev) {
   for (ssize_t i = children_.size() - 1; i >= 0; i--) {
     View* child = children_[i];

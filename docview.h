@@ -73,6 +73,11 @@ class DocView : public View,
   SkPoint PagePointToViewPoint(int page, const SkPoint& pagept) const;
   SkRect ConvertRectFromPage(int page, const SkRect& rect) const;
 
+  // for hover events
+  virtual void MouseMove(MouseInputEvent ev);
+  virtual void MouseLeave(MouseInputEvent ev);  // Hover stops
+
+  // Handle drag events:
   View* MouseDown(MouseInputEvent ev);
   void MouseDrag(MouseInputEvent ev);
   void MouseUp(MouseInputEvent ev);
@@ -189,6 +194,9 @@ class DocView : public View,
   std::vector<SkSize> page_sizes_;  // in PDF points
   float max_page_width_{0};  // in PDF points
   float zoom_{1};  // user zoom in/out
+
+  int hovering_annotation_page_{-1};
+  std::unique_ptr<Annotation> hovering_annotation_;
 
   std::set<Annotation*> selected_annotations_;
   int selected_annotations_page_{-1};

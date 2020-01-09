@@ -84,6 +84,9 @@ class Annotation {
   virtual void StopEditing() {}
   virtual TextAnnotation* AsTextAnnotation() { return nullptr; }
 
+  // Called when an annotation hasn't been placed yet, but may want to draw
+  virtual void SetHoverPoint(SkPoint pt);
+
   SkRect Bounds() const { return bounds_; }
   void SetWidth(float width) { bounds_.fRight = bounds_.fLeft + width; }
   void SetHeight(float height) { bounds_.fBottom = bounds_.fTop + height; }
@@ -109,8 +112,7 @@ std::vector<std::unique_ptr<Annotation>> AnnotationsFromPage(
 
 class TextAnnotation : public Annotation {
  public:
-  explicit TextAnnotation(AnnotationDelegate* delegate)
-      : Annotation(delegate) {}
+  explicit TextAnnotation(AnnotationDelegate* delegate);
   // Load a TextAnnotation from saved PDF:
   TextAnnotation(AnnotationDelegate* delegate,
                  FPDF_PAGE page,
@@ -125,6 +127,8 @@ class TextAnnotation : public Annotation {
   static const int SaveKeyUTF16LELen() { return 22; }
 
   bool CreateMouseUp(SkPoint pt) override;
+
+  void SetHoverPoint(SkPoint pt) override;
 
   void Draw(SkCanvas* canvas, SkRect rect) override;
 
