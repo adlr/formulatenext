@@ -124,13 +124,12 @@ body {
   outline: none;
   border: none;
   resize: none;
-  background-color: rgba(255, 255, 255, 0.8);
 }
 
 .ql-editor {
   line-height: unset;
-  padding: 2px;
-  font-family: "Arimo", Helvetica, Arial, "Noto Sans CJK TC", sans-serif;
+  padding: 0px;
+  font-family: "Arimo", Helvetica, Arial, "Noto Sans CJK TC", sans-serif, "Noto Color Emoji";
   font-size: 13px;
 }
 

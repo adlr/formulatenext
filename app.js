@@ -340,33 +340,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('pointerup', thumbMouseUp);
   });
 
-  let calcFontMetrics = (fontsize) => {
-    let div = document.createElement('div');
-    div.style.position = 'absolute';
-    div.style.top = '-10000px';
-    div.style.left = '-10000px';
-    div.style.fontFamily = 'Arial';
-    div.style.fontSize = '' + fontsize + 'px';
-    let span = document.createElement('span');
-    span.style.fontSize = '0%';
-    span.innerText = 'x';
-    let spanbig = document.createElement('span');
-    spanbig.innerText = 'x';
-    div.appendChild(span);
-    div.appendChild(spanbig);
-    document.body.appendChild(div);
-    let ret = span.offsetTop;
-    console.log([span.offsetTop, span.offsetHeight,
-                 spanbig.offsetTop, spanbig.offsetHeight].join(', '));
-    document.body.removeChild(div);
-    return ret;
-  };
-
   let launchEditor = (xpos, ypos, width, zoom, text, caretPos) => {
     const dpr = window.devicePixelRatio || 1;
-    console.log(`Edit at ${xpos} ${ypos}, ${zoom}, ${text}, ${caretPos}`);
+    console.log(`Edit at ${xpos} ${ypos}, ${width}, ${zoom}, ${text}, ${caretPos}`);
     // let vertOffset = calcFontMetrics((zoom * 12) | 0);
-    let padding = 2 + 1;
+    let padding = 0 + 1;  // .ql-editor's padding + 1
     xpos -= zoom * padding;
     ypos -= zoom * padding;
     let textarea = document.createElement('div');
@@ -375,7 +353,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let quillarea = document.createElement('div');
     quillarea.innerHTML = text;
     quillarea.id = 'quill-editor';
-    quillarea.style.width = 'fit-content';
+    quillarea.style.width = width <= 0 ?
+      'fit-content' : (Math.floor(width) + 2 + 'px');
     quillarea.style.height = 'auto';
 
     textarea.style.marginLeft = xpos + 'px';
@@ -385,16 +364,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('main-scroll-inner').appendChild(textarea);
 
     let quill = g_quill = new Quill('#quill-editor', {
-      modules: {
-        // toolbar: [
-        //   ['bold', 'italic'],
-        //   [{ 'size': ['small', false, 'large', 'huge'] }],
-        //   [{ 'color': [] }, { 'font': [] }],
-        //   ['clean']
-        // ],
-        toolbar: false
-      },
-      placeholder: 'Text goes here...',
+      modules: { toolbar: false },
+      placeholder: 'Text',
       theme: 'snow'
     });
     let fixupSize = () => {
@@ -403,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const yPad = padding;
       const xSize = quill.root.offsetWidth + xPad;
       const ySize = quill.root.offsetHeight + yPad;
-      textarea.style.width = 'fit-content'; // xSize + 'px';
+      // textarea.style.width = width < 0 ? 'fit-content' : width; // xSize + 'px';
       textarea.style.height = ySize + 'px';
     };
     quill.on('text-change', (delta, oldDelta, source) => {
