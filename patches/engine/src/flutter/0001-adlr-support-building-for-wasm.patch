@@ -1,0 +1,82 @@
+From 8dbdd699c46b7740efc2243c768beb58b959cb66 Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Sun, 19 Jan 2020 14:01:11 -0800
+Subject: [PATCH] adlr: support building for wasm
+
+---
+ fml/build_config.h       | 6 ++++--
+ shell/platform/BUILD.gn  | 3 ++-
+ third_party/txt/BUILD.gn | 6 ++++--
+ 3 files changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/fml/build_config.h b/fml/build_config.h
+index 2714f46d1..24f402a38 100644
+--- a/fml/build_config.h
++++ b/fml/build_config.h
+@@ -46,6 +46,8 @@
+ #define OS_SOLARIS 1
+ #elif defined(__QNXNTO__)
+ #define OS_QNX 1
++#elif defined(__EMSCRIPTEN__)
++#define OS_WASM 1
+ #else
+ #error Please add support for your platform in flutter/fml/build_config.h
+ #endif
+@@ -60,7 +62,7 @@
+ // more specific macro.
+ #if defined(OS_MACOSX) || defined(OS_LINUX) || defined(OS_FREEBSD) ||    \
+     defined(OS_OPENBSD) || defined(OS_SOLARIS) || defined(OS_ANDROID) || \
+-    defined(OS_NACL) || defined(OS_QNX)
++    defined(OS_NACL) || defined(OS_QNX) || defined(OS_WASM)
+ #define OS_POSIX 1
+ #endif
+ 
+@@ -88,7 +90,7 @@
+ #define ARCH_CPU_ARM64 1
+ #define ARCH_CPU_64_BITS 1
+ #define ARCH_CPU_LITTLE_ENDIAN 1
+-#elif defined(__pnacl__)
++#elif defined(__pnacl__) || defined(OS_WASM)
+ #define ARCH_CPU_32_BITS 1
+ #define ARCH_CPU_LITTLE_ENDIAN 1
+ #elif defined(__MIPSEL__)
+diff --git a/shell/platform/BUILD.gn b/shell/platform/BUILD.gn
+index 4b881909d..0c5724d4c 100644
+--- a/shell/platform/BUILD.gn
++++ b/shell/platform/BUILD.gn
+@@ -33,6 +33,7 @@ group("platform") {
+       ]
+     }
+   } else {
+-    assert(false, "Unknown/Unsupported platform.")
++    deps = []
++    #assert(false, "Unknown/Unsupported platform.")
+   }
+ }
+diff --git a/third_party/txt/BUILD.gn b/third_party/txt/BUILD.gn
+index 7111bf9fe..8444fa2ba 100644
+--- a/third_party/txt/BUILD.gn
++++ b/third_party/txt/BUILD.gn
+@@ -28,7 +28,9 @@ config("txt_config") {
+   include_dirs = [ "src" ]
+ }
+ 
+-source_set("txt") {
++static_library("txt") {
++  complete_static_lib = true
++  print("adlr in txt")
+   defines = []
+   if (flutter_use_fontconfig) {
+     defines += [ "FLUTTER_USE_FONTCONFIG" ]
+@@ -129,7 +131,7 @@ source_set("txt") {
+   public_configs = [ ":txt_config" ]
+ 
+   public_deps = [
+-    "$flutter_root/fml",
++    #"$flutter_root/fml",
+     "//third_party/harfbuzz",
+     "//third_party/icu",
+     "//third_party/skia",
+-- 
+2.11.0
+

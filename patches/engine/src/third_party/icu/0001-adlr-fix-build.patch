@@ -1,0 +1,24 @@
+From 98a9372de92137788b700b029b30fa717b768cf2 Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Sun, 19 Jan 2020 13:39:11 -0800
+Subject: [PATCH] adlr: fix build
+
+---
+ BUILD.gn | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/BUILD.gn b/BUILD.gn
+index 42b5c4aa..3a72d260 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -100,6 +100,7 @@ config("icu_code") {
+       "-Wno-unused-function",
+       # putil.cpp contains unused variables when building for iOS simulators.
+       "-Wno-unused-variable",
++      "-Wno-implicit-int-float-conversion",
+     ]
+   }
+   if (is_clang || is_linux || is_android) {
+-- 
+2.11.0
+

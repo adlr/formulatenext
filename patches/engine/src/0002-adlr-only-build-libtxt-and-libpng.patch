@@ -1,0 +1,34 @@
+From 6ced819e691758fd8d4f9dbd68bf2d49d3ad5163 Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Sun, 19 Jan 2020 13:37:56 -0800
+Subject: [PATCH 2/3] adlr: only build libtxt and libpng
+
+---
+ BUILD.gn | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/BUILD.gn b/BUILD.gn
+index 0dfd099..da8e77c 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -6,7 +6,8 @@
+ group("default") {
+   testonly = true
+   deps = [
+-    "//flutter",
++    "//flutter/third_party/txt",
++    "//third_party/libpng",
+   ]
+ }
+ 
+@@ -14,6 +15,6 @@ group("dist") {
+   testonly = true
+ 
+   deps = [
+-    "//flutter:dist",
++    # "//flutter:dist",
+   ]
+ }
+-- 
+2.11.0
+

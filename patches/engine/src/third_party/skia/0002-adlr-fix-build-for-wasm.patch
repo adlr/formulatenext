@@ -1,0 +1,88 @@
+From 3b19f885cbfb5240304c1eb10b09006a51b41a2a Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Sun, 19 Jan 2020 13:40:54 -0800
+Subject: [PATCH 2/2] adlr: fix build for wasm
+
+---
+ BUILD.gn                          | 23 +++++++++++++++++++++--
+ src/ports/SkFontHost_FreeType.cpp |  2 +-
+ 2 files changed, 22 insertions(+), 3 deletions(-)
+
+diff --git a/BUILD.gn b/BUILD.gn
+index 954ac2f749..39f187a399 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -49,6 +49,18 @@ config("skia_public") {
+   } else if (skia_gl_standard == "webgl") {
+     defines += [ "SK_ASSUME_WEBGL=1" ]
+   }
++  if (is_wasm) {
++    defines += [
++      "SKNX_NO_SIMD",
++      "SK_DISABLE_AAA",
++      "SK_DISABLE_READBUFFER",
++      "SK_DISABLE_EFFECT_DESERIALIZATION",
++      "SK_DISABLE_LEGACY_SHADERCONTEXT",
++      "SK_RELEASE",
++      "GR_GL_CHECK_ALLOC_WITH_GET_ERROR=0",
++    ]
++    cflags = [ "-s", "WARN_UNALIGNED=1" ]
++  }
+ }
+ 
+ # Skia internal APIs, used by Skia itself and a few test tools.
+@@ -688,7 +700,7 @@ optional("raw") {
+ 
+   # SkRawCodec catches any exceptions thrown by dng_sdk, insulating the rest of
+   # Skia.
+-  configs_to_remove = [ "//gn:no_exceptions" ]
++  # configs_to_remove = [ "//gn:no_exceptions" ]
+ 
+   sources = [
+     "src/codec/SkRawCodec.cpp",
+@@ -804,6 +816,10 @@ if (skia_enable_gpu && skia_generate_workarounds) {
+ component("skia") {
+   public_configs = [ ":skia_public" ]
+   configs += skia_library_configs
++  if (is_wasm) {
++    configs -= [ "//build/config/compiler:no_rtti" ]
++    configs += [ "//build/config/compiler:rtti" ]
++  }
+ 
+   public_deps = [
+     ":gpu",
+@@ -855,6 +871,8 @@ component("skia") {
+   public += skia_effects_imagefilter_public
+   public += skia_xps_public
+ 
++  cflags = [ "-Wno-implicit-int-float-conversion" ]
++
+   sources = []
+   sources += skia_core_sources
+   sources += skia_utils_sources
+@@ -1001,7 +1019,8 @@ component("skia") {
+ # DebugCanvas used in experimental/wasm-skp-debugger
+ if (target_cpu == "wasm") {
+   static_library("debugcanvas") {
+-    public_configs = [ ":skia_public" ]
++    public_configs = [ ":skia_public",
++                       "//build/config/compiler:rtti" ]
+ 
+     sources = [
+       "tools/SkSharingProc.cpp",
+diff --git a/src/ports/SkFontHost_FreeType.cpp b/src/ports/SkFontHost_FreeType.cpp
+index 34f9f47549..94f51ad6b7 100644
+--- a/src/ports/SkFontHost_FreeType.cpp
++++ b/src/ports/SkFontHost_FreeType.cpp
+@@ -54,7 +54,7 @@
+ // Flag SK_FREETYPE_DLOPEN: also try dlopen to get newer features.
+ #define SK_FREETYPE_DLOPEN (0x1)
+ #ifndef SK_FREETYPE_MINIMUM_RUNTIME_VERSION
+-#  if defined(SK_BUILD_FOR_ANDROID_FRAMEWORK) || defined (SK_BUILD_FOR_GOOGLE3)
++#  if defined(SK_BUILD_FOR_ANDROID_FRAMEWORK) || defined (SK_BUILD_FOR_GOOGLE3) || defined(__EMSCRIPTEN__)
+ #    define SK_FREETYPE_MINIMUM_RUNTIME_VERSION (((FREETYPE_MAJOR) << 24) | ((FREETYPE_MINOR) << 16) | ((FREETYPE_PATCH) << 8))
+ #  else
+ #    define SK_FREETYPE_MINIMUM_RUNTIME_VERSION ((2 << 24) | (3 << 16) | (11 << 8) | (SK_FREETYPE_DLOPEN))
+-- 
+2.11.0
+

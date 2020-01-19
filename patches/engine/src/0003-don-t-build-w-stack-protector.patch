@@ -1,0 +1,25 @@
+From ce9a66165a0655e277c62ca0592bf0489ee33f6e Mon Sep 17 00:00:00 2001
+From: Andrew de los Reyes <adlr@chromium.org>
+Date: Sun, 19 Jan 2020 13:42:03 -0800
+Subject: [PATCH 3/3] don't build w/ stack protector
+
+---
+ build/config/compiler/BUILD.gn | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
+index b31ae95..11abaa0 100644
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -95,7 +95,7 @@ config("compiler") {
+       cflags += [ "-fstack-protector-all" ]
+     } else if (is_linux) {
+       cflags += [
+-        "-fstack-protector",
++        #"-fstack-protector",
+         "--param=ssp-buffer-size=4",
+       ]
+     }
+-- 
+2.11.0
+
