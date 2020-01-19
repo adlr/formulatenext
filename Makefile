@@ -1,29 +1,42 @@
 all: formulate.html
 
+ENGINE=../engine
+
 CFLAGS=\
-	-g -O0 -Wall -Werror
+	-std=c++17 \
+	-g -O0 -Wall -Werror -Wno-unused-private-field
 #	-g -Os --profiling
+# -fsanitize=address -fsanitize=undefined 
+
+# -Iskia/skia \
+# -Iskia/skia/include/core \
+# -Iskia/skia/include/config \
+# -Iskia/skia/include/docs \
+# -Iskia/skia/include/utils \
+
 
 INC=\
 	-Ipdfium/pdfium \
-	-Iskia/skia \
-	-Iskia/skia/include/core \
-	-Iskia/skia/include/config \
-	-Iskia/skia/include/docs \
-	-Iskia/skia/include/utils \
-	-I../engine/src/flutter/third_party/txt/src/ \
-	-I../engine/src \
-	-I../engine/src/third_party/icu/source/common \
-	-I../engine/src/third_party/skia/include/third_party/skcms \
+	-I$(ENGINE)/src/flutter/third_party/txt/src/ \
+	-I$(ENGINE)/src \
+	-I$(ENGINE)/src/third_party/icu/source/common \
+	-I$(ENGINE)/src/third_party/skia/include/third_party/skcms \
+	-I$(ENGINE)/src/third_party/freetype2/include/ \
+	-I$(ENGINE)/src/third_party/skia \
+	-I$(ENGINE)/src/third_party/skia/include/core \
+	-I$(ENGINE)/src/third_party/skia/include/config \
+	-I$(ENGINE)/src/third_party/skia/include/docs \
+	-I$(ENGINE)/src/third_party/skia/include/utils \
+	-I$(ENGINE)/src/third_party/harfbuzz/src \
 	-Inon-test-include
 
 %.o : %.cc
-	emcc $(CFLAGS) -MMD -std=c++17 $(INC) -o $@ $< -s USE_FREETYPE=1 -s USE_HARFBUZZ=1
+	em++ $(CFLAGS) -MMD $(INC) -o $@ $<
 
 %.o : %.cpp
-	emcc $(CFLAGS) -MMD -std=c++17 $(INC) -o $@ $< -s USE_FREETYPE=1 -s USE_HARFBUZZ=1
+	em++ $(CFLAGS) -MMD $(INC) -o $@ $<
 
-OBJS=\
+CLEANOBJS=\
 	formulate_bridge.o \
 	annotation.o \
 	docview.o \
@@ -37,12 +50,12 @@ OBJS=\
 	svgpath.o \
 	thumbnailview.o \
 	undo_manager.o \
+	flutter_shim.o
+
+OBJS=\
+	$(CLEANOBJS) \
 	pdfium/pdfium/out/Debug/obj/libpdfium.a \
-	../engine/src/flutter/third_party/txt/libtxt.a \
-	skia/skia/formulate_out/libskia.a \
-	~/.emscripten_cache/asmjs/libharfbuzz.a \
-	libicuuc.bc \
-	libicudt.bc
+	$(ENGINE)/src/out/Debug/obj/flutter/third_party/txt/libtxt.a
 
 MATERIAL_FONTS_FILES=\
 	MaterialIcons-Regular.woff2 \
@@ -59,20 +72,24 @@ Roboto/Roboto.css :
 	./download_font.sh 'https://fonts.googleapis.com/css?family=Roboto'
 
 NotoMono-Regular.ttf.o : skia/skia/modules/canvaskit/fonts/NotoMono-Regular.ttf.cpp
-	emcc -c -o $@ \
+	em++ -c -o $@ \
 		-std=c++17 \
 		-Iskia/skia \
 		-Iskia/skia/include/core \
 		-Iskia/skia/include/config \
 		$<
 
-formulate.html: $(OBJS) $(MATERIAL_FONTS_FILES) Roboto/Roboto.css
-	emcc $(CFLAGS) -o $@ $(OBJS) \
+formulate.html: $(OBJS) $(MATERIAL_FONTS_FILES) Roboto/Roboto.css icudtl.dat
+	em++ $(CFLAGS) -o $@ $(OBJS) \
 		-s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" \
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s DEMANGLE_SUPPORT=1 \
 		--preload-file usr \
+		--preload-file icudtl.dat \
 		-s TOTAL_MEMORY=268435456
+
+clean:
+	rm -f $(CLEANOBJS)
 
 favicon.png: favicon.svg
 	rsvg-convert -w 192 -h 192 --format=png --output=$@ $<
@@ -81,7 +98,7 @@ favicon.png: favicon.svg
 	rm favicon-temp.png
 
 signature.html: signature.o
-	emcc $(CFLAGS) -o $@ signature.o \
+	em++ $(CFLAGS) -o $@ signature.o \
 		opencv/opencv/build_wasm/lib/libopencv_core.a \
 		opencv/opencv/build_wasm/lib/libopencv_imgproc.a \
 		-s "EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap']" \
