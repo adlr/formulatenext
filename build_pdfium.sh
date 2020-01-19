@@ -15,7 +15,7 @@ cd "$BASE_DIR/pdfium/pdfium"
 BUILD_DIR=out/Debug
 
 # Inspired by https://github.com/Zubnix/skia-wasm-port/blob/master/build_bindings.sh
-gn gen ${BUILD_DIR} \
+gn --export-compile-commands gen ${BUILD_DIR} \
   --args="is_debug=false \
   is_official_build=false \
   use_goma=false \
@@ -27,7 +27,7 @@ gn gen ${BUILD_DIR} \
   is_component_build=false \
   clang_use_chrome_plugins=false \
   use_libjpeg_turbo=true \
-  use_system_libpng=true \
+  use_system_libpng=false \
   use_glib=false \
   target_os=\"wasm\" \
   target_cpu=\"wasm\" \
