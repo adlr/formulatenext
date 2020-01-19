@@ -23,7 +23,7 @@ class Toolbox {
   }
 
  private:
-  Tool current_tool_;
+  Tool current_tool_{kArrow_Tool};
 };
 
 }  // namespace formulate

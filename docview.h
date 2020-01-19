@@ -19,9 +19,9 @@ namespace formulate {
 
 char KnobsForType(PDFDoc::ObjType type);
 
-class DocView : public View,
-                public PDFDocEventHandler {
+class DocView : public View, public PDFDocEventHandler {
  public:
+  static void dumpalign();
   DocView() { doc_.AddEventHandler(this); }
   virtual const char* Name() const { return "DocView"; }
   void Draw(SkCanvas* canvas, SkRect rect);
@@ -153,6 +153,7 @@ class DocView : public View,
     virtual void MouseDown(MouseInputEvent ev) = 0;
     virtual void MouseDrag(MouseInputEvent ev) = 0;
     virtual void MouseUp(MouseInputEvent ev) = 0;
+    virtual void Draw(SkCanvas* canvas, SkRect rect, int page) {}
 
    protected:
     DocView* parent_{nullptr};
@@ -170,6 +171,7 @@ class DocView : public View,
     void MouseDown(MouseInputEvent ev);
     void MouseDrag(MouseInputEvent ev);
     void MouseUp(MouseInputEvent ev);
+    void Draw(SkCanvas* canvas, SkRect rect, int page);
 
    private:
     std::unique_ptr<Annotation> placing_annotation_;

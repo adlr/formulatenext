@@ -1,4 +1,11 @@
 #include <emscripten.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include "unicode/udata.h"
 
 #include "SkBitmap.h"
 #include "SkCanvas.h"
@@ -89,6 +96,28 @@ void SetScrollOrigin(int id, float xpos, float ypos) {
 
 EMSCRIPTEN_KEEPALIVE
 bool Init() {
+  // Init ICU
+  int icudata_fd = open("icudtl.dat", O_RDONLY);
+  if (!icudata_fd) {
+    fprintf(stderr, "failed to open ICU data file\n");
+    return false;
+  }
+  struct stat stat_buffer = {};
+  if (fstat(icudata_fd, &stat_buffer) != 0) {
+    fprintf(stderr, "failed to get ICU data file size\n");
+    return false;
+  }
+  void* icudata = mmap(nullptr, stat_buffer.st_size, PROT_READ,
+                       MAP_PRIVATE, icudata_fd, 0);
+  if (icudata == MAP_FAILED) {
+    fprintf(stderr, "failed to mmap ICU data\n");
+    return false;
+  }
+  UErrorCode err_code = U_ZERO_ERROR;
+  udata_setCommonData(icudata, &err_code);
+  if (err_code != U_ZERO_ERROR) {
+    fprintf(stderr, "failed to init ICU common data\n");
+  }
   InitPDFium();
   leaf_views_[0] = doc_view_ = new DocView();
   leaf_views_[1] = thumb_view_ = new ThumbnailView(&doc_view_->doc_);
@@ -295,3 +324,18 @@ void bridge_downloadBytes(void* ptr, int len) {
 }
 
 }  // namespace formulate
+
+extern "C" {
+
+unsigned long __stack_chk_guard;
+void __stack_chk_guard_setup(void)
+{
+  __stack_chk_guard = 0xBAAAAAAD;//provide some magic numbers
+}
+
+void __stack_chk_fail(void)
+{
+  /* Error message */
+}
+
+}  // extern "C"

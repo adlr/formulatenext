@@ -63,8 +63,9 @@ std::unique_ptr<txt::Paragraph> RichFormat::Format(const char* html) {
   txt::ParagraphStyle style;
   style.font_family = "Arimo";
   style.font_size = 13.0;
-  paragraph_builder_ = txt::ParagraphBuilder::CreateTxtBuilder(
-      style, font_collection_);
+  paragraph_builder_ = std::move(txt::ParagraphBuilder::CreateTxtBuilder(
+      style, font_collection_));
+  fprintf(stderr, "pb at 0x%08x\n", (int)paragraph_builder_.get());
   txt::TextStyle textstyle;
   textstyle.color = SK_ColorBLACK;
   textstyle.font_families.push_back("Arimo");

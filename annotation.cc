@@ -27,6 +27,8 @@ Annotation* Annotation::Create(AnnotationDelegate* delegate,
   switch (type) {
     case Toolbox::kText_Tool:
       return new TextAnnotation(delegate);
+    case Toolbox::kFreehand_Tool:
+      return new PathAnnotation(delegate);
     default:
       fprintf(stderr, "can't create annotation for type %d\n", type);
       return nullptr;
@@ -374,6 +376,220 @@ void TextAnnotation::MoveKnob(Knobmask knob, float dx, float dy) {
     fixed_width_ = true;
   }
   LayoutText();
+}
+
+PathAnnotation::PathAnnotation(AnnotationDelegate* delegate)
+    : Annotation(delegate) {
+  paint_.setAntiAlias(true);
+  paint_.setStyle(SkPaint::kStroke_Style);
+  paint_.setColor(0xff000000);  // opaque black
+  paint_.setStrokeWidth(1);
+}
+
+// Load a PathAnnotation from saved PDF:
+PathAnnotation::PathAnnotation(AnnotationDelegate* delegate,
+                               FPDF_PAGE page,
+                               FPDF_PAGEOBJECT obj,
+                               FPDF_PAGEOBJECTMARK mark)
+    : Annotation(delegate) {
+}
+
+PathAnnotation::~PathAnnotation() {}
+
+void PathAnnotation::CreateMouseDown(SkPoint pt) {
+  fprintf(stderr, "called PathAnnotation::CreateMouseDown\n");
+  fresh_ = true;
+  path_.moveTo(pt);
+  prev_pt_.fX = prev_pt_.fY = -1;  // indicates unset
+  bounds_.fLeft = bounds_.fRight = pt.x();
+  bounds_.fTop = bounds_.fBottom = pt.y();
+}
+
+namespace {
+// From https://gist.github.com/njvack/6925609
+// |pts| point to an array of 4 points. Control points for the middle
+// segment are returned.
+// For the first segment, pass the first point twice. For the last segment,
+// pass the last point twice.
+std::pair<SkPoint, SkPoint> ControlPoints(const SkPoint* pts) {
+  std::pair<SkPoint, SkPoint> ret;
+  ret.first.fX = (-pts[0].x() + 6*pts[1].x() + pts[2].x()) / 6;
+  ret.first.fY = (-pts[0].y() + 6*pts[1].y() + pts[2].y()) / 6;
+  ret.second.fX = (pts[1].x() + 6*pts[2].x() - pts[3].x()) / 6;
+  ret.second.fY = (pts[1].y() + 6*pts[2].y() - pts[3].y()) / 6;
+  return ret;
+}
+}  // namespace {}
+
+void PathAnnotation::CreateMouseDrag(SkPoint pt) {
+  AppendPointInCreate(pt, false);
+}
+
+void PathAnnotation::AppendPointInCreate(SkPoint pt, bool force) {
+  // First, find out how many points we have so far. We know we must
+  // have at least one from the CreateMouseDown event. We also don't
+  // need more than 3 existing ones, so don't look beyond that.
+  SkPoint points[4] = {
+    SkPoint::Make(0, 0),
+    SkPoint::Make(0, 0),
+    prev_pt_,
+    pt
+  };
+  path_.getLastPt(&points[1]);
+  if (path_.countPoints() > 1) {
+    if (path_.countPoints() <= 3)
+      return;
+    points[0] = path_.getPoint(path_.countPoints() - 4);
+  } else {
+    points[0] = points[1];
+  }
+  fprintf(stderr, "4 pts: %f %f %f %f\n",
+          points[0].x(),
+          points[1].x(),
+          points[2].x(),
+          points[3].x());
+
+  if (prev_pt_.fX < 0) {
+    // TODO(adlr): check for repeated point
+    prev_pt_ = pt;
+    return;
+  }
+
+  if (prev_pt_ == pt)
+    return;
+
+  // We have a least 3 points now, so add a bezier path segment
+  std::pair<SkPoint, SkPoint> ctrl_pts = std::make_pair(points[1], points[2]);
+            //ControlPoints(points);
+  fprintf(stderr, "about to maybe malloc\n");
+  path_.cubicTo(ctrl_pts.first, ctrl_pts.second, prev_pt_);
+  prev_pt_ = pt;
+  fprintf(stderr, "did maybe malloc\n");
+  bounds_ = path_.getBounds();  // slightly incorrect but fast
+}
+
+bool PathAnnotation::CreateMouseUp(SkPoint pt) {
+  AppendPointInCreate(pt, false);
+  AppendPointInCreate(pt, true);
+  bounds_ = path_.computeTightBounds();
+  return path_.countPoints() > 1;
+}
+
+namespace {
+class BezierIterator {
+ public:
+  BezierIterator(SkPoint* points, size_t size)
+      : points_(points), cnt_(size), i_(1) {}
+  bool HasNext() { return (i_ + 1) < cnt_; }
+  void Get(SkPoint* out) {
+    std::pair<SkPoint, SkPoint> cpx;
+    if (i_ == 1 || i_ + 1 == cnt_) {
+      SkPoint pts[4] = {
+        i_ == 1 ? points_[0] : points_[i_ - 2],
+        i_ == 1 ? points_[0] : points_[i_ - 1],
+        points_[i_],
+        i_ + 1 == cnt_ ? points_[i_] : points_[i_ + 1]
+      };
+      cpx = ControlPoints(pts);
+    } else {
+      cpx = ControlPoints(&points_[i_ - 2]);
+    }
+    out[0] = cpx.first;
+    out[1] = cpx.second;
+    out[2] = points_[i_];
+  }
+  void Inc() { i_++; }
+
+ private:
+  SkPoint* points_;
+  size_t cnt_;
+  size_t i_;
+};
+
+}  // namespace {}
+
+void PathAnnotation::Draw(SkCanvas* canvas, SkRect rect) {
+  canvas->drawPath(path_, paint_);
+
+  // if (points_.size() < 2)
+  //   return;
+
+  // SkPath path;
+  // float sx = 1.0, sy = 1.0;
+  // float tx = 0.0, ty = 0.0;
+
+  // if (!placing_) {
+  //   sx = bounds_.width();
+  //   sy = bounds_.height();
+  //   tx = bounds_.left();
+  //   ty = bounds_.top();
+  // }
+
+
+  // path.moveTo(points_[0].x() * sx + tx, points_[0].y() * sy + ty);
+
+  // for (BezierIterator it(&points_[0], points_.size());
+  //      it.HasNext(); it.Inc()) {
+  //   SkPoint pts[3];
+  //   it.Get(pts);
+  //   path.cubicTo(pts[0].x() * sx + tx,
+  //                pts[0].y() * sy + ty,
+  //                pts[1].x() * sx + tx,
+  //                pts[1].y() * sy + ty,
+  //                pts[2].x() * sx + tx,
+  //                pts[2].y() * sy + ty);
+  // }
+
+  // SkPaint paint;
+  // paint.setAntiAlias(true);
+  // paint.setStyle(SkPaint::kStroke_Style);
+  // paint.setColor(0xff000000);  // opaque black
+  // paint.setStrokeWidth(1);
+
+  // canvas->drawPath(path, paint);
+}
+
+void PathAnnotation::Flush(FPDF_DOCUMENT doc, FPDF_PAGE page) {
+  // if (points_.size() <= 1 || placing_)
+  //   return;
+
+  // float sx = bounds_.width();
+  // float sy = bounds_.height();
+  // float tx = bounds_.left();
+  // float ty = bounds_.top();
+  // ScopedFPDFPageObject path(
+  //     FPDFPageObj_CreateNewPath(points_[0].x() * sx + tx,
+  //                               points_[0].y() * sy + ty));
+  
+  // if (!FPDFPath_SetStrokeColor(path.get(), 0, 0, 0, 0.5)) {
+  //   fprintf(stderr, "FPDFPath_SetStrokeColor failed!\n");
+  //   return;
+  // }
+  // if (!FPDFPath_SetDrawMode(path.get(), FPDF_FILLMODE_NONE, true)) {
+  //   fprintf(stderr, "FPDFPath_SetDrawMode failed\n");
+  //   return;
+  // }
+
+  // if (!FPDFPath_SetStrokeWidth(path.get(), 1.0)) {
+  //   fprintf(stderr, "FPDFPath_SetStrokeWidth failed\n");
+  //   return;
+  // }
+
+  // for (BezierIterator it(&points_[0], points_.size());
+  //      it.HasNext(); it.Inc()) {
+  //   SkPoint pts[3];
+  //   it.Get(pts);
+  //   if (!FPDFPath_BezierTo(path.get(), pts[0].x() * sx + tx,
+  //                          pts[0].y() * sy + ty,
+  //                          pts[1].x() * sx + tx,
+  //                          pts[1].y() * sy + ty,
+  //                          pts[2].x() * sx + tx,
+  //                          pts[2].y() * sy + ty)) {
+  //     fprintf(stderr, "FPDFPath_BezierTo failed\n");
+  //     return;
+  //   }
+  // }
+  // FPDFPage_InsertObject(page, path.release());
 }
 
 }  // namespace formulate

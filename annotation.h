@@ -4,6 +4,7 @@
 #define ANNOTATION_H_
 
 #include "public/fpdfview.h"
+#include "SkPath.h"
 
 #include "rich_format.h"
 #include "toolbox.h"
@@ -150,6 +151,44 @@ class TextAnnotation : public Annotation {
   std::string editing_value_;
   std::unique_ptr<txt::Paragraph> paragraph_;
   bool fixed_width_{false};
+};
+
+class PathAnnotation : public Annotation {
+ public:
+  explicit PathAnnotation(AnnotationDelegate* delegate);
+  // Load a PathAnnotation from saved PDF:
+  PathAnnotation(AnnotationDelegate* delegate,
+                 FPDF_PAGE page,
+                 FPDF_PAGEOBJECT obj,
+                 FPDF_PAGEOBJECTMARK mark);
+  virtual ~PathAnnotation();
+  Toolbox::Tool Type() override { return Toolbox::kFreehand_Tool; }
+  static constexpr char kSaveKey[] = "FN:Path";
+  static constexpr char kSaveKeyUTF16LE[] =
+      "F\0N\0:\0P\0a\0t\0h\0\0";
+
+  // If |force| is set, allow duplicate point to be inserted
+  void AppendPointInCreate(SkPoint pt, bool force);
+
+  void CreateMouseDown(SkPoint pt) override;
+  void CreateMouseDrag(SkPoint pt) override;
+  bool CreateMouseUp(SkPoint pt) override;
+
+  void Draw(SkCanvas* canvas, SkRect rect) override;
+  void Flush(FPDF_DOCUMENT doc, FPDF_PAGE page) override;
+  bool Editable() const override { return false; }
+
+ private:
+  SkPath path_;
+  SkPoint prev_pt_;
+  SkPaint paint_;
+
+  // A 'fresh' Annotation is one that was created by the user (as
+  // opposed to loading from a file) and is relatively new-ish, for
+  // some defintion of that. The idea is that if you create a new
+  // freehand stroke that's near another one you recently did, maybe
+  // they should be merged into one w/ some heuristics.
+  bool fresh_{false};
 };
 
 }  // namespace formulate
